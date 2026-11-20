@@ -55,6 +55,7 @@ val SettingsPaneRoutes = setOf(
     IntegrationsRoute,
     DiscordRoute,
     ScrobbleServiceRoute,
+    com.mochyy.mochymusic.ui.screens.settings.integrations.ListenBrainzRoute,
     BackupRoute,
     InternetSettingsRoute,
     ProxySettingsRoute,

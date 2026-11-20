@@ -432,6 +432,9 @@ fun NavGraphBuilder.navigationBuilder(
         com.mochyy.mochymusic.ui.screens.settings.integrations.spotify.SpotifyScreen(navController = navController)
     }
 
+    composable(com.mochyy.mochymusic.ui.screens.settings.integrations.ListenBrainzRoute) {
+        com.mochyy.mochymusic.ui.screens.settings.integrations.ListenBrainzScreen(navController = navController)
+    }
     composable(com.mochyy.mochymusic.ui.screens.settings.integrations.discord.DiscordRoute) {
         com.mochyy.mochymusic.ui.screens.settings.integrations.discord.DiscordScreen(navController = navController)
     }

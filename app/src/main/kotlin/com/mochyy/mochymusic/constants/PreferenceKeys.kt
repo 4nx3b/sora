@@ -169,6 +169,14 @@ val DnsOverHttpsEnabledKey = booleanPreferencesKey("dnsOverHttpsEnabled")
 val DnsOverHttpsProviderKey = stringPreferencesKey("dnsOverHttpsProvider")
 val DnsOverHttpsCustomUrlKey = stringPreferencesKey("dnsOverHttpsCustomUrl")
 
+// ListenBrainz, from the Integrations page: a user token instead of a sign-in, on its own rules
+val ListenBrainzEnabledKey = booleanPreferencesKey("listenBrainzEnabled")
+val ListenBrainzTokenKey = stringPreferencesKey("listenBrainzToken")
+val ListenBrainzPrimaryArtistOnlyKey = booleanPreferencesKey("listenBrainzPrimaryArtistOnly")
+
+// whether the stats page asks Last.fm for each artist's genres, the work-out-genres switch
+val WorkOutGenresKey = booleanPreferencesKey("workOutGenres")
+
 // data saver: lighter streams and no canvas or video backgrounds, on mobile data only unless the second switch is off
 val DataSaverKey = booleanPreferencesKey("dataSaver")
 val DataSaverMobileOnlyKey = booleanPreferencesKey("dataSaverMobileOnly")
