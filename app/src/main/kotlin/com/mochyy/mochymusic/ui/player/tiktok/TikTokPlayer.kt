@@ -439,11 +439,11 @@ internal fun TikTokMeshBackdrop(seed: Color, modifier: Modifier) {
         android.graphics.Color.HSLToColor(floatArrayOf((hsl[0] + hueShift).mod(360f), 0.55f, lightness)),
     ).copy(alpha = alpha)
 
-    val phase = remember { androidx.compose.animation.core.Animatable(0f) }
+    var phase by remember { androidx.compose.runtime.mutableFloatStateOf(0f) }
     LaunchedEffect(Unit) {
         while (true) {
             androidx.compose.runtime.withFrameMillis { }
-            phase.value = (System.nanoTime() / 1_000_000_000f * 0.125f).mod(1f)
+            phase = (System.nanoTime() / 1_000_000_000f * 0.125f).mod(1f)
         }
     }
     val base = Color(0xFF0B0B0F)
@@ -461,7 +461,7 @@ internal fun TikTokMeshBackdrop(seed: Color, modifier: Modifier) {
     )
     Canvas(modifier) {
         drawRect(base)
-        val t = phase.value * 2f * Math.PI.toFloat()
+        val t = phase * 2f * Math.PI.toFloat()
         blobs.forEachIndexed { i, color ->
             val anchor = anchors[i]
             val drift = 0.06f
