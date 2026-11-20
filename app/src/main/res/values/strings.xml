@@ -451,4 +451,7 @@
     <string name="eight_d_preset_chill">Chill</string>
     <string name="eight_d_preset_balanced">Balanced</string>
     <string name="eight_d_preset_extreme">Extreme</string>
+
+    <!-- namida player style -->
+    <string name="namida_jump_current">Jump to what's playing</string>
 </resources>

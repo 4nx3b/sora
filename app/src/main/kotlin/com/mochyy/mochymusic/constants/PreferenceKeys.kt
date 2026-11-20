@@ -711,6 +711,12 @@ enum class PlayerStyle(val displayName: String, val selectorName: String) {
     BEDSIDE("Bedside clock", "Big clock"),
     // the nightstand as two tiles side by side, the music on one and the lyrics or a clock on the other, each scrolled on its own
     BEDSIDE_TILES("Bedside", "Bedside"),
+    // namida's player: a rounded panel in the cover's colour, a waveform seek bar and its own queue page
+    NAMIDA("Namida", "Namida"),
+    // the apple music look: the artwork filling the top with a floating-light background and white type
+    APPLE_MUSIC("Apple Music", "Apple Music"),
+    // the queue as a vertical feed with a right rail of actions, the tiktok look
+    TIKTOK("TikTok", "TikTok"),
     // a look module's own player, drawn from its layout; kept last so the others keep their places, and only offered while such a module is on
     MODULE("Module", "Module");
 
@@ -755,6 +761,10 @@ enum class PlayerStyle(val displayName: String, val selectorName: String) {
             listOf(POSTER),
             // the lyrics stage sits under the timeline, the way the classic sits under the flagship
             listOf(TIMELINE, LYRICS),
+            // the ported looks: namida, the apple music design, and the tiktok feed
+            listOf(NAMIDA),
+            listOf(APPLE_MUSIC),
+            listOf(TIKTOK),
         )
     }
 }
