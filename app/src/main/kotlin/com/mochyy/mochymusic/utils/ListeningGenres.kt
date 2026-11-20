@@ -119,7 +119,7 @@ object ListeningGenres {
             .replace('-', ' ')
             .replace("&", "and")
             .replace(Regex("[^a-z0-9 ]"), "")
-            .replace(Regex("\s+"), " ")
+            .replace(Regex("\\s+"), " ")
             .trim()
         if (cleaned.isEmpty()) return null
         return GenreVocabulary[cleaned] ?: GenreVocabulary[GenreAliases[cleaned] ?: return null]

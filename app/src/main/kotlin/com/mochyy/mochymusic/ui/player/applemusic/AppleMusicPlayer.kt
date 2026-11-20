@@ -342,7 +342,7 @@ private fun AppleControlBar(
                 }
                 .pointerInput(durationMs) {
                     detectTapGestures { change ->
-                        onSeek(((change.position.x / size.width).coerceIn(0f, 1f) * durationMs).toLong())
+                        onSeek(((change.x / size.width).coerceIn(0f, 1f) * durationMs).toLong())
                     }
                 },
         ) {

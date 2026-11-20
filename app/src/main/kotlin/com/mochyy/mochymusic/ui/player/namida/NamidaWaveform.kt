@@ -135,7 +135,7 @@ internal fun NamidaWaveform(
                 .height(NamidaWaveformHeight)
                 .pointerInput(durationMs, songKey) {
                     detectTapGestures { change ->
-                        val fraction = (change.position.x / size.width).coerceIn(0f, 1f)
+                        val fraction = (change.x / size.width).coerceIn(0f, 1f)
                         onSeek((fraction * durationMs).toLong())
                     }
                 }
