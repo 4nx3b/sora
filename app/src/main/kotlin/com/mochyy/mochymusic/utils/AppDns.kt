@@ -9,6 +9,7 @@ import com.mochyy.mochymusic.constants.DnsOverHttpsCustomUrlKey
 import com.mochyy.mochymusic.constants.DnsOverHttpsEnabledKey
 import com.mochyy.mochymusic.constants.DnsOverHttpsProviderKey
 import okhttp3.Dns
+import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.OkHttpClient
 import okhttp3.dnsoverhttps.DnsOverHttps
 import java.net.InetAddress
@@ -55,7 +56,7 @@ object AppDns {
             // the bootstrap client is a plain one, so resolving the DoH endpoint itself stays on
             // the system resolver rather than looping back through this one
             .client(OkHttpClient())
-            .url(url)
+            .url(url.toHttpUrl())
             .build()
     }.getOrDefault(Dns.SYSTEM)
 }

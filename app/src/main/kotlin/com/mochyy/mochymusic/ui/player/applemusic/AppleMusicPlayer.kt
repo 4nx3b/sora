@@ -70,6 +70,7 @@ import com.mochyy.mochymusic.R
 import com.mochyy.mochymusic.ui.player.styles.LocalStyleInteractive
 import com.mochyy.mochymusic.ui.player.styles.StyleActions
 import com.mochyy.mochymusic.ui.player.styles.StyleFrame
+import com.mochyy.mochymusic.ui.player.styles.StyleMenu
 import com.mochyy.mochymusic.ui.player.styles.StyleTones
 import com.mochyy.mochymusic.ui.player.styles.rememberDurationMs
 import com.mochyy.mochymusic.ui.player.styles.rememberLivePosition
@@ -284,7 +285,7 @@ fun AppleMusicPlayerStyle(actions: StyleActions, modifier: Modifier, preview: Bo
                 )
             }
 
-            com.mochyy.mochymusic.ui.player.styles.StyleMenu(
+            StyleMenu(
                 open = menuOpen,
                 onOpenChange = setMenuOpen,
                 tones = tones,
@@ -341,7 +342,7 @@ private fun AppleControlBar(
                 }
                 .pointerInput(durationMs) {
                     detectTapGestures { change ->
-                        onSeek(((change.x / size.width).coerceIn(0f, 1f) * durationMs).toLong())
+                        onSeek(((change.position.x / size.width).coerceIn(0f, 1f) * durationMs).toLong())
                     }
                 },
         ) {

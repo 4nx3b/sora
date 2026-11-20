@@ -78,50 +78,6 @@ object ListeningGenres {
         val genre = itunesGenre.lowercase(Locale.ROOT)
         return GenreFamily.entries.firstOrNull { family -> family.itunes.any { genre.contains(it) } }
     }
-}
-
-/**
- * genre families, most specific first: K-Pop is checked before Pop, Latin before Pop ("Pop Latino"),
- * Alternative before Rock and Pop ("Indie Pop", "Indie Rock"), Metal before Rock.
- */
-private enum class GenreFamily(val itunes: List<String>, val youtube: List<String>) {
-    KPop(listOf("k-pop"), listOf("k-pop", "kpop")),
-    JPop(listOf("j-pop", "anime"), listOf("j-pop", "jpop")),
-    Mandopop(listOf("mandopop", "cantopop", "c-pop", "chinese"), listOf("mandopop", "cantopop")),
-    HipHop(listOf("hip-hop", "hip hop", "rap"), listOf("hip-hop", "hip hop", "hiphop", "rap")),
-    RnB(listOf("r&b", "soul", "funk"), listOf("r&b", "soul")),
-    Electronic(
-        listOf("electronic", "dance", "house", "techno", "trance", "edm", "dubstep"),
-        listOf("dance", "electr", "elektr", "dansa", "électr", "eletr"),
-    ),
-    Metal(listOf("metal"), listOf("metal")),
-    Latin(listOf("latin", "reggaeton", "salsa", "bachata"), listOf("latin")),
-    Alternative(listOf("alternative", "indie"), listOf("indie", "altern")),
-    Rock(listOf("rock", "punk", "grunge"), listOf("rock")),
-    Jazz(listOf("jazz"), listOf("jazz")),
-    Classical(listOf("classical", "opera"), listOf("classical", "klasik", "clásic", "classiq", "klassik", "clássic", "classic")),
-    Country(listOf("country", "americana"), listOf("country")),
-    Reggae(listOf("reggae", "dancehall", "caribbean"), listOf("reggae")),
-    Blues(listOf("blues"), listOf("blues")),
-    Folk(listOf("folk", "singer/songwriter", "acoustic"), listOf("folk", "akustik", "acoustic", "acústic")),
-    Christian(listOf("christian", "gospel"), listOf("christian", "gospel", "kristen", "rohani", "cristian", "chrétien")),
-    Soundtrack(listOf("soundtrack"), listOf("soundtrack", "musical")),
-    African(listOf("afro", "african", "amapiano"), listOf("afric", "afrika", "afro")),
-    Arabic(listOf("arabic"), listOf("arab")),
-    Indian(listOf("bollywood", "indian", "hindi", "punjabi", "tamil"), listOf("india")),
-    Brazilian(listOf("brazil", "mpb", "sertanejo", "samba", "bossa"), listOf("brazil", "brasil")),
-    Dangdut(listOf("dangdut"), listOf("dangdut")),
-    Pop(listOf("pop"), listOf("pop"));
-
-    fun matches(title: String): Boolean {
-        val t = title.lowercase(Locale.ROOT)
-        return youtube.any { t.contains(it) }
-    }
-
-    fun matchesExactly(title: String): Boolean {
-        val t = title.trim().lowercase(Locale.ROOT)
-        return youtube.any { t == it }
-    }
 
     // ── work out genres, from the Integrations page ──────────────────────────────────────────
     //
@@ -265,4 +221,48 @@ private enum class GenreFamily(val itunes: List<String>, val youtube: List<Strin
         "gangsta rap" to "rap",
         "underground hip hop" to "hip hop",
     )
+}
+
+/**
+ * genre families, most specific first: K-Pop is checked before Pop, Latin before Pop ("Pop Latino"),
+ * Alternative before Rock and Pop ("Indie Pop", "Indie Rock"), Metal before Rock.
+ */
+private enum class GenreFamily(val itunes: List<String>, val youtube: List<String>) {
+    KPop(listOf("k-pop"), listOf("k-pop", "kpop")),
+    JPop(listOf("j-pop", "anime"), listOf("j-pop", "jpop")),
+    Mandopop(listOf("mandopop", "cantopop", "c-pop", "chinese"), listOf("mandopop", "cantopop")),
+    HipHop(listOf("hip-hop", "hip hop", "rap"), listOf("hip-hop", "hip hop", "hiphop", "rap")),
+    RnB(listOf("r&b", "soul", "funk"), listOf("r&b", "soul")),
+    Electronic(
+        listOf("electronic", "dance", "house", "techno", "trance", "edm", "dubstep"),
+        listOf("dance", "electr", "elektr", "dansa", "électr", "eletr"),
+    ),
+    Metal(listOf("metal"), listOf("metal")),
+    Latin(listOf("latin", "reggaeton", "salsa", "bachata"), listOf("latin")),
+    Alternative(listOf("alternative", "indie"), listOf("indie", "altern")),
+    Rock(listOf("rock", "punk", "grunge"), listOf("rock")),
+    Jazz(listOf("jazz"), listOf("jazz")),
+    Classical(listOf("classical", "opera"), listOf("classical", "klasik", "clásic", "classiq", "klassik", "clássic", "classic")),
+    Country(listOf("country", "americana"), listOf("country")),
+    Reggae(listOf("reggae", "dancehall", "caribbean"), listOf("reggae")),
+    Blues(listOf("blues"), listOf("blues")),
+    Folk(listOf("folk", "singer/songwriter", "acoustic"), listOf("folk", "akustik", "acoustic", "acústic")),
+    Christian(listOf("christian", "gospel"), listOf("christian", "gospel", "kristen", "rohani", "cristian", "chrétien")),
+    Soundtrack(listOf("soundtrack"), listOf("soundtrack", "musical")),
+    African(listOf("afro", "african", "amapiano"), listOf("afric", "afrika", "afro")),
+    Arabic(listOf("arabic"), listOf("arab")),
+    Indian(listOf("bollywood", "indian", "hindi", "punjabi", "tamil"), listOf("india")),
+    Brazilian(listOf("brazil", "mpb", "sertanejo", "samba", "bossa"), listOf("brazil", "brasil")),
+    Dangdut(listOf("dangdut"), listOf("dangdut")),
+    Pop(listOf("pop"), listOf("pop"));
+
+    fun matches(title: String): Boolean {
+        val t = title.lowercase(Locale.ROOT)
+        return youtube.any { t.contains(it) }
+    }
+
+    fun matchesExactly(title: String): Boolean {
+        val t = title.trim().lowercase(Locale.ROOT)
+        return youtube.any { t == it }
+    }
 }

@@ -5,6 +5,8 @@
 // artwork, its own lyrics view and its own queue page, so it reads the same whatever the rest of
 // the player does.
 
+@file:OptIn(androidx.compose.ui.text.ExperimentalTextApi::class)
+
 package com.mochyy.mochymusic.ui.player.namida
 
 import androidx.compose.runtime.staticCompositionLocalOf
@@ -62,14 +64,14 @@ class NamidaPalette(
 /** namida's dark theme colour derivations, from the artwork's seed colour. */
 fun namidaPalette(seed: Color): NamidaPalette {
     val hsl = FloatArray(3)
-    android.graphics.Color.colorToHSL(seed.toArgb(), hsl)
+    androidx.core.graphics.ColorUtils.colorToHSL(seed.toArgb(), hsl)
     // namida keeps the hue, quiets the saturation and lifts the lightness for its accent
     val accentHsl = floatArrayOf(hsl[0], (hsl[1] * 0.9f).coerceIn(0.05f, 0.85f), 0.62f)
-    val accent = Color(android.graphics.Color.HSLToColor(accentHsl)).copy(alpha = 0.78f)
+    val accent = Color(androidx.core.graphics.ColorUtils.HSLToColor(accentHsl)).copy(alpha = 0.78f)
     // the panel: the accent's hue held dark and quiet, the way namida's dark surface keeps a
     // trace of the song's colour
     fun surfaceTone(lightness: Float, alpha: Float) =
-        Color(android.graphics.Color.HSLToColor(floatArrayOf(hsl[0], (hsl[1] * 0.30f).coerceIn(0.02f, 0.20f), lightness)))
+        Color(androidx.core.graphics.ColorUtils.HSLToColor(floatArrayOf(hsl[0], (hsl[1] * 0.30f).coerceIn(0.02f, 0.20f), lightness)))
             .copy(alpha = alpha)
     return NamidaPalette(
         accent = accent,

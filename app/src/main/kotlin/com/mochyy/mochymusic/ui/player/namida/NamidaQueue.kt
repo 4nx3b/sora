@@ -30,9 +30,11 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
@@ -46,6 +48,7 @@ import com.mochyy.mochymusic.LocalPlayerConnection
 import com.mochyy.mochymusic.R
 import com.mochyy.mochymusic.ui.player.models.QueueItemData
 import com.mochyy.mochymusic.utils.makeTimeString
+import kotlinx.coroutines.launch
 
 /** the queue's tile: how big the artwork is, the tile's corner and the bottom row's height */
 private val NamidaQueueArtwork = 54.dp
@@ -70,6 +73,7 @@ internal fun NamidaQueue(
     val currentIndex by connection.currentWindowIndex.collectAsState()
     val playing by connection.uiState.trackInfo.collectAsState()
     val listState = rememberLazyListState()
+    val scope = rememberCoroutineScope()
 
     // open parked on the playing song, a fifth of the way down the list, namida's follower spot
     LaunchedEffect(Unit) {
@@ -154,7 +158,7 @@ internal fun NamidaQueue(
             NamidaQueueButton(palette, R.drawable.music_history, stringResource(R.string.namida_jump_current)) {
                 if (currentIndex in queue.indices) {
                     runCatching {
-                        listState.animateScrollToItem(currentIndex, -(720 * NamidaQueuePark).toInt())
+                        scope.launch { listState.animateScrollToItem(currentIndex, -(720 * NamidaQueuePark).toInt()) }
                     }
                 }
             }

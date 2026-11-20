@@ -63,6 +63,7 @@ import com.mochyy.mochymusic.ui.player.models.QueueItemData
 import com.mochyy.mochymusic.ui.player.styles.LocalStyleInteractive
 import com.mochyy.mochymusic.ui.player.styles.StyleActions
 import com.mochyy.mochymusic.ui.player.styles.StyleFrame
+import com.mochyy.mochymusic.ui.player.styles.StyleMenu
 import com.mochyy.mochymusic.ui.player.styles.StyleTones
 import com.mochyy.mochymusic.ui.player.styles.rememberDurationMs
 import com.mochyy.mochymusic.ui.player.styles.rememberLivePosition
@@ -163,7 +164,7 @@ fun TikTokPlayerStyle(actions: StyleActions, modifier: Modifier, preview: Boolea
                 )
             }
 
-            com.mochyy.mochymusic.ui.player.styles.StyleMenu(
+            StyleMenu(
                 open = menuOpen,
                 onOpenChange = setMenuOpen,
                 tones = tones,
@@ -434,9 +435,9 @@ private fun TikTokRailButton(icon: Int, tint: Color, scale: Float = 1f, onClick:
 @Composable
 internal fun TikTokMeshBackdrop(seed: Color, modifier: Modifier) {
     val hsl = FloatArray(3)
-    android.graphics.Color.colorToHSL(seed.toArgb(), hsl)
+    androidx.core.graphics.ColorUtils.colorToHSL(seed.toArgb(), hsl)
     fun tone(hueShift: Float, lightness: Float, alpha: Float) = Color(
-        android.graphics.Color.HSLToColor(floatArrayOf((hsl[0] + hueShift).mod(360f), 0.55f, lightness)),
+        androidx.core.graphics.ColorUtils.HSLToColor(floatArrayOf((hsl[0] + hueShift).mod(360f), 0.55f, lightness)),
     ).copy(alpha = alpha)
 
     var phase by remember { androidx.compose.runtime.mutableFloatStateOf(0f) }

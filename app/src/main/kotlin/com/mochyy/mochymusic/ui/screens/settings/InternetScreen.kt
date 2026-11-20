@@ -95,8 +95,11 @@ fun InternetSettingsScreen(navController: NavController) {
         val prefs = store.first()
         if (prefs[AudioQualityWifiKey] == null && prefs[AudioQualityCellularKey] == null) {
             prefs[AudioQualityKey]?.let { legacy ->
-                context.dataStore.updateData {
-                    it.toBuilder().set(AudioQualityWifiKey, legacy).set(AudioQualityCellularKey, legacy).build()
+                context.dataStore.updateData { prefs ->
+                    prefs.toMutablePreferences().apply {
+                        set(AudioQualityWifiKey, legacy)
+                        set(AudioQualityCellularKey, legacy)
+                    }
                 }
             }
         }

@@ -23,6 +23,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
@@ -134,7 +135,7 @@ internal fun NamidaWaveform(
                 .height(NamidaWaveformHeight)
                 .pointerInput(durationMs, songKey) {
                     detectTapGestures { change ->
-                        val fraction = (change.x / size.width).coerceIn(0f, 1f)
+                        val fraction = (change.position.x / size.width).coerceIn(0f, 1f)
                         onSeek((fraction * durationMs).toLong())
                     }
                 }
@@ -144,7 +145,7 @@ internal fun NamidaWaveform(
                         onDragStart = { change ->
                             cancelled = false
                             scrubDeltaMs = 0L
-                            startY = change.position.y
+                            startY = change.y
                             scrubFraction = (change.x / size.width).coerceIn(0f, 1f)
                             haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         },
@@ -157,7 +158,7 @@ internal fun NamidaWaveform(
                                 haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                                 return@detectDragGestures
                             }
-                            val fraction = (change.x / size.width).coerceIn(0f, 1f)
+                            val fraction = (change.position.x / size.width).coerceIn(0f, 1f)
                             scrubDeltaMs = (fraction * durationMs).toLong() - position.positionMs()
                             scrubFraction = fraction
                         },
