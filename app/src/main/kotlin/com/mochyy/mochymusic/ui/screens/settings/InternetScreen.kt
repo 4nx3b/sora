@@ -378,7 +378,7 @@ internal fun restartForRegionChange(context: Context) {
     val scope = kotlinx.coroutines.CoroutineScope(Dispatchers.Main)
     scope.launch {
         delay(400)
-        withContext(Dispatchers.NonCancellable) {
+        withContext(kotlinx.coroutines.NonCancellable) {
             val launchIntent = context.packageManager.getLaunchIntentForPackage(context.packageName)
             if (launchIntent != null) {
                 launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)

@@ -333,7 +333,6 @@
     <string name="content_language">Default content language</string>
     <string name="content_country">Default content country</string>
     <string name="system_default">System default</string>
-    <string name="enable_proxy">Enable proxy</string>
     <string name="proxy_type">Proxy type</string>
     <string name="proxy_url">Proxy URL</string>
     <string name="restart_to_take_effect">Restart to take effect</string>
@@ -485,7 +484,6 @@
     <string name="listenbrainz_enter_token_desc">Paste your ListenBrainz user token to scrobble</string>
     <string name="listenbrainz_token_title">ListenBrainz token</string>
     <string name="listenbrainz_token_placeholder">User token</string>
-    <string name="scrobble_to">Scrobble to %1$s</string>
     <string name="scrobble_listening_desc">Every song that counts is scrobbled</string>
     <string name="scrobble_paused_desc">Scrobbling paused; the account is kept</string>
     <string name="scrobble_primary_artist_only">Only scrobble primary artist</string>

@@ -15,6 +15,7 @@ import com.mochyy.mochymusic.models.MediaMetadata
 import com.mochyy.mochymusic.utils.AppProxy
 import com.mochyy.mochymusic.utils.OfflineMode
 import com.mochyy.mochymusic.utils.dataStore
+import com.mochyy.mochymusic.utils.followAppProxy
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
