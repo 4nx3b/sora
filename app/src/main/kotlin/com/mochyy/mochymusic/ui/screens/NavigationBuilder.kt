@@ -450,6 +450,9 @@ fun NavGraphBuilder.navigationBuilder(
         com.mochyy.mochymusic.ui.screens.settings.integrations.ScrobbleServiceScreen(navController = navController, site = site)
     }
 
+    composable(com.mochyy.mochymusic.ui.screens.settings.InternetSettingsRoute) {
+        com.mochyy.mochymusic.ui.screens.settings.InternetSettingsScreen(navController = navController)
+    }
     composable(com.mochyy.mochymusic.ui.screens.settings.ProxySettingsRoute) {
         com.mochyy.mochymusic.ui.screens.settings.ProxySettingsScreen(navController = navController)
     }

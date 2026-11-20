@@ -158,6 +158,17 @@ val ProfileJoinedEpochDayKey = longPreferencesKey("profileJoinedEpochDay")
 
 val AudioQualityKey = stringPreferencesKey("audioQuality")
 
+// the audio quality ceilings per connection, from the Internet settings page: which rung a
+// stream may climb on wifi and on mobile data. The single audioQuality choice feeds both the
+// first time, so nobody's earlier pick is lost.
+val AudioQualityWifiKey = stringPreferencesKey("audioQualityWifi")
+val AudioQualityCellularKey = stringPreferencesKey("audioQualityCellular")
+
+// DNS over HTTPS, from the Internet settings page: the provider by name and, for Custom, its url
+val DnsOverHttpsEnabledKey = booleanPreferencesKey("dnsOverHttpsEnabled")
+val DnsOverHttpsProviderKey = stringPreferencesKey("dnsOverHttpsProvider")
+val DnsOverHttpsCustomUrlKey = stringPreferencesKey("dnsOverHttpsCustomUrl")
+
 // data saver: lighter streams and no canvas or video backgrounds, on mobile data only unless the second switch is off
 val DataSaverKey = booleanPreferencesKey("dataSaver")
 val DataSaverMobileOnlyKey = booleanPreferencesKey("dataSaverMobileOnly")

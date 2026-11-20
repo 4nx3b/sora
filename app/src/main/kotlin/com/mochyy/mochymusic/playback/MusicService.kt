@@ -907,7 +907,8 @@ class MusicService :
 
         audioManager.registerAudioDeviceCallback(audioDeviceCallback, null)
 
-        audioQuality = dataStore.get(AudioQualityKey).toEnum(com.mochyy.mochymusic.constants.AudioQuality.AUTO)
+        com.mochyy.mochymusic.utils.NetMetered.start(this)
+        audioQuality = com.mochyy.mochymusic.utils.NetMetered.effectiveAudioQuality(com.mochyy.mochymusic.utils.PreferencesCache.current(dataStore))
         ipVersion = dataStore.get(IpVersionKey).toEnum(IpVersion.AUTO)
         // a saved volume of (next to) nothing is almost always left over from the old saving bug
         // (the live volume saved while muted or mid-fade, and copied back into this setting): it
@@ -961,10 +962,10 @@ class MusicService :
 
         var isFirstQualityEmit = true
         scope.launch {
-            dataStore.data
-                .map { it[AudioQualityKey]?.let { value ->
-                    com.mochyy.mochymusic.constants.AudioQuality.entries.find { it.name == value }
-                } ?: com.mochyy.mochymusic.constants.AudioQuality.AUTO }
+            combine(
+                dataStore.data,
+                com.mochyy.mochymusic.utils.NetMetered.metered,
+            ) { prefs, _ -> com.mochyy.mochymusic.utils.NetMetered.effectiveAudioQuality(prefs) }
                 .distinctUntilChanged()
                 .collect { newQuality ->
                     val oldQuality = audioQuality

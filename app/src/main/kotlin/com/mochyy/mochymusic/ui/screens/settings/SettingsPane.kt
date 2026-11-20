@@ -56,6 +56,7 @@ val SettingsPaneRoutes = setOf(
     DiscordRoute,
     ScrobbleServiceRoute,
     BackupRoute,
+    InternetSettingsRoute,
     ProxySettingsRoute,
     ModulesRoute,
     "module/{id}",
