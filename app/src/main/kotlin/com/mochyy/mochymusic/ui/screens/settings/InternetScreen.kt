@@ -93,21 +93,40 @@ fun InternetSettingsScreen(navController: NavController) {
     // ── Muzo Data: the stored key's one-line state, and the usage check row ──
     var muzoKeyStatus by remember { mutableStateOf<String?>(null) }
     var muzoUsageCheck by remember { mutableStateOf<String?>(null) }
-    LaunchedEffect(Unit) {
-        muzoKeyStatus = if (com.mochyy.mochymusic.muzo.MuzoService.apiKey(context) != null) "✓" else null
-    }
+    var muzoChecking by remember { mutableStateOf(false) }
     val muzoScope = androidx.compose.runtime.rememberCoroutineScope()
+
+    /** One usage question against the key as it stands; keyless answers locally, without the network. */
     val checkMuzoUsage: () -> Unit = {
-        muzoScope.launch {
-            val key = com.mochyy.mochymusic.muzo.MuzoService.apiKey(context)
-            muzoUsageCheck = when {
-                key == null -> MuzoService.NO_KEY_PROMPT
-                else -> when (val check = com.mochyy.mochymusic.muzo.MuzoService.checkApi(key)) {
-                    is com.mochyy.mochymusic.muzo.MuzoApiCheck.Ok -> MuzoService.usageDetail(check)
-                    is com.mochyy.mochymusic.muzo.MuzoApiCheck.Rejected -> check.reason
-                    is com.mochyy.mochymusic.muzo.MuzoApiCheck.Unreachable -> check.reason
+        if (!muzoChecking) {
+            muzoChecking = true
+            muzoScope.launch {
+                val key = com.mochyy.mochymusic.muzo.MuzoService.apiKey(context)
+                muzoUsageCheck = when {
+                    key == null -> MuzoService.NO_KEY_PROMPT
+                    else -> when (val check = com.mochyy.mochymusic.muzo.MuzoService.checkApi(key)) {
+                        is com.mochyy.mochymusic.muzo.MuzoApiCheck.Ok -> MuzoService.usageDetail(check)
+                        is com.mochyy.mochymusic.muzo.MuzoApiCheck.Rejected -> check.reason
+                        is com.mochyy.mochymusic.muzo.MuzoApiCheck.Unreachable -> check.reason
+                    }
                 }
+                muzoChecking = false
             }
+        }
+    }
+    // one usage question per visit, and again whenever the key changes — the one
+    // edit that can turn a refusal into an answer (Neiro's Sources screen)
+    var muzoKeySeen by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(Unit) {
+        muzoKeySeen = com.mochyy.mochymusic.muzo.MuzoService.apiKey(context)
+        muzoKeyStatus = if (muzoKeySeen != null) "✓" else null
+        checkMuzoUsage()
+    }
+    LaunchedEffect(muzoKeyStatus) {
+        val keyNow = com.mochyy.mochymusic.muzo.MuzoService.apiKey(context)
+        if (keyNow != muzoKeySeen) {
+            muzoKeySeen = keyNow
+            checkMuzoUsage()
         }
     }
 
@@ -262,7 +281,21 @@ fun InternetSettingsScreen(navController: NavController) {
                 items = listOf(
                     SettingsItem(
                         title = { Text(stringResource(R.string.muzo_api_key)) },
-                        descriptionText = stringResource(R.string.muzo_data_desc),
+                        // the composable description: it shows even with the setting that hides
+                        // the one-line ones off, because the check's answer is the row's result,
+                        // not a static subtitle (Neiro's Sources screen shows it always too)
+                        description = {
+                            Text(
+                                text = when {
+                                    muzoChecking -> stringResource(R.string.muzo_api_checking)
+                                    muzoUsageCheck != null -> muzoUsageCheck!!
+                                    else -> stringResource(R.string.muzo_data_desc)
+                                },
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                            )
+                        },
                         icon = painterResource(R.drawable.key),
                         iconShape = CircleShape,
                         onClick = { dialog = InternetDialog.MuzoKey },
@@ -275,8 +308,17 @@ fun InternetSettingsScreen(navController: NavController) {
                         },
                     ),
                     SettingsItem(
-                        title = { Text(stringResource(R.string.check)) },
-                        descriptionText = muzoUsageCheck,
+                        title = { Text(if (muzoChecking) stringResource(R.string.muzo_api_checking) else stringResource(R.string.check)) },
+                        description = muzoUsageCheck?.let { result ->
+                            {
+                                Text(
+                                    text = result,
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1,
+                                )
+                            }
+                        },
                         icon = painterResource(R.drawable.speed),
                         iconShape = CircleShape,
                         onClick = { checkMuzoUsage() },

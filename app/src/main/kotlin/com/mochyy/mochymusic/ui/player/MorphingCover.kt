@@ -343,22 +343,12 @@ private fun Modifier.morphLayout(
     endpointsPx: MorphEndpointsPx,
     element: MorphElement,
     lyricsProgressProvider: () -> Float = { 0f },
-    drift: ArtworkDriftSlot? = null,
 ) = this.layout { measurable, constraints ->
     val p = progressProvider()
     val hOffset = horizontalOffsetProvider()
 
     val (x, y, w, h) = when (element) {
-        MorphElement.ART -> drift?.rect?.let { open ->
-            val m = endpointsPx.artRect(0f, hOffset, 0f)
-            val r = driftRect(
-                Rect(m[0], m[1], m[0] + m[2], m[1] + m[3]),
-                open.translate(Offset(hOffset, 0f)),
-                p,
-                endpointsPx.fullHeightPx - endpointsPx.miniHeightPx,
-            )
-            floatArrayOf(r.left, r.top, r.width, r.height)
-        } ?: endpointsPx.artRect(p, hOffset, lyricsProgressProvider())
+        MorphElement.ART -> endpointsPx.artRect(p, hOffset, lyricsProgressProvider())
         MorphElement.PLAY -> {
             val playX = lerpF(endpointsPx.miniPlayXPx, endpointsPx.fullPlayXPx, p)
             val playY = lerpF(endpointsPx.miniPlayYPx, endpointsPx.fullPlayYPx, p)
@@ -714,11 +704,9 @@ fun MorphingCover(
 
     // (The mini player's press tilt is the sheet's own now - see BottomSheet - so it tilts the
     // pill's outline with what's in it, and eases out into the open instead of snapping off.)
-    val driftSlot = LocalArtworkDriftSlot.current?.takeIf { alternateStyle }
     Box(
         modifier = modifier
             .glassRoot(glassState, isActive = { !editMode || glassActiveInEdit() })
-            .driftOrigin(driftSlot)
     ) {
 
         SheetPillGlass(
@@ -866,25 +854,16 @@ fun MorphingCover(
                         endpointsPx = endpointsPx,
                         element = MorphElement.ART,
                         lyricsProgressProvider = lyricsProgressProvider,
-                        drift = driftSlot,
                     )
-                    .driftCopySource(driftSlot)
                     .then(studioArtModifier)
                     .graphicsLayer {
                         val p = progressProvider()
-                        val driftCorner = driftSlot?.takeIf { it.rect != null }?.cornerPx
-                        val driftOpen = driftCorner != null
                         if (alternateStyle) {
-                            alpha = if (driftOpen) {
-                                if (p < DriftRestAt) 1f else 0f
-                            } else {
-                                (1f - p / 0.4f).coerceIn(0f, 1f)
-                            }
+                            alpha = (1f - p / 0.4f).coerceIn(0f, 1f)
                         }
 
-                        val pauseScale = if (driftOpen) 1f else animatedPauseScale
-                        scaleX = pauseScale
-                        scaleY = pauseScale
+                        scaleX = animatedPauseScale
+                        scaleY = animatedPauseScale
                         // A colour filter on a layer forces it offscreen - the whole cover rendered
                         // into a buffer of its own every frame of the morph. While playing the
                         // matrix is the identity anyway, so it's only set while the cover is
@@ -910,12 +889,8 @@ fun MorphingCover(
                             0.dp
                         }
                         // the corners round with the size, so a cover still travelling small keeps its thumbnail corners
-                        if (driftCorner != null) {
-                            artShape.radius = lerp(ThumbnailCornerRadius, driftCorner.toDp(), p)
-                        } else {
-                            val base = lerp(ThumbnailCornerRadius, expandedRadius, coverGrowth(p, endpointsPx.growLate))
-                            artShape.radius = lerp(base, LyricsHeaderCornerRadius, lyricsProgressProvider())
-                        }
+                        val base = lerp(ThumbnailCornerRadius, expandedRadius, coverGrowth(p, endpointsPx.growLate))
+                        artShape.radius = lerp(base, LyricsHeaderCornerRadius, lyricsProgressProvider())
                         shape = artShape
                     }
                     .then(

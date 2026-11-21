@@ -18,7 +18,6 @@
 
 package com.mochyy.mochymusic.ported.flamingo
 
-import com.mochyy.mochymusic.ported.bridge.driftArtworkSlot // BRIDGE(neiro): drift
 import android.Manifest
 import android.graphics.Bitmap
 import android.os.SystemClock
@@ -2461,7 +2460,7 @@ private fun ColumnScope.FlamingoAlbum(
                         compositingStrategy = CompositingStrategy.ModulateAlpha
                     }
                     .padding(start = dp, end = dp, bottom = dp)
-                    .driftArtworkSlot(cornerDp = 16f) // BRIDGE(neiro): drift
+                    
                     .then(modifier),
                 imageQuality = ImageQuality.RAW,
                 shadowOverlay = true,

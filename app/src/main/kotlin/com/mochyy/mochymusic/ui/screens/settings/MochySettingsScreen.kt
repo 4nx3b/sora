@@ -182,6 +182,8 @@ private val SettingsIndex = listOf(
     SettingsEntry("Offline mode", "App behaviour", "general_settings", "play downloaded cache offline"),
     SettingsEntry("Data saver", "App behaviour", "general_settings", "data saver mobile metered cellular bandwidth lower quality canvas video"),
     SettingsEntry("Internet", "App behaviour", com.mochyy.mochymusic.ui.screens.settings.InternetSettingsRoute, "internet region country dns doh proxy wifi cellular quality blocked spoof"),
+    SettingsEntry("Listen Together", "App behaviour", "listen_together", "listen together party room host guest chat sync queue friends group", R.string.ported_listen_together),
+    SettingsEntry("Listen Together settings", "App behaviour", "listen_together_settings", "listen together username server avatar blocked users settings", R.string.ported_listen_together),
     SettingsEntry("YouTube Music region", "App behaviour", com.mochyy.mochymusic.ui.screens.settings.InternetSettingsRoute, "region country geo block spoof youtube music"),
     SettingsEntry("DNS over HTTPS", "App behaviour", com.mochyy.mochymusic.ui.screens.settings.InternetSettingsRoute, "dns doh https cloudflare google adguard quad9 resolver"),
     SettingsEntry("Audio quality on Wi-Fi", "App behaviour", com.mochyy.mochymusic.ui.screens.settings.InternetSettingsRoute, "quality wifi ceiling stream mobile data cellular"),
@@ -524,6 +526,14 @@ fun MochySettingsScreen(navController: NavController, pane: SettingsPane? = null
                             iconRes = R.drawable.integration,
                             selected = selected == IntegrationsRoute,
                             onClick = { open(IntegrationsRoute) }
+                        )
+
+                        // the listen together rooms, ported from Neiro: the page is its own, entered like every other category
+                        CategoryBubble(
+                            title = stringResource(R.string.ported_listen_together),
+                            iconRes = R.drawable.group,
+                            selected = selected == "listen_together",
+                            onClick = { open("listen_together") }
                         )
 
                         CategoryBubble(

@@ -6,7 +6,6 @@ package com.mochyy.mochymusic.ported.bridge
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
@@ -20,7 +19,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.datastore.preferences.core.Preferences
 import androidx.navigation.NavController
-import com.mochyy.mochymusic.ui.player.driftArtworkSlot as soraDriftArtworkSlot
 
 // ---- preferences
 
@@ -40,11 +38,6 @@ fun rememberLowDataModeActive(): Boolean = com.mochyy.mochymusic.utils.rememberD
 @Composable
 fun rememberLiquidGlassEnabled(): Boolean = com.mochyy.mochymusic.ui.component.liquid.LocalLiquidGlass.current.enabled
 
-// ---- drift: the one artwork flight every sora style shares
-
-fun Modifier.driftArtworkSlot(active: Boolean = true, cornerDp: Float): Modifier =
-    soraDriftArtworkSlot(corner = cornerDp.dp, active = active)
-
 // ---- cast: sora has none, so the output button falls through to the system output picker
 
 class NewAction(val onClick: () -> Unit)
@@ -52,8 +45,9 @@ class NewAction(val onClick: () -> Unit)
 @Composable
 fun rememberCastPlayerMenuAction(@Suppress("UNUSED_PARAMETER") renderSheet: Boolean = true): NewAction? = null
 
-// ---- menus. sora's player menu is a sheet over the whole player, so the vendored menu calls ask the host
-// to open it there instead of nesting it inside Neiro's own menu sheet.
+// ---- menus. The Apple Music style's own menus, ported from Neiro (the header card, the
+// action grid, the sectioned rows; the anchored lyrics popup) — the vendored BottomSheetMenu
+// still carries them, the way Neiro's player menu rides its own sheet.
 
 @Stable
 class PortedMenus {
@@ -65,52 +59,39 @@ val LocalPortedMenus = staticCompositionLocalOf { PortedMenus() }
 
 @Composable
 fun PlayerMenu(
-    @Suppress("UNUSED_PARAMETER") mediaMetadata: MediaMetadata,
-    @Suppress("UNUSED_PARAMETER") navController: NavController,
-    @Suppress("UNUSED_PARAMETER") playerBottomSheetState: BottomSheetState,
-    @Suppress("UNUSED_PARAMETER") isQueueTrigger: Boolean = false,
-    @Suppress("UNUSED_PARAMETER") onShowDetailsDialog: () -> Unit = {},
+    mediaMetadata: MediaMetadata,
+    navController: NavController,
+    playerBottomSheetState: BottomSheetState,
+    isQueueTrigger: Boolean = false,
+    onShowDetailsDialog: () -> Unit = {},
     onDismiss: () -> Unit,
 ) {
-    val menus = LocalPortedMenus.current
-    LaunchedEffect(Unit) {
-        menus.playerMenuOpen = true
-        onDismiss()
-    }
+    com.mochyy.mochymusic.ported.flamingo.PlayerMenu(
+        mediaMetadata = mediaMetadata,
+        navController = navController,
+        playerBottomSheetState = playerBottomSheetState,
+        isQueueTrigger = isQueueTrigger,
+        onShowDetailsDialog = onShowDetailsDialog,
+        onDismiss = onDismiss,
+    )
 }
 
 @Composable
 fun AnchoredLyricsOverflowMenu(
-    @Suppress("UNUSED_PARAMETER") iconBoundsInRoot: Rect,
+    iconBoundsInRoot: Rect,
     @Suppress("UNUSED_PARAMETER") lyricsProvider: () -> com.mochyy.mochymusic.db.entities.LyricsEntity?,
     @Suppress("UNUSED_PARAMETER") mediaMetadataProvider: () -> MediaMetadata,
     @Suppress("UNUSED_PARAMETER") lyricsSyncOffset: Int,
     @Suppress("UNUSED_PARAMETER") onLyricsSyncOffsetChange: (Int) -> Unit,
     onDismiss: () -> Unit,
-    @Suppress("UNUSED_PARAMETER") backdrop: com.kyant.backdrop.Backdrop? = null,
+    backdrop: com.kyant.backdrop.Backdrop? = null,
     @Suppress("UNUSED_PARAMETER") showTranslationActions: Boolean = true,
 ) {
-    val menus = LocalPortedMenus.current
-    LaunchedEffect(Unit) {
-        menus.lyricsMenuOpen = true
-        onDismiss()
-    }
-}
-
-// the host draws sora's player menu over the whole style when a vendored menu asked for it
-@Composable
-fun PortedMenuLayer(menus: PortedMenus) {
-    if (menus.playerMenuOpen || menus.lyricsMenuOpen) {
-        val fromLyrics = menus.lyricsMenuOpen
-        com.mochyy.mochymusic.ui.player.menu.PlayerActionMenu(
-            onDismiss = {
-                menus.playerMenuOpen = false
-                menus.lyricsMenuOpen = false
-            },
-            onEditPlayer = {},
-            fromLyrics = fromLyrics,
-        )
-    }
+    com.mochyy.mochymusic.ported.flamingo.AnchoredLyricsOverflowMenu(
+        iconBoundsInRoot = iconBoundsInRoot,
+        onDismiss = onDismiss,
+        backdrop = backdrop,
+    )
 }
 
 @Composable

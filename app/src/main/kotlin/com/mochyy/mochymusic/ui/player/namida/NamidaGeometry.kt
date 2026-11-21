@@ -7,6 +7,12 @@
 // queue slides up over the player), 3 = its overshoot. Values in between are
 // the drag/animation itself, so every element rides the same numbers namida's
 // elements ride.
+//
+// namida lays its whole miniplayer out in a virtual box and scales it down to
+// fit the real screen (NamidaUIScale's sqrt ramp below 400dp shortest side,
+// then the controller's own panelScale against a 360x540 reference); every dp
+// and sp the style draws goes through [NamidaScale] so the port measures the
+// same numbers namida measures on the same device.
 
 package com.mochyy.mochymusic.ui.player.namida
 
@@ -14,6 +20,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.sqrt
 
 /** namida's inverseAboveOne (miniplayer_raw.dart): mirrors n back below 1. */
 internal fun inverseAboveOne(n: Double): Double = if (n > 1) 2 - n else n
@@ -39,6 +46,49 @@ internal val NamidaArtworkRadius = 14.dp
 internal val NamidaQueueTileHeight = 72.dp
 internal val NamidaQueueThumbnailSize = 64.dp
 internal val NamidaQueueItemExtent = 90.dp
+
+/**
+ * namida's own double scale, resolved exactly like the app does it:
+ * NamidaUIScale._resolve (sqrt of the shortest side over a 400 reference,
+ * clamped 0.7..1.0) and MiniPlayerController._resolvePanelScale (the virtual
+ * box against a 360x540 reference, clamped 0.7..1.0). Everything the layout
+ * outputs is virtual dp; everything the style draws comes back through
+ * [dp] and [scaled] so the port lands where namida lands.
+ */
+internal class NamidaScale(screenWidthDp: Double, screenHeightDp: Double) {
+    val uiScale: Double
+    val panelScale: Double
+    val total: Double
+
+    /** namida's virtual screen (the MediaQuery the miniplayer subtree sees). */
+    val virtualWidth: Double
+    val virtualHeight: Double
+
+    init {
+        val shortest = min(screenWidthDp, screenHeightDp)
+        uiScale = if (shortest > 0) sqrt(shortest / 400.0).coerceIn(0.7, 1.0) else 1.0
+        virtualWidth = screenWidthDp / uiScale
+        virtualHeight = screenHeightDp / uiScale
+        panelScale = if (virtualWidth > 0 && virtualHeight > 0) {
+            min(virtualWidth / 360.0, virtualHeight / 540.0).coerceIn(0.7, 1.0)
+        } else {
+            1.0
+        }
+        total = uiScale * panelScale
+    }
+
+    /** a virtual-dp measurement from namida's math, as real dp on this screen. */
+    fun dp(value: Double): Dp = (value * total).dp
+
+    /** one of namida's absolute constants (an icon size, a margin), as real dp here. */
+    fun scaled(value: Dp): Dp = value * total.toFloat()
+
+    /** a font size, which namida's scale boxes scale the same as everything else. */
+    fun sp(value: Double) = (value * total).let { androidx.compose.ui.unit.TextUnit(it.toFloat(), androidx.compose.ui.unit.TextUnitType.Sp) }
+
+    /** a real-dp inset of this screen, as the virtual dp namida's math wants. */
+    fun virtual(value: Double): Double = value / total
+}
 
 /** the play/pause metrics (_PlayPauseMetrics), at any p. */
 internal object NamidaPlayPauseMetrics {
@@ -95,7 +145,12 @@ internal class NamidaLayout {
     var topRowHeight = 0.0; private set
     var maxQueueHeight = 0.0; private set
 
-    /** inputs that don't change while dragging */
+    /**
+     * inputs that don't change while dragging. [maxOffset] is namida's
+     * controller.maxOffset MINUS the nav bar height, exactly as its update()
+     * derives it: the panel adds the nav bar back, every other offset rides
+     * the reduced one.
+     */
     data class Inputs(
         val screenWidth: Double,
         val maxOffset: Double,
@@ -200,10 +255,16 @@ internal class NamidaLayout {
         this.imageSpaceInPanel = spaceLeftInPanelAboveInfo
         this.imageCenterLeft = screenWidth / 2 - imagePaddingLeft
         this.topRowHeight = topRowHeight
-        this.maxQueueHeight = maxOffset - 100.0 - topInset - 12.0
+        this.maxQueueHeight = maxOffset + navBarHeight - 100.0 - topInset - 12.0
     }
 
-    /** the artwork box for one card, following its aspect ratio (_ImageSlotLayout.update). */
+    /**
+     * the artwork box for one card, following its aspect ratio (_ImageSlotLayout.update).
+     * The returned [ImageSlot.leftOffset] is where the PICTURE lands (namida's
+     * Align pads leftOffset by imagePaddingLeft before the constrained image
+     * inside, which cancels the -imagePaddingLeft in imageCenterLeft: the
+     * picture is centred).
+     */
     fun imageSlot(aspectRatio: Double): ImageSlot {
         val bcp = bcp
         val collapsedWidth = imageWidth
@@ -221,7 +282,7 @@ internal class NamidaLayout {
         return ImageSlot(
             boxWidth = boxWidth,
             boxHeight = boxHeight,
-            leftOffset = (imageCenterLeft - boxWidth / 2) * bcp,
+            leftOffset = (imageCenterLeft - boxWidth / 2) * bcp + imagePaddingLeft * bcp,
             vOffset = vOffset,
         )
     }

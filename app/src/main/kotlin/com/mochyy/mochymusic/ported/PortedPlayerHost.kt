@@ -9,6 +9,9 @@ import android.media.AudioManager
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -45,11 +48,9 @@ import com.mochyy.mochymusic.ported.bridge.BottomSheetPageState
 import com.mochyy.mochymusic.ported.bridge.LocalBottomSheetPageState
 import com.mochyy.mochymusic.ported.bridge.LocalLiquidGlassTuning
 import com.mochyy.mochymusic.ported.bridge.LocalMenuState
-import com.mochyy.mochymusic.ported.bridge.LocalPortedMenus
+import com.mochyy.mochymusic.ported.bridge.LocalStableSystemBarsTopPadding
 import com.mochyy.mochymusic.ported.bridge.LocalVideoArtworkState
 import com.mochyy.mochymusic.ported.bridge.MenuState
-import com.mochyy.mochymusic.ported.bridge.PortedMenuLayer
-import com.mochyy.mochymusic.ported.bridge.PortedMenus
 import com.mochyy.mochymusic.ported.bridge.rememberPortedCanvas
 import com.mochyy.mochymusic.ported.bridge.rememberPortedNavController
 import com.mochyy.mochymusic.ported.bridge.rememberVideoArtworkState
@@ -95,7 +96,6 @@ fun PortedPlayerHost(style: PlayerStyle, actions: StyleActions, modifier: Modifi
 
         val open = sheet.isExpanded
         val navController = rememberPortedNavController(actions)
-        val menus = remember { PortedMenus() }
         val menuState = remember { MenuState() }
         val pageState = remember { BottomSheetPageState() }
         val (canvasPrimary, canvasFallback) = rememberPortedCanvas(
@@ -108,12 +108,20 @@ fun PortedPlayerHost(style: PlayerStyle, actions: StyleActions, modifier: Modifi
         val video = rememberVideoArtworkState(metadata, isPlaying, enabled = open)
         val landscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
 
+        // Neiro reads the status bar's shown height (its KeepStatusBarHiddenInDialog keeps the
+        // bar hidden without changing the number); the cutout is unioned in because with the bar
+        // hidden the window draws into the camera strip (drawUnderCutout SHORT_EDGES) and the
+        // cutout inset is the one that never lies about where the notch is.
+        val stableTopInset = maxOf(
+            com.mochyy.mochymusic.ui.utils.stableStatusBarsAsTopPadding(),
+            WindowInsets.displayCutout.asPaddingValues().calculateTopPadding(),
+        )
         CompositionLocalProvider(
-            LocalPortedMenus provides menus,
             LocalMenuState provides menuState,
             LocalBottomSheetPageState provides pageState,
             LocalVideoArtworkState provides video,
             LocalLiquidGlassTuning provides LocalLiquidGlass.current.tuning,
+            LocalStableSystemBarsTopPadding provides stableTopInset,
         ) {
             Box(modifier.fillMaxSize()) {
                 when (style) {
@@ -183,7 +191,6 @@ fun PortedPlayerHost(style: PlayerStyle, actions: StyleActions, modifier: Modifi
                 }
                 BottomSheetMenu(state = menuState)
                 BottomSheetPage(state = pageState)
-                PortedMenuLayer(menus)
             }
         }
     }

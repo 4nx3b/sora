@@ -1,6 +1,5 @@
 package com.mochyy.mochymusic.ui.player.styles
 
-import com.mochyy.mochymusic.ui.player.driftArtworkSlot
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.layout.Arrangement
@@ -78,12 +77,6 @@ fun AlternatePlayerStyle(
     modifier: Modifier = Modifier,
     preview: Boolean = false,
 ) {
-    if (preview && com.mochyy.mochymusic.ui.player.LocalArtworkDriftSlot.current != null) {
-        androidx.compose.runtime.CompositionLocalProvider(com.mochyy.mochymusic.ui.player.LocalArtworkDriftSlot provides null) {
-            AlternatePlayerStyle(style, actions, modifier, preview)
-        }
-        return
-    }
     when (style) {
         PlayerStyle.POSTER -> PosterPlayerStyle(actions, modifier, preview)
         PlayerStyle.TIMELINE -> TimelinePlayerStyle(actions, modifier, preview)
@@ -235,7 +228,17 @@ internal class StyleInsets(val start: Dp, val top: Dp, val end: Dp, val bottom: 
 internal fun styleInsets(landscape: Boolean): StyleInsets {
     val direction = androidx.compose.ui.platform.LocalLayoutDirection.current
     val sides = WindowInsets.navigationBars.union(WindowInsets.displayCutout).asPaddingValues()
-    val status = if (landscape) 0.dp else WindowInsets.stableStatusBars.asPaddingValues().calculateTopPadding()
+    // namida reads viewPadding.top, which keeps the notch height even while the status bar is
+    // hidden; the cutout inset is what still says where the camera strip is then, so both are
+    // unioned and the style never lays its top row inside the notch
+    val status = if (landscape) {
+        0.dp
+    } else {
+        maxOf(
+            WindowInsets.stableStatusBars.asPaddingValues().calculateTopPadding(),
+            WindowInsets.displayCutout.asPaddingValues().calculateTopPadding(),
+        )
+    }
     return StyleInsets(
         start = sides.calculateStartPadding(direction),
         top = status,
@@ -741,7 +744,7 @@ private fun TimelinePlayerStyle(actions: StyleActions, modifier: Modifier, previ
                     fallbackUrl = track.artwork,
                     modifier = Modifier
                         .size(if (landscape) icon * 0.86f else icon)
-                        .then(if (preview) Modifier else Modifier.driftArtworkSlot((if (landscape) icon * 0.86f else icon) * 0.26f))
+                        
                         .clip(RoundedCornerShape(icon * 0.26f))
                         .background(Color.White.copy(alpha = 0.08f)),
                 ) { url, pictureModifier ->
