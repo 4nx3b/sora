@@ -109,13 +109,31 @@ private fun ValueRow(title: String, value: LiquidGlassValue, enabled: Boolean) {
     val (v, setV) = rememberPreference(value.key, value.default)
     SwitchPreference(title = { Text(title) }, checked = on, onCheckedChange = setOn, isEnabled = enabled)
     AnimatedVisibility(on && enabled) {
-        var local by remember(v) { mutableFloatStateOf(v) }
-        Slider(
-            value = local.coerceIn(value.range),
-            onValueChange = { local = it },
-            onValueChangeFinished = { setV(local) },
-            valueRange = value.range,
-            modifier = Modifier.padding(horizontal = 24.dp),
-        )
+        val live = com.mochyy.mochymusic.ui.component.liquid.LiquidGlassLiveValues.dragging
+        androidx.compose.runtime.DisposableEffect(value.key) { onDispose { live.remove(value.key) } }
+        val shown = (live[value.key] ?: v).coerceIn(value.range)
+        val onChange: (Float) -> Unit = { live[value.key] = it }
+        val onFinished = {
+            live.remove(value.key)?.let(setV)
+            Unit
+        }
+        val glass = com.mochyy.mochymusic.ui.component.liquid.LocalLiquidGlass.current
+        if (glass.surface(glass.sliders)) {
+            com.mochyy.mochymusic.ui.component.liquid.LiquidGlassSlider(
+                value = shown,
+                onValueChange = onChange,
+                valueRange = value.range,
+                onValueChangeFinished = onFinished,
+                modifier = Modifier.padding(horizontal = 24.dp),
+            )
+        } else {
+            Slider(
+                value = shown,
+                onValueChange = onChange,
+                onValueChangeFinished = onFinished,
+                valueRange = value.range,
+                modifier = Modifier.padding(horizontal = 24.dp),
+            )
+        }
     }
 }

@@ -116,11 +116,17 @@ fun setGlassMaterial(context: Context, liquid: Boolean? = null, acrylic: Boolean
     }
 }
 
+/** a tuning value while its slider is held, so the glass follows the finger before the value is saved on release */
+object LiquidGlassLiveValues {
+    val dragging = androidx.compose.runtime.mutableStateMapOf<Preferences.Key<Float>, Float>()
+}
+
 @Composable
 private fun tuningValue(value: LiquidGlassValue): Float {
     val on by rememberPreference(value.enabledKey, false)
     val v by rememberPreference(value.key, value.default)
-    return if (on) v.coerceIn(value.range) else value.default
+    val live = LiquidGlassLiveValues.dragging[value.key]
+    return if (on) (live ?: v).coerceIn(value.range) else value.default
 }
 
 @Composable

@@ -48,7 +48,6 @@ fun VolumeSlider(
     val glass = com.mochyy.mochymusic.ui.component.liquid.LocalLiquidGlass.current
     if (glass.surface(glass.sliders)) {
         com.mochyy.mochymusic.ui.component.liquid.LiquidGlassSlider(
-                backdrop = com.mochyy.mochymusic.ui.component.liquid.LocalAppBackdrop.current,
             value = value,
             onValueChange = onValueChange,
             modifier = modifier,

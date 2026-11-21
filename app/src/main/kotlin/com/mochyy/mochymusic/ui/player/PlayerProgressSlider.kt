@@ -228,7 +228,6 @@ fun PlayerProgressSlider(
     ) {
         if (glassSlider) {
             com.mochyy.mochymusic.ui.component.liquid.LiquidGlassSlider(
-                backdrop = com.mochyy.mochymusic.ui.component.liquid.LocalAppBackdrop.current,
                 value = sliderState.value,
                 onValueChange = { sliderState.onValueChange?.invoke(it) },
                 valueRange = 0f..rangeEnd.coerceAtLeast(1f),

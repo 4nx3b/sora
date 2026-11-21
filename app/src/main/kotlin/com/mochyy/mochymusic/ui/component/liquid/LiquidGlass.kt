@@ -62,11 +62,11 @@ private const val SURFACE_OPACITY = LiquidGlassDefaults.TabsContainerAlpha
 
 data class LiquidGlassTuning(
     val intensity: LiquidGlassIntensity = LiquidGlassIntensity.STANDARD,
-    val refractionHeightFraction: Float = LiquidGlassValues.RefractionHeight.default,
-    val refractionAmountFraction: Float = LiquidGlassValues.RefractionAmount.default,
-    val blurFraction: Float = LiquidGlassValues.BlurRadius.default,
-    val tintFraction: Float = LiquidGlassValues.TintOpacity.default,
-    val shadowFraction: Float = LiquidGlassValues.ShadowDepth.default,
+    val refractionHeightFraction: Float = LiquidGlassSettingsDefaults.DEFAULT_LIQUID_GLASS_REFRACTION_HEIGHT,
+    val refractionAmountFraction: Float = LiquidGlassSettingsDefaults.DEFAULT_LIQUID_GLASS_REFRACTION_AMOUNT,
+    val blurFraction: Float = LiquidGlassSettingsDefaults.DEFAULT_LIQUID_GLASS_BLUR_RADIUS,
+    val tintFraction: Float = LiquidGlassSettingsDefaults.DEFAULT_LIQUID_GLASS_TINT_OPACITY,
+    val shadowFraction: Float = LiquidGlassSettingsDefaults.DEFAULT_LIQUID_GLASS_SHADOW_DEPTH,
     val depth3D: Boolean = true,
     val chromaticAberration: Boolean = true,
     val backdropVibrancy: Boolean = true,
@@ -95,16 +95,16 @@ data class LiquidGlassTuning(
         }
 
     val refractionHeightFactor: Float =
-        (refractionHeightFraction / LiquidGlassValues.RefractionHeight.default) * presetRefraction
+        (refractionHeightFraction / LiquidGlassSettingsDefaults.DEFAULT_LIQUID_GLASS_REFRACTION_HEIGHT) * presetRefraction
 
     val refractionAmountFactor: Float =
-        (refractionAmountFraction / LiquidGlassValues.RefractionAmount.default) * presetRefraction
+        (refractionAmountFraction / LiquidGlassSettingsDefaults.DEFAULT_LIQUID_GLASS_REFRACTION_AMOUNT) * presetRefraction
 
-    val blurFactor: Float = (blurFraction / LiquidGlassValues.BlurRadius.default) * presetBlur
+    val blurFactor: Float = (blurFraction / LiquidGlassSettingsDefaults.DEFAULT_LIQUID_GLASS_BLUR_RADIUS) * presetBlur
 
-    val tintFactor: Float = tintFraction / LiquidGlassValues.TintOpacity.default
+    val tintFactor: Float = tintFraction / LiquidGlassSettingsDefaults.DEFAULT_LIQUID_GLASS_TINT_OPACITY
 
-    val shadowFactor: Float = shadowFraction / LiquidGlassValues.ShadowDepth.default
+    val shadowFactor: Float = shadowFraction / LiquidGlassSettingsDefaults.DEFAULT_LIQUID_GLASS_SHADOW_DEPTH
 
     val vibrancyFactor: Float = if (backdropVibrancy) 1f else 0f
 
@@ -118,9 +118,68 @@ data class LiquidGlassTuning(
     val dispersionStrength: Float = LiquidGlassUpstream.dispersionStrength(chromaticAmount, rainbow)
 }
 
-internal const val ACRYLIC_BLUR_DP = 32f
-internal const val ACRYLIC_NOISE = 0.12f
-internal const val ACRYLIC_TINT_ALPHA = 0.72f
+@Composable
+internal fun rememberLiquidGlassTuning(): LiquidGlassTuning {
+    val intensity = LocalLiquidGlass.current.tuning.intensity
+    val refractionHeight = LocalLiquidGlass.current.tuning.refractionHeightFraction
+    val refractionAmount = LocalLiquidGlass.current.tuning.refractionAmountFraction
+    val blurRadius = LocalLiquidGlass.current.tuning.blurFraction
+    val tintOpacity = LocalLiquidGlass.current.tuning.tintFraction
+    val shadowDepth = LocalLiquidGlass.current.tuning.shadowFraction
+    val depth3D = LocalLiquidGlass.current.tuning.depth3D
+    val chromaticAberration = LocalLiquidGlass.current.tuning.chromaticAberration
+    val backdropVibrancy = LocalLiquidGlass.current.tuning.backdropVibrancy
+    val adaptiveLuminance = LocalLiquidGlass.current.tuning.adaptiveLuminance
+    val cornerRadius = LocalLiquidGlass.current.tuning.cornerRadius
+    val chromaticAmount = LocalLiquidGlass.current.tuning.chromaticAmount
+    val clarity = LocalLiquidGlass.current.tuning.clarity
+    val saturation = LocalLiquidGlass.current.tuning.saturation
+    val refractionWidth = LocalLiquidGlass.current.tuning.refractionWidth
+    val rainbow = LocalLiquidGlass.current.tuning.rainbow
+    val rim = LocalLiquidGlass.current.tuning.rim
+    val quality = LocalLiquidGlass.current.tuning.quality
+    return remember(
+        intensity,
+        refractionHeight,
+        refractionAmount,
+        blurRadius,
+        tintOpacity,
+        shadowDepth,
+        depth3D,
+        chromaticAberration,
+        backdropVibrancy,
+        adaptiveLuminance,
+        cornerRadius,
+        chromaticAmount,
+        clarity,
+        saturation,
+        refractionWidth,
+        rainbow,
+        rim,
+        quality,
+    ) {
+        LiquidGlassTuning(
+            intensity = intensity,
+            refractionHeightFraction = refractionHeight,
+            refractionAmountFraction = refractionAmount,
+            blurFraction = blurRadius,
+            tintFraction = tintOpacity,
+            shadowFraction = shadowDepth,
+            depth3D = depth3D,
+            chromaticAberration = chromaticAberration,
+            backdropVibrancy = backdropVibrancy,
+            adaptiveLuminance = adaptiveLuminance,
+            cornerRadius = cornerRadius,
+            chromaticAmount = chromaticAmount,
+            clarity = clarity,
+            saturation = saturation,
+            refractionWidth = refractionWidth,
+            rainbow = rainbow,
+            rim = rim,
+            quality = quality,
+        )
+    }
+}
 
 private const val GLASS_RESOLUTION_SCALE = 0.33f
 
@@ -153,8 +212,31 @@ private fun Modifier.glassRim(shape: Shape): Modifier = drawBackdrop(
 )
 
 @Composable
+fun Modifier.lightweightLiquidGlass(
+    shape: CornerBasedShape,
+    fallbackColor: Color,
+): Modifier {
+    val glassHeaderPills = LocalLiquidGlass.current.let { it.enabled || it.acrylic }
+    val useGlass = glassHeaderPills && isGlassSupported()
+    val glassTint = if (MaterialTheme.colorScheme.surface.luminance() > 0.5f) {
+        Color(0xFFFAFAFA)
+    } else {
+        Color(0xFF121212)
+    }
+
+    return clip(shape)
+        .background(
+            color = if (useGlass) glassTint.copy(alpha = SURFACE_OPACITY) else fallbackColor,
+            shape = shape,
+        )
+        .then(if (useGlass) glassRim(shape) else Modifier)
+        .border(GLASS_EDGE_WIDTH, GLASS_EDGE_COLOR, shape)
+}
+
+@Composable
 fun Modifier.liquidGlassRim(shape: CornerBasedShape): Modifier {
-    if (!LocalLiquidGlass.current.enabled || !isGlassSupported()) return this
+    val glassHeaderPills = LocalLiquidGlass.current.let { it.enabled || it.acrylic }
+    if (!glassHeaderPills || !isGlassSupported()) return this
     return remember(shape) { glassRim(shape) }
 }
 
@@ -165,18 +247,18 @@ fun Modifier.liquidGlass(
     surfaceTint: Color? = null,
 ): Modifier {
     if (!isGlassSupported()) return this
-    val config = LocalLiquidGlass.current
-    if (config.reduceBlur) {
+    val reduceDynamicBlur = LocalLiquidGlass.current.reduceBlur
+    if (reduceDynamicBlur) {
         return background(MaterialTheme.colorScheme.surface, shape)
             .border(GLASS_EDGE_WIDTH, GLASS_EDGE_COLOR, shape)
     }
-    val acrylic = config.acrylic
-    val glassPerformance = config.performance
-    val tuning = config.tuning
+    val glassPerformance = LocalLiquidGlass.current.performance
+    val tuning = rememberLiquidGlassTuning()
     val backdrop = LocalAppBackdrop.current
     val exportedBackdrop = LocalGlassExport.current
     val density = LocalDensity.current
     val resolutionScale = ((if (glassPerformance) FROST_RESOLUTION_SCALE else GLASS_RESOLUTION_SCALE) * tuning.qualityFactor).coerceIn(0.1f, 1f)
+    val acrylic = LocalLiquidGlass.current.acrylic
     val blurRadiusDp = if (acrylic) {
         ACRYLIC_BLUR_DP
     } else {
@@ -195,23 +277,6 @@ fun Modifier.liquidGlass(
     val acrylicTint = MaterialTheme.colorScheme.surface.copy(alpha = ACRYLIC_TINT_ALPHA)
     val glassShape = remember(shape, tuning.cornerFactor) { scaledCorners(shape, tuning.cornerFactor) }
     val highlightSpec = remember(tuning.rim) { Highlight.Default.copy(alpha = tuning.rim.coerceIn(0f, 1f)) }
-
-    // acrylic replaces the lens: frosted blur, the surface tint and grain, nothing refracted or lit
-    if (acrylic) {
-        return drawBackdrop(
-            backdrop = backdrop,
-            shape = { glassShape },
-            effects = { blur(blurPx) },
-            highlight = null,
-            shadow = null,
-            onDrawSurface = {
-                drawRect(color = acrylicTint, size = size)
-                drawRect(brush = acrylicGrainBrush(), size = size, alpha = ACRYLIC_NOISE)
-            },
-            exportedBackdrop = exportedBackdrop,
-            samplingScale = { _, _ -> resolutionScale },
-        )
-    }
 
     return drawBackdrop(
         backdrop = backdrop,
@@ -235,6 +300,10 @@ fun Modifier.liquidGlass(
         shadow = { Shadow.Default.copy(radius = Shadow.Default.radius * tuning.shadowFactor) },
         onDrawSurface = {
             drawRect(color = surfaceTintColor, size = size)
+            if (acrylic) {
+                drawRect(color = acrylicTint, size = size)
+                drawRect(brush = acrylicGrainBrush(), size = size, alpha = ACRYLIC_NOISE)
+            }
         },
         exportedBackdrop = exportedBackdrop,
         samplingScale = { _, _ -> resolutionScale },
@@ -301,3 +370,15 @@ private val GlowBottomEnd = Color.White.copy(alpha = 0.14f)
 
 @Composable
 fun Modifier.liquidGlassSurface(shape: CornerBasedShape): Modifier = liquidGlass(shape).liquidGlassRim(shape)
+
+internal object LiquidGlassSettingsDefaults {
+    const val DEFAULT_LIQUID_GLASS_REFRACTION_HEIGHT = 0.30f
+    const val DEFAULT_LIQUID_GLASS_REFRACTION_AMOUNT = 0.75f
+    const val DEFAULT_LIQUID_GLASS_BLUR_RADIUS = 0.65f
+    const val DEFAULT_LIQUID_GLASS_TINT_OPACITY = 1.40f
+    const val DEFAULT_LIQUID_GLASS_SHADOW_DEPTH = 0.45f
+}
+
+internal const val ACRYLIC_BLUR_DP = 32f
+internal const val ACRYLIC_NOISE = 0.12f
+internal const val ACRYLIC_TINT_ALPHA = 0.72f

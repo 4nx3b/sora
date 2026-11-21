@@ -74,7 +74,8 @@ fun LiquidGlassSwitch(
     backdrop: Backdrop = emptyBackdrop(),
 ) {
     val dark = MaterialTheme.colorScheme.background.luminance() < 0.5f
-    val accentColor = MaterialTheme.colorScheme.primary
+    val accentColor =
+        if (dark) Color(0xFF30D158) else Color(0xFF34C759)
     val trackColor =
         if (dark) Color(0xFF787880).copy(0.36f)
         else Color(0xFF787878).copy(0.2f)
