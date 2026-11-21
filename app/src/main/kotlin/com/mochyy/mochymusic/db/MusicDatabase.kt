@@ -909,7 +909,13 @@ val MIGRATION_45_46 =
     object : Migration(45, 46) {
         override fun migrate(db: SupportSQLiteDatabase) {
             // Neiro/ArchiveTune port: when the listener blocked an artist, for the ported
-            // player styles' artist rows and menus
-            db.execSQL("ALTER TABLE `artist` ADD COLUMN `blockedAt` INTEGER")
+            // player styles' artist rows and menus.
+            // The column must be declared exactly like ArtistEntity does —
+            // @ColumnInfo(defaultValue = "NULL") — because Room checks the schema after
+            // every migration: PRAGMA table_info reports "NULL" only when the ALTER
+            // carries an explicit DEFAULT NULL, and a bare "blockedAt INTEGER" reads
+            // back as an undefined default, which fails validation with
+            // "Migration didn't properly handle: artist" and rolls the whole upgrade back.
+            db.execSQL("ALTER TABLE `artist` ADD COLUMN `blockedAt` INTEGER DEFAULT NULL")
         }
     }
