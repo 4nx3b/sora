@@ -4,6 +4,10 @@
 
 package com.mochyy.mochymusic.ui.player.tiktok
 
+import kotlinx.coroutines.flow.collectLatest
+import androidx.lifecycle.repeatOnLifecycle
+import androidx.compose.ui.graphics.drawscope.translate
+import androidx.compose.ui.draw.drawWithCache
 import com.mochyy.mochymusic.ui.player.driftArtworkSlot
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
@@ -202,7 +206,7 @@ private fun TikTokSongPage(
 ) {
     Box(Modifier.fillMaxSize()) {
         // the mesh of the artwork's colours, drifting
-        TikTokMeshBackdrop(seed, Modifier.fillMaxSize())
+        TikTokMeshBackdrop(seed, Modifier.fillMaxSize(), animate = !preview)
         // the darkening scrim the feed sits on
         Box(
             Modifier
@@ -435,58 +439,72 @@ private fun TikTokRailButton(icon: Int, tint: Color, scale: Float = 1f, onClick:
  * design's wash behind the feed. The colours are the artwork seed's hue turned four ways.
  */
 @Composable
-internal fun TikTokMeshBackdrop(seed: Color, modifier: Modifier) {
-    val hsl = FloatArray(3)
-    androidx.core.graphics.ColorUtils.colorToHSL(seed.toArgb(), hsl)
-    fun tone(hueShift: Float, lightness: Float, alpha: Float) = Color(
-        androidx.core.graphics.ColorUtils.HSLToColor(floatArrayOf((hsl[0] + hueShift).mod(360f), 0.55f, lightness)),
-    ).copy(alpha = alpha)
-
-    var phase by remember { androidx.compose.runtime.mutableFloatStateOf(0f) }
-    LaunchedEffect(Unit) {
-        while (true) {
-            androidx.compose.runtime.withFrameMillis { }
-            phase = (System.nanoTime() / 1_000_000_000f * 0.125f).mod(1f)
-        }
-    }
-    val base = Color(0xFF0B0B0F)
-    val blobs = listOf(
-        tone(0f, 0.34f, 0.65f),
-        tone(40f, 0.38f, 0.55f),
-        tone(-30f, 0.30f, 0.60f),
-        tone(70f, 0.42f, 0.45f),
-    )
-    val anchors = listOf(
-        Offset(0.20f, 0.25f),
-        Offset(0.80f, 0.20f),
-        Offset(0.75f, 0.80f),
-        Offset(0.25f, 0.75f),
-    )
-    Canvas(modifier) {
-        drawRect(base)
-        if (size.minDimension <= 0f) return@Canvas
-        val t = phase * 2f * Math.PI.toFloat()
-        blobs.forEachIndexed { i, color ->
-            val anchor = anchors[i]
-            val drift = 0.06f
-            val cx = size.width * (anchor.x + drift * kotlin.math.sin(t + i * 1.4f))
-            val cy = size.height * (anchor.y + drift * kotlin.math.cos(t + i * 1.1f))
-            drawCircle(
-                brush = Brush.radialGradient(
-                    colors = listOf(color, Color.Transparent),
-                    center = Offset(cx, cy),
-                    radius = size.maxDimension * 0.65f,
-                ),
-                radius = size.maxDimension * 0.65f,
-                center = Offset(cx, cy),
-            )
-        }
-        drawRect(
-            Brush.verticalGradient(
-                0f to Color.Black.copy(alpha = 0.25f),
-                1f to Color.Black.copy(alpha = 0.45f),
-            ),
+internal fun TikTokMeshBackdrop(seed: Color, modifier: Modifier, animate: Boolean) {
+    val blobs = remember(seed) {
+        val hsl = FloatArray(3)
+        androidx.core.graphics.ColorUtils.colorToHSL(seed.toArgb(), hsl)
+        fun tone(hueShift: Float, lightness: Float, alpha: Float) = Color(
+            androidx.core.graphics.ColorUtils.HSLToColor(floatArrayOf((hsl[0] + hueShift).mod(360f), 0.55f, lightness)),
+        ).copy(alpha = alpha)
+        listOf(
+            tone(0f, 0.34f, 0.65f),
+            tone(40f, 0.38f, 0.55f),
+            tone(-30f, 0.30f, 0.60f),
+            tone(70f, 0.42f, 0.45f),
         )
     }
+
+    val phase = remember { androidx.compose.runtime.mutableFloatStateOf(meshPhaseNow()) }
+    val sheet = com.mochyy.mochymusic.ui.component.LocalPlayerBottomSheetState.current
+    val lifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
+    LaunchedEffect(animate, lifecycle, sheet) {
+        if (!animate) return@LaunchedEffect
+        lifecycle.repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.RESUMED) {
+            snapshotFlow { sheet == null || sheet.progress > 0.01f }.collectLatest { open ->
+                if (!open) return@collectLatest
+                while (true) {
+                    androidx.compose.runtime.withFrameMillis { }
+                    phase.floatValue = meshPhaseNow()
+                }
+            }
+        }
+    }
+    Spacer(
+        modifier.drawWithCache {
+            val radius = size.maxDimension * 0.65f
+            val brushes = if (size.minDimension > 0f) {
+                blobs.map { Brush.radialGradient(listOf(it, Color.Transparent), center = Offset.Zero, radius = radius) }
+            } else {
+                emptyList()
+            }
+            val scrim = Brush.verticalGradient(
+                0f to Color.Black.copy(alpha = 0.25f),
+                1f to Color.Black.copy(alpha = 0.45f),
+            )
+            onDrawBehind {
+                drawRect(MeshBase)
+                if (brushes.isEmpty()) return@onDrawBehind
+                val t = phase.floatValue * 2f * Math.PI.toFloat()
+                brushes.forEachIndexed { i, brush ->
+                    val anchor = MeshAnchors[i]
+                    val cx = size.width * (anchor.x + MeshDrift * kotlin.math.sin(t + i * 1.4f))
+                    val cy = size.height * (anchor.y + MeshDrift * kotlin.math.cos(t + i * 1.1f))
+                    translate(cx, cy) { drawCircle(brush = brush, radius = radius, center = Offset.Zero) }
+                }
+                drawRect(scrim)
+            }
+        },
+    )
 }
+
+private fun meshPhaseNow(): Float = (System.nanoTime() / 1_000_000_000f * 0.125f).mod(1f)
+
+private val MeshBase = Color(0xFF0B0B0F)
+private const val MeshDrift = 0.06f
+private val MeshAnchors = listOf(
+    Offset(0.20f, 0.25f),
+    Offset(0.80f, 0.20f),
+    Offset(0.75f, 0.80f),
+    Offset(0.25f, 0.75f),
+)
 

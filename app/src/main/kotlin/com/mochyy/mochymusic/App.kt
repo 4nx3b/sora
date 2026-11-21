@@ -86,6 +86,14 @@ class App : Application(), SingletonImageLoader.Factory {
         Timber.plant(com.mochyy.mochymusic.utils.CrashLogTree())
 
         PreferencesCache.start(this, applicationScope)
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            applicationScope.launch(Dispatchers.Default) {
+                val prefs = dataStore.data.first()
+                val glassSurface = listOf(LiquidGlassNavBarKey, LiquidGlassMiniPlayerKey, LiquidGlassSlidersKey, LiquidGlassTogglesKey)
+                    .any { prefs[it] == true }
+                if (prefs[LiquidGlassEnabledKey] == true && glassSurface) com.kyant.backdrop.prewarmBackdropShaders()
+            }
+        }
         // tokens saved before the vault existed are sealed on the first start after the update
         applicationScope.launch(kotlinx.coroutines.Dispatchers.IO) { (dataStore as? com.mochyy.mochymusic.utils.SecretPreferences)?.sealLeftovers() }
         com.mochyy.mochymusic.utils.NotRecommended.init(this)
