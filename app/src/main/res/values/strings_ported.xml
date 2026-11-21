@@ -21,6 +21,7 @@
     <string name="more">more</string>
     <string name="ported_play">Play</string>
     <string name="ported_queue">Queue</string>
+    <string name="ported_queue_items">items</string>
     <string name="ported_search">Search</string>
     <string name="ported_share">Share</string>
     <string name="show_romanization">Show Romanization</string>

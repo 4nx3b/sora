@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- namida pause_circle_filled icon, extracted verbatim from its broken_filled.ttf -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="1024"
+    android:viewportHeight="1024">
+    <group
+        android:scaleX="1"
+        android:scaleY="-1"
+        android:translateY="1024">
+        <path
+            android:fillColor="#FF000000"
+            android:pathData="M511 906Q416 906 333.0 870.0Q250 834 187.0 771.5Q124 709 88.5 626.0Q53 543 53 448Q53 353 88.5 270.0Q124 187 187.0 124.5Q250 62 333.0 26.0Q416 -10 511 -10Q605 -10 688.0 26.0Q771 62 834.0 124.5Q897 187 932.5 270.0Q968 353 968 448Q968 543 932.5 626.0Q897 709 834.0 771.5Q771 834 688.0 870.0Q605 906 511 906ZM453 309Q453 279 421 279H361Q329 279 329 309V587Q329 617 361 617H420Q453 617 453 587V309ZM695 309Q695 279 662 279H603Q571 279 571 309V587Q571 617 603 617H662Q695 617 695 587Z" />
+    </group>
+</vector>

@@ -1,7 +1,9 @@
-// namida's queue: a page that slides over the player, the songs as rounded tiles with the
-// current one carried on a gradient of the song's colour, a header that counts the queue and the
-// time left in it, and a bottom row of round buttons — jump to what's playing, shuffle, and the
-// remove menu (duplicates, previous, next, all).
+// namida player style — the queue page, ported from namida's player: the queue
+// that slides up over the player (miniplayer_base's queue child +
+// ui/pages/current_queue_page.dart): the 32-radius rounded sheet, its accent
+// card gradient behind the chips header and search box, the 90-extent tiles
+// (72 tall, 64 thumbnail), the floating jump button at 12/12 and the bottom
+// utils row (48 tall, 12-radius top).
 
 package com.mochyy.mochymusic.ui.player.namida
 
@@ -19,24 +21,26 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.compositeOver
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -46,226 +50,312 @@ import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.mochyy.mochymusic.LocalPlayerConnection
 import com.mochyy.mochymusic.R
-import com.mochyy.mochymusic.ui.player.models.QueueItemData
+import com.mochyy.mochymusic.ui.player.styles.StyleActions
+import com.mochyy.mochymusic.ui.player.styles.styleInsets
 import com.mochyy.mochymusic.utils.makeTimeString
-import kotlinx.coroutines.launch
 
-/** the queue's tile: how big the artwork is, the tile's corner and the bottom row's height */
-private val NamidaQueueArtwork = 54.dp
-private val NamidaQueueCorner = 12.dp
-private val NamidaQueueBottomRow = 48.dp
-
-/** how far down the queue's list the playing song is parked, as a share of the pane */
-private const val NamidaQueuePark = 0.20f
-
-/**
- * The queue over the player: [onClose] folds it back down. The current song is highlighted on a
- * gradient of the song's colour and the list opens parked on it, namida's way.
- */
 @Composable
-internal fun NamidaQueue(
-    palette: NamidaPalette,
-    onClose: () -> Unit,
+fun NamidaQueue(
+    visibleFraction: Float,
+    actions: StyleActions,
+    preview: Boolean,
+    onCollapse: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val connection = LocalPlayerConnection.current ?: return
-    val queue by connection.queueItems.collectAsState()
-    val currentIndex by connection.currentWindowIndex.collectAsState()
-    val playing by connection.uiState.trackInfo.collectAsState()
+    val palette = LocalNamidaPalette.current
+    val connection = LocalPlayerConnection.current
+    val queueItems = connection?.queueItems?.collectAsState()?.value.orEmpty()
+    val windowIndex = connection?.currentWindowIndex?.collectAsState()?.value ?: -1
+    val playing = connection?.uiState?.transportState?.collectAsState()?.value?.isPlaying == true
+    var searchOpen by remember { mutableStateOf(false) }
+    var searchQuery by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
-    val scope = rememberCoroutineScope()
 
-    // open parked on the playing song, a fifth of the way down the list, namida's follower spot
-    LaunchedEffect(Unit) {
-        if (currentIndex in queue.indices) {
-            val viewport = 720
-            runCatching { listState.scrollToItem(currentIndex, -(viewport * NamidaQueuePark).toInt()) }
+    // namida's queue follower: open the list at the playing song
+    LaunchedEffect(queueItems.size, windowIndex) {
+        if (windowIndex in queueItems.indices) {
+            listState.scrollToItem(windowIndex.coerceAtMost(queueItems.size - 1))
         }
     }
 
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .clip(RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp))
-            .background(palette.surface),
+    Box(
+        modifier
+            .graphicsLayer {
+                translationY = (1f - visibleFraction) * size.height
+                alpha = visibleFraction.coerceIn(0f, 1f)
+            },
     ) {
-        // the header: the count, the time left, and the close chevron
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(start = 16.dp, end = 12.dp, top = 14.dp, bottom = 10.dp),
+        Column(
+            Modifier
+                .fillMaxSize()
+                .graphicsLayer {
+                    shape = RoundedCornerShape(topStart = NamidaQueueTopRadius, topEnd = NamidaQueueTopRadius)
+                    clip = true
+                }
+                .background(palette.scaffold),
         ) {
-            Column(Modifier.weight(1f)) {
-                Text(
-                    text = stringResource(R.string.queue),
-                    color = palette.onSurface,
-                    fontSize = 15.sp,
-                    fontFamily = NamidaFontFamily,
-                    fontWeight = FontWeight.SemiBold,
-                )
-                val remaining = queue.drop(maxOf(currentIndex, 0)).sumOf { it.duration }.coerceAtLeast(0L)
-                if (queue.isNotEmpty() && remaining > 0L) {
-                    Text(
-                        text = "${(currentIndex + 1).coerceIn(1, queue.size)}/${queue.size} • ${makeTimeString(remaining)}",
-                        color = palette.onSurfaceSoft,
-                        fontSize = 13.sp,
-                        fontFamily = NamidaFontFamily,
-                        fontWeight = FontWeight.SemiBold,
+            // the accent card behind the header and search box
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .background(palette.accentCard),
+            ) {
+                // the chips header row: the queue chip, collapse arrow, search
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                ) {
+                    QueueChip(text = stringResource(R.string.ported_queue), active = true)
+                    Spacer(Modifier.weight(1f))
+                    Icon(
+                        painter = painterResource(R.drawable.namida_arrow_down_2),
+                        contentDescription = null,
+                        tint = palette.onSecondaryContainer,
+                        modifier = Modifier
+                            .size(34.dp)
+                            .clip(CircleShape)
+                            .clickable(enabled = !preview) { onCollapse() }
+                            .padding(7.dp),
+                    )
+                    Icon(
+                        painter = painterResource(R.drawable.namida_search_normal),
+                        contentDescription = null,
+                        tint = palette.onSecondaryContainer,
+                        modifier = Modifier
+                            .size(34.dp)
+                            .clip(CircleShape)
+                            .clickable(enabled = !preview) {
+                                searchOpen = !searchOpen
+                                if (!searchOpen) searchQuery = ""
+                            }
+                            .padding(7.dp),
                     )
                 }
-            }
-            Box(
-                contentAlignment = Alignment.Center,
-                modifier = Modifier
-                    .size(34.dp)
-                    .clip(CircleShape)
-                    .clickable(onClick = onClose),
-            ) {
-                Icon(
-                    painter = painterResource(R.drawable.expand_more),
-                    contentDescription = null,
-                    tint = palette.onSecondaryContainer,
-                    modifier = Modifier.size(22.dp),
-                )
-            }
-        }
-
-        LazyColumn(
-            state = listState,
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth(),
-        ) {
-            items(queue, key = { it.uid }) { item ->
-                val isCurrent = item.mediaId == playing.mediaId
-                NamidaQueueTile(palette, item, isCurrent) {
-                    connection.playQueueItem(item.uid)
-                }
-            }
-        }
-
-        // the bottom utils row: jump to the playing song, shuffle, each a gradient circle
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.End),
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(NamidaQueueBottomRow)
-                .padding(horizontal = 14.dp),
-        ) {
-            val transport by connection.uiState.transportState.collectAsState()
-            NamidaQueueButton(palette, R.drawable.music_history, stringResource(R.string.namida_jump_current)) {
-                if (currentIndex in queue.indices) {
-                    runCatching {
-                        scope.launch { listState.animateScrollToItem(currentIndex, -(720 * NamidaQueuePark).toInt()) }
+                // the search box (QueueSearchBox)
+                if (searchOpen) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 4.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(palette.secondaryContainer.copy(alpha = 0.4f))
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.namida_search_normal),
+                            contentDescription = null,
+                            tint = palette.textSmall,
+                            modifier = Modifier.size(18.dp),
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Box(Modifier.weight(1f)) {
+                            if (searchQuery.isEmpty()) {
+                                Text(
+                                    stringResource(R.string.search),
+                                    color = palette.textSmall,
+                                    fontSize = 14.sp,
+                                    fontFamily = NamidaFontFamily,
+                                )
+                            }
+                            BasicTextField(
+                                value = searchQuery,
+                                onValueChange = { searchQuery = it },
+                                singleLine = true,
+                                textStyle = androidx.compose.ui.text.TextStyle(
+                                    color = palette.textLarge,
+                                    fontSize = 14.sp,
+                                    fontFamily = NamidaFontFamily,
+                                ),
+                                cursorBrush = SolidColor(palette.currentColor),
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                        }
+                        if (searchQuery.isNotEmpty()) {
+                            Icon(
+                                painter = painterResource(R.drawable.namida_close_circle),
+                                contentDescription = null,
+                                tint = palette.textSmall,
+                                modifier = Modifier
+                                    .size(20.dp)
+                                    .clickable { searchQuery = "" },
+                            )
+                        }
                     }
                 }
             }
-            NamidaQueueButton(palette, R.drawable.shuffle, stringResource(R.string.shuffle), transport.shuffleModeEnabled) {
-                connection.player.shuffleModeEnabled = !connection.player.shuffleModeEnabled
+
+            // the tiles
+            val shown = if (searchQuery.isBlank()) {
+                queueItems
+            } else {
+                queueItems.filter {
+                    it.title.contains(searchQuery, ignoreCase = true) || it.artist.contains(searchQuery, ignoreCase = true)
+                }
             }
-            NamidaQueueButton(palette, R.drawable.playlist_add, stringResource(R.string.ps_action_add_to_playlist)) {
-                connection.playQueueItemNext(queue.getOrNull(currentIndex)?.uid ?: return@NamidaQueueButton)
+            Box(Modifier.weight(1f)) {
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(top = 6.dp, bottom = 12.dp),
+                ) {
+                    items(shown.size, key = { i -> shown[i].uid }) { i ->
+                        val item = shown[i]
+                        val realIndex = queueItems.indexOf(item)
+                        NamidaQueueTile(
+                            title = item.title,
+                            artist = item.artist,
+                            artwork = item.artworkUri?.toString(),
+                            duration = item.duration,
+                            isCurrent = realIndex == windowIndex,
+                            isPlaying = playing && realIndex == windowIndex,
+                            onClick = {
+                                if (!preview && realIndex >= 0) {
+                                    connection?.player?.seekTo(realIndex, 0)
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
+                }
+                // the floating jump button (12/12), back to the playing song
+                Icon(
+                    painter = painterResource(R.drawable.namida_arrow_up),
+                    contentDescription = null,
+                    tint = palette.onSecondaryContainer,
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(12.dp)
+                        .size(40.dp)
+                        .shadow(6.dp, CircleShape, ambientColor = palette.playShadow, spotColor = palette.playShadow)
+                        .clip(CircleShape)
+                        .background(palette.scaffold)
+                        .clickable(enabled = !preview) {
+                            if (windowIndex in queueItems.indices) {
+                                listState.animateScrollToItem(windowIndex)
+                            }
+                        }
+                        .padding(10.dp),
+                )
+            }
+
+            // the bottom utils row: count and length (QueueUtilsRow)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .graphicsLayer {
+                        shape = RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp)
+                        clip = true
+                    }
+                    .background(palette.scaffold)
+                    .padding(horizontal = 12.dp, vertical = 4.dp)
+                    .height(NamidaQueueBottomRowHeight),
+                horizontalArrangement = Arrangement.End,
+            ) {
+                val totalMs = shown.sumOf { it.duration }
+                Text(
+                    "${shown.size} ${stringResource(R.string.ported_queue_items)} • ${makeTimeString(totalMs)}",
+                    color = palette.textSmall,
+                    fontSize = 12.sp,
+                    fontFamily = NamidaFontFamily,
+                )
+                Spacer(Modifier.width(12.dp))
             }
         }
-        Spacer(Modifier.height(6.dp))
     }
 }
 
-/** one song of the queue: artwork, two lines, the length; the playing one on the colour gradient. */
+@Composable
+private fun QueueChip(text: String, active: Boolean) {
+    val palette = LocalNamidaPalette.current
+    Text(
+        text,
+        color = if (active) palette.scaffold else palette.onSecondaryContainer,
+        fontSize = 13.sp,
+        fontWeight = FontWeight.W600,
+        fontFamily = NamidaFontFamily,
+        modifier = Modifier
+            .clip(RoundedCornerShape(12.dp))
+            .background(if (active) palette.currentColor else palette.secondaryContainer)
+            .padding(horizontal = 12.dp, vertical = 6.dp),
+    )
+}
+
+/** namida's queue tile: 72 tall, 64 rounded thumbnail, 15/13 text, 90 extent. */
 @Composable
 private fun NamidaQueueTile(
-    palette: NamidaPalette,
-    item: QueueItemData,
+    title: String,
+    artist: String,
+    artwork: String?,
+    duration: Long,
     isCurrent: Boolean,
+    isPlaying: Boolean,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
+    val palette = LocalNamidaPalette.current
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 10.dp, vertical = 3.dp)
-            .clip(RoundedCornerShape(NamidaQueueCorner))
-            .background(
-                when {
-                    isCurrent -> Brush.linearGradient(
-                        colors = listOf(
-                            palette.accent.copy(alpha = 0.55f).compositeOver(palette.surface),
-                            palette.accent.copy(alpha = 0.22f).compositeOver(palette.surface),
-                        ),
-                    )
-                    else -> Brush.horizontalGradient(listOf(Color.Transparent, Color.Transparent))
-                },
-            )
+        modifier = modifier
+            .height(NamidaQueueItemExtent)
             .clickable(onClick = onClick)
-            .padding(horizontal = 8.dp, vertical = 6.dp),
+            .padding(horizontal = 12.dp, vertical = 4.dp),
     ) {
-        AsyncImage(
-            model = item.artworkUri,
-            contentDescription = null,
-            contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+        Box(
+            contentAlignment = Alignment.Center,
             modifier = Modifier
-                .size(NamidaQueueArtwork)
+                .size(NamidaQueueThumbnailSize)
                 .clip(RoundedCornerShape(8.dp)),
-        )
-        Spacer(Modifier.width(12.dp))
+        ) {
+            AsyncImage(
+                model = artwork,
+                contentDescription = null,
+                contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                modifier = Modifier.fillMaxSize(),
+            )
+            if (isCurrent) {
+                Box(
+                    Modifier
+                        .fillMaxSize()
+                        .background(palette.scaffold.copy(alpha = 0.4f)),
+                )
+                Icon(
+                    painter = painterResource(if (isPlaying) R.drawable.namida_pause else R.drawable.namida_play),
+                    contentDescription = null,
+                    tint = palette.currentColor,
+                    modifier = Modifier.size(26.dp),
+                )
+            }
+        }
+        Spacer(Modifier.width(10.dp))
         Column(Modifier.weight(1f)) {
             Text(
-                text = item.title,
-                color = if (isCurrent) Color.White.copy(alpha = 0.67f) else palette.onSurface,
+                title,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                color = if (isCurrent) palette.currentColor else palette.textMedium,
                 fontSize = 15.sp,
+                fontWeight = FontWeight.W600,
                 fontFamily = NamidaFontFamily,
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
             )
             Text(
-                text = item.artist,
-                color = if (isCurrent) Color.White.copy(alpha = 0.55f) else palette.onSurfaceSoft,
-                fontSize = 13.sp,
-                fontFamily = NamidaFontFamily,
+                artist,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-            )
-        }
-        if (item.duration > 0L) {
-            Text(
-                text = makeTimeString(item.duration),
-                color = if (isCurrent) Color.White.copy(alpha = 0.67f) else palette.onSurfaceSoft,
+                color = palette.textSmall,
                 fontSize = 13.sp,
+                fontWeight = FontWeight.W400,
                 fontFamily = NamidaFontFamily,
-                fontWeight = FontWeight.Medium,
             )
         }
-    }
-}
-
-/** one of the bottom row's gradient circles, namida's round util buttons. */
-@Composable
-private fun NamidaQueueButton(
-    palette: NamidaPalette,
-    icon: Int,
-    label: String,
-    active: Boolean = false,
-    onClick: () -> Unit,
-) {
-    Box(
-        contentAlignment = Alignment.Center,
-        modifier = Modifier
-            .size(34.dp)
-            .clip(CircleShape)
-            .background(
-                if (active) palette.accent.copy(alpha = 0.6f).compositeOver(palette.surface)
-                else palette.accent.copy(alpha = 0.18f).compositeOver(palette.surface),
-            )
-            .clickable(onClick = onClick),
-    ) {
-        Icon(
-            painter = painterResource(icon),
-            contentDescription = label,
-            tint = if (active) Color.White else palette.onSecondaryContainer,
-            modifier = Modifier.size(18.dp),
+        Text(
+            makeTimeString(duration),
+            color = palette.textSmall,
+            fontSize = 13.sp,
+            fontFamily = NamidaFontFamily,
         )
     }
 }

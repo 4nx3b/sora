@@ -1,21 +1,36 @@
-// namida's lyrics: centered lines in the artwork's place, the active line in a rounded pill of
-// the song's colour, the lines around it fading by distance, tap a line to seek to it.
+// namida player style — the lyrics page, ported from namida's
+// packages/lyrics_lrc_parsed_view.dart and ui/widgets/lyrics_karaoke_text.dart:
+// the same type (NText medium — LexendDeca w600 — at 26 in the fullscreen page,
+// 15 beside the player), the same focal effect (the active line grows, the rest
+// sit smaller and dimmer), the same word-by-word karaoke sweep through the
+// active line, the same interlude dots (radius fontSize × 0.16) and the same
+// untimed lines at 0.8×.
 
 package com.mochyy.mochymusic.ui.player.namida
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
@@ -23,121 +38,294 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.compositeOver
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil3.compose.AsyncImage
+import com.mochyy.mochymusic.LocalPlayerConnection
+import com.mochyy.mochymusic.R
 import com.mochyy.mochymusic.lyrics.LyricsEntry
-import com.mochyy.mochymusic.ui.player.styles.LivePosition
-import com.mochyy.mochymusic.ui.player.styles.withLyricsOffset
-import androidx.compose.runtime.withFrameMillis
+import com.mochyy.mochymusic.ui.player.styles.rememberLivePosition
+import com.mochyy.mochymusic.ui.player.styles.rememberStyleLyrics
+import com.mochyy.mochymusic.ui.player.styles.rememberStyleTrack
+import kotlin.math.roundToInt
 
-/** the base size of a lyrics line and the padding the list keeps around its ends */
-private val NamidaLyricsFontSize = 15.sp
-private val NamidaLyricsVerticalPadding = 144.dp
-private val NamidaLyricsHorizontalPadding = 8.dp
+/** the lyrics' base sizes (lyrics_lrc_parsed_view): 26 fullscreen, 15 beside the player */
+private const val FullscreenLyricsSize = 26f
+private const val PanelLyricsSize = 15f
 
-/** how far off the active line may sit before the list follows it again */
-private const val NamidaFollowLow = 0.10f
-private const val NamidaFollowHigh = 0.70f
+/** the focal multipliers (the active line's growth against the rest) */
+private const val ActiveLineScale = 1.12f
+private const val InactiveLineAlpha = 0.55f
 
-/** the active line's index, or -1 before the words start. */
-internal fun namidaActiveLine(lines: List<LyricsEntry>, positionMs: Long): Int {
-    var active = -1
-    for (i in lines.indices) {
-        if (lines[i].time <= positionMs) active = i else break
-    }
-    return active
-}
-
-/**
- * The lyrics pane shown where the artwork was. The active line is followed on the frame clock —
- * recomposition happens only when it changes — and the list parks it at two fifths of the pane
- * once it leaves the band around the middle.
- */
 @Composable
-internal fun NamidaLyrics(
-    palette: NamidaPalette,
-    lines: List<LyricsEntry>,
-    position: LivePosition,
-    onSeek: (Long) -> Unit,
+fun NamidaLyrics(
+    fullscreen: Boolean,
+    onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val palette = LocalNamidaPalette.current
+    val connection = LocalPlayerConnection.current
+    val lyrics = rememberStyleLyrics(readings = true)
+    val track = rememberStyleTrack()
+    val position = rememberLivePosition()
+    val posMs = position.positionMs()
+
+    val baseSize = (if (fullscreen) FullscreenLyricsSize else PanelLyricsSize).sp
+    var activeIndex by remember { mutableIntStateOf(-1) }
     val listState = rememberLazyListState()
-    val clock = position.withLyricsOffset()
-    var active by remember { mutableIntStateOf(-1) }
-    // the line changes a handful of times a second at most; the frame read stays in the effect
-    LaunchedEffect(lines, clock) {
-        while (true) {
-            withFrameMillis { }
-            val now = namidaActiveLine(lines, clock.positionMs())
-            if (now != active) active = now
+
+    // the active line follows the position
+    LaunchedEffect(lyrics.mediaId) { activeIndex = -1 }
+    val newActive = remember(lyrics.lines, posMs) {
+        var found = -1
+        for ((i, line) in lyrics.lines.withIndex()) {
+            if (line.time <= posMs) found = i else break
         }
+        found
     }
-    LaunchedEffect(active) {
-        if (active < 0) return@LaunchedEffect
-        val viewport = listState.layoutInfo.viewportSize
-        val item = listState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == active }
-        // follow only once the line leaves the comfort band, the way namida's follower does
-        if (item != null) {
-            val offsetFraction = item.offset.toFloat() / viewport.height.coerceAtLeast(1)
-            if (offsetFraction in NamidaFollowLow..NamidaFollowHigh) return@LaunchedEffect
-        }
-        // park the active line at two fifths of the pane
-        runCatching {
+    LaunchedEffect(newActive) {
+        if (newActive != activeIndex && newActive >= 0) {
+            activeIndex = newActive
+            // namida's follow: the active line rides the middle of the page
             listState.animateScrollToItem(
-                index = active,
-                scrollOffset = -(viewport.height * 0.4f).toInt(),
+                index = (newActive - 2).coerceAtLeast(0),
+                scrollOffset = 0,
             )
         }
     }
-    LazyColumn(
-        state = listState,
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = modifier
-            .fillMaxSize()
-            .padding(vertical = NamidaLyricsVerticalPadding),
+
+    Box(
+        modifier
+            .background(palette.scaffold),
     ) {
-        items(lines.size) { index ->
-            val isActive = index == active
-            val distance = if (active < 0) 3 else absOf(index - active)
-            val alpha = when {
-                isActive -> 1f
-                distance == 1 -> 0.5f
-                distance == 2 -> 0.4f
-                else -> 0.25f
-            }
-            val line = lines[index]
-            Box(
-                contentAlignment = Alignment.Center,
+        // namida's lyrics backdrop: the artwork, blurred and dimmed
+        if (fullscreen) {
+            AsyncImage(
+                model = track.artwork,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
                 modifier = Modifier
-                    .padding(horizontal = NamidaLyricsHorizontalPadding, vertical = 2.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .fillMaxWidth(0.86f)
-                    .then(
-                        if (isActive) Modifier
-                            .background(palette.accent.copy(alpha = 0.50f).compositeOver(palette.surface))
-                            .height(if (line.text.isBlank()) 26.dp else 44.dp)
-                        else Modifier,
+                    .fillMaxSize()
+                    .blur(64.dp)
+                    .alpha(0.35f),
+            )
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .background(palette.scaffold.copy(alpha = 0.45f)),
+            )
+        }
+
+        Column(Modifier.fillMaxSize()) {
+            if (fullscreen) {
+                // the dismiss row
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    contentAlignment = Alignment.CenterStart,
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.namida_arrow_down_2),
+                        contentDescription = null,
+                        tint = palette.onSecondaryContainer,
+                        modifier = Modifier
+                            .size(38.dp)
+                            .clip(CircleShape)
+                            .clickable { onDismiss() }
+                            .padding(8.dp),
                     )
-                    .clickable { onSeek(line.time) }
-                    .padding(horizontal = 8.dp, vertical = 6.dp),
+                }
+            }
+
+            LazyColumn(
+                state = listState,
+                horizontalAlignment = if (fullscreen) Alignment.CenterHorizontally else Alignment.Start,
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                    horizontal = 24.dp,
+                    vertical = 64.dp,
+                ),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .weight(1f)
+                    .graphicsLayer { alpha = if (fullscreen) 1f else 1f },
             ) {
+                items(lyrics.lines.size, key = { lyrics.lines[it].time * 1000 + it }) { i ->
+                    val line = lyrics.lines[i]
+                    val isActive = i == activeIndex
+                    NamidaLyricsLine(
+                        line = line,
+                        positionMs = posMs,
+                        isActive = isActive,
+                        baseSize = baseSize,
+                        alignCenter = fullscreen,
+                        onClick = {
+                            connection?.seekTo(line.time.toLong().coerceAtLeast(0))
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+                item {
+                    Spacer(Modifier.height(96.dp))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun NamidaLyricsLine(
+    line: LyricsEntry,
+    positionMs: Long,
+    isActive: Boolean,
+    baseSize: androidx.compose.ui.unit.TextUnit,
+    alignCenter: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val palette = LocalNamidaPalette.current
+    val scale by animateFloatAsState(
+        targetValue = if (isActive) ActiveLineScale else 1f,
+        animationSpec = spring(dampingRatio = 0.8f, stiffness = 300f),
+        label = "namidaLyricsFocal",
+    )
+    val alpha by animateFloatAsState(
+        targetValue = if (isActive) 1f else InactiveLineAlpha,
+        animationSpec = tween(300),
+        label = "namidaLyricsAlpha",
+    )
+
+    Column(
+        horizontalAlignment = if (alignCenter) Alignment.CenterHorizontally else Alignment.Start,
+        modifier = modifier
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+                this.alpha = alpha
+            }
+            .clickable { onClick() }
+            .padding(vertical = 2.dp),
+    ) {
+        when {
+            // the karaoke line: word by word through the active line
+            line.words != null && line.words.isNotEmpty() -> {
+                NamidaKaraokeText(
+                    words = line.words!!,
+                    positionMs = positionMs,
+                    lineStartMs = line.time,
+                    color = palette.textMedium,
+                    fontSize = baseSize,
+                    textAlign = if (alignCenter) TextAlign.Center else TextAlign.Start,
+                )
+            }
+            // the instrumental gap: namida's interlude dots (radius = fontSize * 0.16)
+            line.text.isBlank() -> {
+                val dot = (baseSize.value * 0.16f * 2).dp
+                Row(horizontalArrangement = Arrangement.spacedBy(dot / 2 + 4.dp)) {
+                    repeat(3) { i ->
+                        val phase = ((positionMs - line.time).coerceAtLeast(0L) % 1200L) / 1200f
+                        val bounce = ((phase * 3 - i).rem(3f) + 3f).rem(3f).coerceIn(0f, 1f)
+                        Box(
+                            Modifier
+                                .size(dot)
+                                .graphicsLayer { translationY = -bounce * 6f }
+                                .background(palette.textMedium.copy(alpha = 0.35f + 0.65f * (1f - bounce)), CircleShape),
+                        )
+                    }
+                }
+            }
+            else -> {
                 Text(
-                    text = line.text.ifBlank { "• • •" },
-                    color = palette.onSurface,
-                    fontSize = NamidaLyricsFontSize,
+                    line.text,
+                    color = palette.textMedium,
+                    fontSize = baseSize,
+                    fontWeight = FontWeight.W600,
                     fontFamily = NamidaFontFamily,
-                    fontWeight = FontWeight.SemiBold,
-                    textAlign = TextAlign.Center,
-                    maxLines = 1,
-                    modifier = Modifier.alpha(alpha),
+                    textAlign = if (alignCenter) TextAlign.Center else TextAlign.Start,
+                    maxLines = 3,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+        // the translation under the line, at namida's secondary multiplier (0.75 fullscreen)
+        line.translatedTextFlow.collectAsState().value?.let { translation ->
+            if (translation.isNotBlank() && line.text.isNotBlank()) {
+                Text(
+                    translation,
+                    color = palette.textSmall,
+                    fontSize = (baseSize.value * if (alignCenter) 0.75f else 0.85f).sp,
+                    fontWeight = FontWeight.W600,
+                    fontFamily = NamidaFontFamily,
+                    textAlign = if (alignCenter) TextAlign.Center else TextAlign.Start,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(top = 2.dp),
                 )
             }
         }
     }
 }
 
-private fun absOf(value: Int): Int = if (value < 0) -value else value
+/** namida's karaoke sweep: each word fills as it is sung (LyricsKaraokeText). */
+@Composable
+private fun NamidaKaraokeText(
+    words: List<com.mochyy.mochymusic.lyrics.WordTimestamp>,
+    positionMs: Long,
+    lineStartMs: Long,
+    color: Color,
+    fontSize: androidx.compose.ui.unit.TextUnit,
+    textAlign: TextAlign,
+) {
+    val density = LocalDensity.current
+    val sungColor = color
+    val unsungColor = color.copy(alpha = 0.4f)
+
+    // build the line's spans: sung words full, the singing word split at its
+    // own progress, the rest dim — the sweep namida's karaoke text paints
+    val annotated = androidx.compose.runtime.remember(words, positionMs) {
+        androidx.compose.ui.text.buildAnnotatedString {
+            for ((i, word) in words.withIndex()) {
+                val start = word.startTime.toLong()
+                val end = word.endTime.toLong()
+                val text = word.text + if (i < words.size - 1) " " else ""
+                when {
+                    positionMs >= end -> withStyle(androidx.compose.ui.text.SpanStyle(color = sungColor)) { append(text) }
+                    positionMs < start -> withStyle(androidx.compose.ui.text.SpanStyle(color = unsungColor)) { append(text) }
+                    else -> {
+                        // the word mid-flight: split at its own fraction
+                        val fraction = if (end > start) (positionMs - start).toFloat() / (end - start) else 1f
+                        val cut = (text.length * fraction).roundToInt().coerceIn(0, text.length)
+                        withStyle(androidx.compose.ui.text.SpanStyle(color = sungColor)) { append(text.substring(0, cut)) }
+                        withStyle(androidx.compose.ui.text.SpanStyle(color = unsungColor)) { append(text.substring(cut)) }
+                    }
+                }
+            }
+        }
+    }
+    Text(
+        annotated,
+        fontSize = fontSize,
+        fontWeight = FontWeight.W600,
+        fontFamily = NamidaFontFamily,
+        textAlign = textAlign,
+        modifier = Modifier.fillMaxWidth(),
+    )
+}
