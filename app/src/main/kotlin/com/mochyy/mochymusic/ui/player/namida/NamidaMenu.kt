@@ -82,6 +82,9 @@ fun NamidaTrackMenu(
     val context = LocalContext.current
     val database = LocalDatabase.current
     val downloadUtil = LocalDownloadUtil.current
+    // sora's app-level page sheet: the details row opens the media-info page in it, the way
+    // every sora menu does (the ported flamingo menu uses its own bridge copy of the same move)
+    val infoSheet = com.mochyy.mochymusic.ui.component.LocalBottomSheetPageState.current
 
     val currentSong = connection.currentSong.collectAsState(null).value
     val liked = currentSong?.song?.liked == true
@@ -286,7 +289,7 @@ fun NamidaTrackMenu(
                         }
                     }
                     row(stringResource(R.string.details), R.drawable.namida_document) {
-                        com.mochyy.mochymusic.ui.utils.ShowMediaInfo(metadata.id)
+                        infoSheet.show { com.mochyy.mochymusic.ui.utils.ShowMediaInfo(metadata.id) }
                     }
                 }
                 metadata?.album?.id?.let { albumId ->

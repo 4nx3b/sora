@@ -2098,7 +2098,7 @@ private fun CoverCanvasLayer(
         val durationSec = playerConnection?.mediaMetadata?.value
             ?.takeIf { it.id == mediaId }?.duration?.takeIf { it > 0 }
 
-        val res = findCanvas(context, normTitle, normArtist, durationSec = durationSec)
+        val res = findCanvas(context, normTitle, normArtist, durationSec = durationSec, mediaId = mediaId)
         if (res != null) {
             CanvasArtworkPlaybackCache.put(mediaId, res)
             canvasArtwork = res

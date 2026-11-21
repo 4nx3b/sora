@@ -81,7 +81,7 @@ fun rememberPortedCanvas(mediaId: String, title: String, artist: String, duratio
                     val t = normalizeCanvasSongTitle(title)
                     val a = normalizeCanvasArtistName(artist)
                     if (t.length < 2 || a.length < 2) return@withContext null
-                    findCanvas(context, t, a, durationSec = durationSec)?.also { CanvasArtworkPlaybackCache.put(mediaId, it) }
+                    findCanvas(context, t, a, durationSec = durationSec, mediaId = mediaId)?.also { CanvasArtworkPlaybackCache.put(mediaId, it) }
                 }
         } ?: return@LaunchedEffect
         urls = found.preferredAnimationUrl to found.videoUrl
