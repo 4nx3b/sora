@@ -73,13 +73,31 @@ object CrashLog {
             runCatching { appendix(out) }
         }
         runCatching {
-            dir.listFiles { f -> f.isFile && f.name.startsWith("crash-") }
+            dir.listFiles { f -> f.isFile && f.name.startsWith("crash-") && f.name.endsWith(".log") }
                 ?.sortedByDescending { it.name }
                 ?.drop(keep)
-                ?.forEach { it.delete() }
+                ?.forEach {
+                    it.delete()
+                    File(dir, it.name + EXPORTED_SUFFIX).delete()
+                }
         }
         return file
     }
+
+    fun pendingExports(dir: File): List<File> =
+        dir.listFiles { f -> f.isFile && f.name.startsWith("crash-") && f.name.endsWith(".log") }
+            .orEmpty()
+            .filter { !File(dir, it.name + EXPORTED_SUFFIX).exists() }
+            .sortedBy { it.name }
+
+    fun markExported(log: File) {
+        File(log.parentFile, log.name + EXPORTED_SUFFIX).createNewFile()
+    }
+
+    fun exportToast(names: List<String>, folder: String, one: String, many: String): String =
+        if (names.size == 1) one.format("$folder/${names[0]}") else many.format(names.size, folder)
+
+    const val EXPORTED_SUFFIX = ".exported"
 
     internal fun timestamp(): String = SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.US).format(Date())
 

@@ -86,6 +86,7 @@ class App : Application(), SingletonImageLoader.Factory {
         Timber.plant(com.mochyy.mochymusic.utils.CrashLogTree())
 
         PreferencesCache.start(this, applicationScope)
+        applicationScope.launch(Dispatchers.IO) { com.mochyy.mochymusic.utils.CrashReporter.exportPending(this@App) }
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
             applicationScope.launch(Dispatchers.Default) {
                 val prefs = dataStore.data.first()
