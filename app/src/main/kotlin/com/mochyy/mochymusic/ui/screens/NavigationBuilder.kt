@@ -464,6 +464,29 @@ fun NavGraphBuilder.navigationBuilder(
         com.mochyy.mochymusic.ui.screens.settings.ProxySettingsScreen(navController = navController)
     }
 
+    // the Listen Together port's pages: the room, its settings and its chat,
+    // in Neiro's shape (the screens carry their own imePadding; the system
+    // bars arrive through the padding they are handed here)
+    composable("listen_together") {
+        com.mochyy.mochymusic.ported.together.ui.ListenTogetherScreen(
+            onOpenChat = { navController.navigate("listen_together_chat") },
+            onOpenSettings = { navController.navigate("listen_together_settings") },
+            contentPadding = androidx.compose.foundation.layout.WindowInsets.systemBars.asPaddingValues(),
+        )
+    }
+    composable("listen_together_settings") {
+        com.mochyy.mochymusic.ported.together.ui.ListenTogetherSettingsScreen(
+            onBack = { navController.popBackStack() },
+            contentPadding = androidx.compose.foundation.layout.WindowInsets.systemBars.asPaddingValues(),
+        )
+    }
+    composable("listen_together_chat") {
+        com.mochyy.mochymusic.ported.together.ui.ListenTogetherChatScreen(
+            onBack = { navController.popBackStack() },
+            modifier = androidx.compose.ui.Modifier.fillMaxSize(),
+        )
+    }
+
     composable("crossmix_settings") {
         com.mochyy.mochymusic.ui.screens.settings.CrossmixSettingsScreen(navController = navController)
     }

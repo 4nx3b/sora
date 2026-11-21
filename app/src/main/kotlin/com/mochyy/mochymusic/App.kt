@@ -99,6 +99,13 @@ class App : Application(), SingletonImageLoader.Factory {
         applicationScope.launch(kotlinx.coroutines.Dispatchers.IO) { (dataStore as? com.mochyy.mochymusic.utils.SecretPreferences)?.sealLeftovers() }
         com.mochyy.mochymusic.utils.NotRecommended.init(this)
 
+        // the Listen Together port's doors, in Neiro's order: the settings facade
+        // first (the engine reads it while it spins up), then the engine itself,
+        // then the personal-queue stash
+        com.mochyy.mochymusic.ported.together.settings.AppSettings.init(this)
+        com.mochyy.mochymusic.ported.together.ListenTogether.init(this)
+        com.mochyy.mochymusic.ported.together.playback.PartyPersonalQueueStash.init(this)
+
         applicationScope.launch(Dispatchers.IO) {
             try {
                 musicDatabase.query { purgeTimestampArtists() }

@@ -572,6 +572,10 @@ class MusicService :
     private var lastAnnouncedSourceMediaId: String? = null
     lateinit var player: ExoPlayer
         private set
+    // the Listen Together port's service-side adapter: holds the engine's live
+    // player through the accessor, so a crossfade handoff that swaps the
+    // instance underneath is picked up on the next read
+    private var partySync: com.mochyy.mochymusic.ported.together.playback.PartySync? = null
     private var secondaryPlayer: ExoPlayer? = null
     private var fadingPlayer: ExoPlayer? = null
     private var isCrossfading = false
@@ -859,6 +863,11 @@ class MusicService :
         dropLocalSongCopies()
         sleepTimer = SleepTimer(scope, player)
         player.addListener(sleepTimer)
+
+        // After the player exists, as in Neiro's PlaybackService: the ported
+        // engine attaches to the live player through the accessor and the room
+        // survives this service being backgrounded and recreated
+        partySync = com.mochyy.mochymusic.ported.together.playback.PartySync(scope) { player }.also { it.start() }
 
         scope.launch {
             dataStore.data.map { it[MusicHapticsEnabledKey] ?: false }
@@ -2385,6 +2394,14 @@ class MusicService :
     }
 
     /**
+     * The Listen Together port's locked-transport door, for the connection to
+     * ask on a play/pause press: true means a room locked to its host took the
+     * press — it moved this device alone and nothing downstream should run.
+     */
+    fun partyLockedTransport(playing: Boolean): Boolean =
+        partySync?.onLockedTransport(playing) == true
+
+    /**
      * Keeps a few songs queued ahead of the current one: first from the queue's own next pages, then, when
      * the queue has run dry and infinite queue is on, from a radio seeded by the songs at the end of the queue.
      * If playback already ended because nothing was left, it resumes on the newly added songs.
@@ -2394,6 +2411,14 @@ class MusicService :
         if (initialQueueLoading || runwayJob?.isActive == true) return
         if (player.mediaItemCount == 0) return
         if (dataStore.get(DisableLoadMoreWhenRepeatAllKey, false) && player.repeatMode == REPEAT_MODE_ALL) return
+        // a guest's queue is the room's — the ported engine owns it, so the
+        // runway stands down for everyone but the host (the host's own picks
+        // keep feeding the room)
+        runCatching {
+            com.mochyy.mochymusic.ported.together.ListenTogether.state.value
+        }.getOrNull()?.let { room ->
+            if (room.inParty && room.you?.isHost != true) return
+        }
         val lowOnSongs = upcomingItemCount(QUEUE_RUNWAY_SIZE + 1) <= QUEUE_RUNWAY_SIZE
         val previewOnly = !lowOnSongs && wantsAutoplayPreview()
         if (!lowOnSongs && !previewOnly) return
@@ -3082,6 +3107,12 @@ class MusicService :
         reason: Int,
     ) {
         clearStreamFailure()
+        // the queue moving on by itself is still this device deciding what the
+        // ported room plays next, and no other path reports it — as in Neiro's
+        // service. A skip is reported by the connection's own press
+        if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO) {
+            partySync?.onLocalIntent()
+        }
         if (!promotingCrossmix) crossmixDirector.onItemChanged()
 
         if (!promotingCrossmix && !isCrossfading) {
@@ -3201,6 +3232,10 @@ class MusicService :
     }
 
     override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
+
+        // The only place the *reason* can be read, so the ported room hears a
+        // pause the listener asked for differently from one another app imposed
+        partySync?.onPlayWhenReadyChanged(playWhenReady, reason)
 
         if (playWhenReady && castConnectionHandler?.isCasting?.value == true) {
             player.pause()
@@ -4615,6 +4650,10 @@ class MusicService :
         playReporter.onSongStop()
         // the same for ListenBrainz, on its own scope: this one is about to be cancelled
         com.mochyy.mochymusic.scrobble.ListenBrainz.onServiceDestroyed(this)
+        // the ported room's engine drops the player through its own door, keeping
+        // its heartbeat and queue observation in step
+        partySync?.stop()
+        partySync = null
         connectivityObserver.unregister()
         callWatcher.stop()
         abandonAudioFocus()
