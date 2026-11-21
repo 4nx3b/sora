@@ -542,6 +542,9 @@ fun NavGraphBuilder.navigationBuilder(
     composable("customisation_settings") {
         com.mochyy.mochymusic.ui.screens.gesture.CustomisationScreen(navController = navController)
     }
+    composable(com.mochyy.mochymusic.ui.screens.settings.LiquidGlassSettingsRoute) {
+        com.mochyy.mochymusic.ui.screens.settings.LiquidGlassSettingsScreen(navController = navController)
+    }
 
     composable("audio_lab") {
         com.mochyy.mochymusic.ui.screens.audiolab.AudioLabScreen(navController = navController)
