@@ -36,6 +36,18 @@ fun AppSwitch(
     enabled: Boolean = true,
     thumbContent: (@Composable () -> Unit)? = null,
 ) {
+    // rows with a thumb icon (SwitchPreference) keep the house switch on purpose, so the glass settings page stays usable
+    val glass = com.mochyy.mochymusic.ui.component.liquid.LocalLiquidGlass.current
+    if (onCheckedChange != null && thumbContent == null && glass.surface(glass.toggles)) {
+        com.mochyy.mochymusic.ui.component.liquid.LiquidGlassSwitch(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            modifier = modifier,
+            enabled = enabled,
+            backdrop = com.mochyy.mochymusic.ui.component.liquid.LocalAppBackdrop.current,
+        )
+        return
+    }
     val alpha = if (enabled) 1f else 0.38f
     val animSpec = tween<Color>(150)
 

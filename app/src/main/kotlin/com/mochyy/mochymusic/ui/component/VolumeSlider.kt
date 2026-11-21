@@ -45,6 +45,18 @@ fun VolumeSlider(
     onValueChangeFinished: (() -> Unit)? = null,
     accentColor: Color = MaterialTheme.colorScheme.primary
 ) {
+    val glass = com.mochyy.mochymusic.ui.component.liquid.LocalLiquidGlass.current
+    if (glass.surface(glass.sliders)) {
+        com.mochyy.mochymusic.ui.component.liquid.LiquidGlassSlider(
+                backdrop = com.mochyy.mochymusic.ui.component.liquid.LocalAppBackdrop.current,
+            value = value,
+            onValueChange = onValueChange,
+            modifier = modifier,
+            enabled = enabled,
+            onValueChangeFinished = onValueChangeFinished,
+        )
+        return
+    }
     val interactionSource = remember { MutableInteractionSource() }
 
     val volumeOffIcon = painterResource(R.drawable.volume_off)

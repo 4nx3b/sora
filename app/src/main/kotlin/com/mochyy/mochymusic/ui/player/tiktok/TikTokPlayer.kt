@@ -4,6 +4,7 @@
 
 package com.mochyy.mochymusic.ui.player.tiktok
 
+import com.mochyy.mochymusic.ui.player.driftArtworkSlot
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
@@ -234,6 +235,7 @@ private fun TikTokSongPage(
                 Box(
                     modifier = Modifier
                         .size(artSize)
+                        .then(if (preview) Modifier else Modifier.driftArtworkSlot(16.dp, active = isCurrent))
                         .clip(RoundedCornerShape(16.dp))
                         .then(
                             if (preview) Modifier else Modifier.pointerInput(Unit) {
@@ -462,6 +464,7 @@ internal fun TikTokMeshBackdrop(seed: Color, modifier: Modifier) {
     )
     Canvas(modifier) {
         drawRect(base)
+        if (size.minDimension <= 0f) return@Canvas
         val t = phase * 2f * Math.PI.toFloat()
         blobs.forEachIndexed { i, color ->
             val anchor = anchors[i]

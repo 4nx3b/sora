@@ -499,4 +499,7 @@
     <string name="work_out_genres">Work out genres</string>
     <string name="work_out_genres_on_desc">Asks Last.fm for an artist\'s genres. Only the artist name is sent.</string>
     <string name="work_out_genres_off_desc">The stats genre chart keeps to iTunes\' own answers while this is off</string>
+    <string name="debug_crash_now">Crash now</string>
+    <string name="debug_crash_now_desc">Debug builds only: throws on the main thread so a crash log is written to files/crash</string>
+    <string name="customise_liquid_glass">Liquid glass</string>
 </resources>

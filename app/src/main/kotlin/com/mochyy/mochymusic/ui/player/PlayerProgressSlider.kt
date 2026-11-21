@@ -219,39 +219,56 @@ fun PlayerProgressSlider(
     )
     val timeColor = remember(expand) { ColorProducer { Color.White.copy(alpha = TimeRestAlpha + (1f - TimeRestAlpha) * expand.value) } }
 
+    val glass = com.mochyy.mochymusic.ui.component.liquid.LocalLiquidGlass.current
+    val glassSlider = glass.surface(glass.sliders)
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .height(28.dp)
+            .height(if (glassSlider) 40.dp else 28.dp)
     ) {
-        Slider(
-            state = sliderState,
-            interactionSource = trackInteractionSource,
-            thumb = { Spacer(modifier = Modifier.size(0.dp)) },
-            track = {
-                com.mochyy.mochymusic.ui.component.SeekBarTrack(
-                    style = seekBarStyle,
-                    fractionProvider = { fill.fraction },
-                    activeColor = barActiveColor,
-                    inactiveColor = Color.White.copy(alpha = 0.24f),
-                    animateWave = transportState.isPlaying,
-                    active = held,
-                    loading = showBuffering,
-                    clockRunning = active,
-                    expandProvider = { expand.value },
-                )
-            },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(28.dp)
-                .padding(horizontal = PlayerHorizontalPadding)
-                .onSizeChanged { fill.widthPx = it.width.toFloat() }
-                .then(onSeekBarPlaced?.let { Modifier.onGloballyPositioned(it) } ?: Modifier)
-                // outside the failure overlay's offscreen layer, which cut the stretched ends off at the bar's own edges
-                .seekStretch(stretch, draggedState, stretchSettle, stretchScope)
-                .then(seekBarModifier)
-                .streamFailureOverlay(failureProgress)
-        )
+        if (glassSlider) {
+            com.mochyy.mochymusic.ui.component.liquid.LiquidGlassSlider(
+                backdrop = com.mochyy.mochymusic.ui.component.liquid.LocalAppBackdrop.current,
+                value = sliderState.value,
+                onValueChange = { sliderState.onValueChange?.invoke(it) },
+                valueRange = 0f..rangeEnd.coerceAtLeast(1f),
+                enabled = durationKnown,
+                onValueChangeFinished = sliderState.onValueChangeFinished,
+                modifier = Modifier
+                    .padding(horizontal = PlayerHorizontalPadding)
+                    .then(onSeekBarPlaced?.let { Modifier.onGloballyPositioned(it) } ?: Modifier)
+                    .then(seekBarModifier),
+            )
+        } else {
+            Slider(
+                state = sliderState,
+                interactionSource = trackInteractionSource,
+                thumb = { Spacer(modifier = Modifier.size(0.dp)) },
+                track = {
+                    com.mochyy.mochymusic.ui.component.SeekBarTrack(
+                        style = seekBarStyle,
+                        fractionProvider = { fill.fraction },
+                        activeColor = barActiveColor,
+                        inactiveColor = Color.White.copy(alpha = 0.24f),
+                        animateWave = transportState.isPlaying,
+                        active = held,
+                        loading = showBuffering,
+                        clockRunning = active,
+                        expandProvider = { expand.value },
+                    )
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(28.dp)
+                    .padding(horizontal = PlayerHorizontalPadding)
+                    .onSizeChanged { fill.widthPx = it.width.toFloat() }
+                    .then(onSeekBarPlaced?.let { Modifier.onGloballyPositioned(it) } ?: Modifier)
+                    // outside the failure overlay's offscreen layer, which cut the stretched ends off at the bar's own edges
+                    .seekStretch(stretch, draggedState, stretchSettle, stretchScope)
+                    .then(seekBarModifier)
+                    .streamFailureOverlay(failureProgress)
+            )
+        }
     }
 
     Row(

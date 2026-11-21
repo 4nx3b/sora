@@ -1,5 +1,6 @@
 package com.mochyy.mochymusic.ui.player.styles
 
+import com.mochyy.mochymusic.ui.player.driftArtworkSlot
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.layout.Arrangement
@@ -77,6 +78,12 @@ fun AlternatePlayerStyle(
     modifier: Modifier = Modifier,
     preview: Boolean = false,
 ) {
+    if (preview && com.mochyy.mochymusic.ui.player.LocalArtworkDriftSlot.current != null) {
+        androidx.compose.runtime.CompositionLocalProvider(com.mochyy.mochymusic.ui.player.LocalArtworkDriftSlot provides null) {
+            AlternatePlayerStyle(style, actions, modifier, preview)
+        }
+        return
+    }
     when (style) {
         PlayerStyle.POSTER -> PosterPlayerStyle(actions, modifier, preview)
         PlayerStyle.TIMELINE -> TimelinePlayerStyle(actions, modifier, preview)
@@ -734,6 +741,7 @@ private fun TimelinePlayerStyle(actions: StyleActions, modifier: Modifier, previ
                     fallbackUrl = track.artwork,
                     modifier = Modifier
                         .size(if (landscape) icon * 0.86f else icon)
+                        .then(if (preview) Modifier else Modifier.driftArtworkSlot((if (landscape) icon * 0.86f else icon) * 0.26f))
                         .clip(RoundedCornerShape(icon * 0.26f))
                         .background(Color.White.copy(alpha = 0.08f)),
                 ) { url, pictureModifier ->

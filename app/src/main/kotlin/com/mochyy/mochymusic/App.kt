@@ -27,7 +27,7 @@ import com.mochyy.mochymusic.constants.*
 import com.mochyy.mochymusic.di.ApplicationScope
 import com.mochyy.mochymusic.i18n.AppLanguage
 import com.mochyy.mochymusic.extensions.toEnum
-import com.mochyy.mochymusic.utils.CrashHandler
+import com.mochyy.mochymusic.utils.CrashReporter
 import com.mochyy.mochymusic.utils.PreferencesCache
 import com.mochyy.mochymusic.utils.cipher.CipherDeobfuscator
 import com.mochyy.mochymusic.utils.dataStore
@@ -69,6 +69,7 @@ class App : Application(), SingletonImageLoader.Factory {
     lateinit var phoneLink: dagger.Lazy<com.mochyy.mochymusic.link.phone.PhoneLinkHost>
 
     override fun onCreate() {
+        CrashReporter.install(this)
         // before super, because that's where hilt builds the database and the player caches
         com.mochyy.mochymusic.importer.transfer.TransferRestore.applyPending(this)
         // the folders a move to another drive left behind, cleared once nothing has them open
@@ -76,13 +77,13 @@ class App : Application(), SingletonImageLoader.Factory {
         super.onCreate()
 
         AppLanguage.initialize(this)
-        CrashHandler.install(this)
 
         CipherDeobfuscator.initialize(this)
 
         if (BuildConfig.DEBUG || BuildConfig.BUILD_TYPE == "fast") {
             Timber.plant(Timber.DebugTree())
         }
+        Timber.plant(com.mochyy.mochymusic.utils.CrashLogTree())
 
         PreferencesCache.start(this, applicationScope)
         // tokens saved before the vault existed are sealed on the first start after the update
