@@ -88,7 +88,7 @@ object RemoteLibraries {
             val base = if (server.address.endsWith("/")) server.address else server.address + "/"
             Uri.parse(base + path.split("/").joinToString("/") { Uri.encode(it) })
         }
-        RemoteServer.Kind.SMB -> Uri.parse("$scheme://${server.id}/${path.trimStart('/')}")
+        RemoteServer.Kind.SMB -> Uri.parse("$Scheme://${server.id}/${path.trimStart('/')}")
     }
 
     /** one remote file, as the browse screen found it */

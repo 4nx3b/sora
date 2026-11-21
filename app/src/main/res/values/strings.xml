@@ -466,6 +466,7 @@
     <string name="source_unreachable">Unreachable: %1$s</string>
     <string name="test">Test</string>
     <string name="check">Check</string>
+    <string name="remove">Remove</string>
     <string name="sources">Sources</string>
     <string name="addon_sources">Addon sources</string>
     <string name="add_addon_source">Add addon source</string>

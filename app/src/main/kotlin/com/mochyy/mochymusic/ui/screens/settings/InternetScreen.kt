@@ -454,6 +454,7 @@ internal fun restartForRegionChange(context: Context) {
 /** which of the page's dialogs is open */
 private enum class InternetDialog {
     Region,
+    MuzoKey,
     WifiQuality,
     CellularQuality,
     DnsProvider,

@@ -96,7 +96,9 @@ class NamidaPalette(
             hsv[1] = (hsv[1] * 0.82f + 0.08f).coerceIn(0.18f, 0.85f)
             hsv[2] = hsv[2].coerceIn(0.38f, 0.86f)
             val color = Color(android.graphics.Color.HSVToColor(hsv))
-            return NamidaPalette(color, scaffold, dark)
+            // the blend base: namida's dark themes blend onto white, its light themes onto black
+            val onSurface = if (dark) Color.White else Color.Black
+            return NamidaPalette(color, scaffold, onSurface, dark)
         }
     }
 }

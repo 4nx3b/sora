@@ -783,6 +783,16 @@ class MusicService :
      */
     private var playbackWakeLock: android.os.PowerManager.WakeLock? = null
 
+    private fun updatePlaybackWakeLock() {
+        val lock = playbackWakeLock ?: return
+        val shouldHold = dataStore.get(KeepCpuAwakeKey, false) && player.isPlaying
+        if (shouldHold && !lock.isHeld) {
+            lock.acquire()
+        } else if (!shouldHold && lock.isHeld) {
+            lock.release()
+        }
+    }
+
     override fun onCreate() {
         super.onCreate()
         isRunning = true

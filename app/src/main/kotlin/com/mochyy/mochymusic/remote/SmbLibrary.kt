@@ -58,8 +58,15 @@ object SmbLibrary {
     private var connection: Connection? = null
     private var shareHandle: DiskShare? = null
 
-    /** the server this session speaks to now, so a stale one is dropped before use */
-    @Volatile var server: SmbServer? = null
+    /** a settings-page server, as the SMB session wants it */
+    fun RemoteServer.toSmb(): SmbServer = SmbServer(
+        host = address,
+        port = port,
+        share = share,
+        basePath = basePath,
+        username = username,
+        password = password,
+    )
 
     @Synchronized
     fun invalidate() {
@@ -138,20 +145,22 @@ object SmbLibrary {
 
     /** One directory's entries, folders first. */
     suspend fun list(
-        server: SmbServer,
+        server: RemoteServer,
         dir: String,
     ): Result<List<Entry>> = withContext(Dispatchers.IO) {
+        val smb = server.toSmb()
         runCatching {
-            withShare(server) { diskShare -> listDir(diskShare, dir) }
+            withShare(smb) { diskShare -> listDir(diskShare, dir) }
         }
     }
 
     /** the share's audio rows, walked breadth-first like Neiro's listLibrary */
-    suspend fun listLibrary(server: SmbServer, maxFiles: Int = 10_000): Result<List<Entry>> =
+    suspend fun listLibrary(server: RemoteServer, maxFiles: Int = 10_000): Result<List<Entry>> =
         withContext(Dispatchers.IO) {
+            val smb = server.toSmb()
             runCatching {
                 val audio = ArrayList<Entry>()
-                withShare(server) { diskShare ->
+                withShare(smb) { diskShare ->
                     val stack = ArrayDeque<String>()
                     stack.add(server.basePath)
                     val visited = HashSet<String>()
@@ -176,8 +185,8 @@ object SmbLibrary {
      * Opens [path] (display form) for reading. The handle is the caller's to
      * close — one per player open, so seeks never share a cursor.
      */
-    fun openFile(server: SmbServer, path: String): com.hierynomus.smbj.share.File =
-        withShare(server) { diskShare ->
+    fun openFile(server: RemoteServer, path: String): com.hierynomus.smbj.share.File =
+        withShare(server.toSmb()) { diskShare ->
             diskShare.openFile(
                 smbPath(path),
                 EnumSet.of(AccessMask.GENERIC_READ),
