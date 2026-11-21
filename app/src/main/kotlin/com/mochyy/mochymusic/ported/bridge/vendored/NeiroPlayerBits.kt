@@ -83,7 +83,7 @@ fun StyledPlaybackSlider(
                     SliderState(
                         value = value,
                         steps = 0,
-                        trackRange = valueRange,
+                        valueRange = valueRange, // BRIDGE(neiro): material3 1.5.0-alpha18 names it valueRange
                     )
                 }
             sliderState.value = value
@@ -126,7 +126,7 @@ fun StyledPlaybackSlider(
                     SliderState(
                         value = value,
                         steps = 0,
-                        trackRange = valueRange,
+                        valueRange = valueRange, // BRIDGE(neiro): material3 1.5.0-alpha18 names it valueRange
                     )
                 }
             sliderState.value = value

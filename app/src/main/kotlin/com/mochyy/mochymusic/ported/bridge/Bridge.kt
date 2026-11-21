@@ -22,13 +22,11 @@ typealias ArtistEntity = com.mochyy.mochymusic.db.entities.ArtistEntity
 typealias Artist = com.mochyy.mochymusic.db.entities.Artist
 typealias SleepTimer = com.mochyy.mochymusic.playback.SleepTimer
 typealias BottomSheetState = com.mochyy.mochymusic.ui.component.BottomSheetState
-typealias BottomSheetPageState = com.mochyy.mochymusic.ui.component.PopupSheetState
 typealias LiquidGlassTuning = com.mochyy.mochymusic.ui.component.liquid.LiquidGlassTuning
 
 val LocalPlayerConnection = com.mochyy.mochymusic.LocalPlayerConnection
 val LocalDatabase = com.mochyy.mochymusic.LocalDatabase
 val LocalSyncUtils = com.mochyy.mochymusic.LocalSyncUtils
-val LocalBottomSheetPageState = com.mochyy.mochymusic.ui.component.LocalBottomSheetPageState
 
 val LocalAnimationsDisabled = staticCompositionLocalOf { false }
 val LocalStableSystemBarsTopPadding = compositionLocalOf<Dp> { 0.dp }
@@ -70,7 +68,7 @@ fun <T> MutableList<T>.move(fromIndex: Int, toIndex: Int): MutableList<T> = sora
 
 val MediaMetadata.isMusicVideo: Boolean get() = isVideoSong
 
-val PlayerConnection.localPlayer: Player get() = player
+val PlayerConnection.localPlayer: androidx.media3.exoplayer.ExoPlayer get() = player
 
 val com.mochyy.mochymusic.playback.MusicService.crossfadeMixing: StateFlow<Boolean> get() = AutoMixUiState.mixing
 
@@ -118,8 +116,23 @@ object LyricsUtils {
 
     fun isLineSyncedLrc(lyrics: String): Boolean = lyrics.lineSequence().any { LrcLine.matches(it.trim()) }
 
-    // sora keeps translations beside the lyrics, never inside them
-    fun hasTranslation(@Suppress("UNUSED_PARAMETER") lyrics: String): Boolean = false
+    private val SyncedLinePrefixRegex = Regex("""^(\s*(?:\[[^\]]+])+)(\s*)(.*?)(\s*)$""")
+
+    // Neiro's (archivetune lyrics/LyricsUtils.kt): a translation sits in the text as a second line on the same timestamp
+    fun hasTranslation(lyrics: String): Boolean {
+        if (lyrics.isBlank()) return false
+        if (isTtml(lyrics)) {
+            return lyrics.contains("data-archivetune", ignoreCase = true) &&
+                lyrics.contains("translation", ignoreCase = true)
+        }
+        val seenPrefixes = HashSet<String>()
+        lyrics.lineSequence().forEach { line ->
+            val match = SyncedLinePrefixRegex.matchEntire(line) ?: return@forEach
+            val prefix = match.groupValues[1]
+            if (!seenPrefixes.add(prefix)) return true
+        }
+        return false
+    }
 
     fun shouldAutoTranslate(lyrics: String, targetLanguage: String, excludedLanguageCodes: Set<String>): Boolean =
         lyrics.isNotBlank() && targetLanguage.isNotBlank() && targetLanguage !in excludedLanguageCodes
@@ -147,4 +160,10 @@ enum class VideoAspectRatio {
         STRETCH -> androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FILL
         FILL -> androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FILL
     }
+}
+
+// ArchiveTune's DAO has upsert(ArtistEntity); sora's insert ignores a conflict, so update after it
+fun com.mochyy.mochymusic.db.DatabaseDao.upsert(artist: com.mochyy.mochymusic.db.entities.ArtistEntity) {
+    insert(artist)
+    update(artist)
 }

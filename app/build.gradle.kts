@@ -392,6 +392,7 @@ dependencies {
     debugImplementation(libs.compose.ui.tooling)
     implementation(libs.compose.animation)
     implementation(libs.compose.reorderable)
+    implementation(libs.squigglyslider)
 
     implementation(libs.viewmodel)
     implementation(libs.viewmodel.compose)

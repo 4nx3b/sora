@@ -37,7 +37,7 @@ fun PlayerSliderTrack(
     val activeTrackColor = colors.activeTrackColor
     val inactiveTickColor = colors.inactiveTickColor
     val activeTickColor = colors.activeTickColor
-    val valueRange = sliderState.trackRange
+    val valueRange = sliderState.valueRange // BRIDGE(neiro): material3 1.5.0-alpha18 names it valueRange
     Canvas(
         modifier
             .fillMaxWidth()
