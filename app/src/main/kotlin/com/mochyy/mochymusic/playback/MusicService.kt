@@ -2137,8 +2137,10 @@ class MusicService :
         resetQueueRunway()
         val generation = queueGeneration
         initialQueueLoading = true
-        // on by default, like spotify: a new playlist keeps shuffling until shuffle is turned off
-        val persistShuffleAcrossQueues = dataStore.get(PersistentShuffleAcrossQueuesKey, true)
+        // off by default, as Neiro's permanent shuffle ships it: a queue started
+        // plain plays in order and shuffle turns off with it; on, shuffle
+        // carries into whatever queue starts next
+        val persistShuffleAcrossQueues = dataStore.get(PersistentShuffleAcrossQueuesKey, false)
         if (!persistShuffleAcrossQueues) {
             player.shuffleModeEnabled = false
         }

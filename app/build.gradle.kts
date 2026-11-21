@@ -390,6 +390,9 @@ dependencies {
     // keep composition inspection tables reachable. Nothing in main/ imports it and there are
     // no @Preview functions, so debug-only costs us nothing.
     debugImplementation(libs.compose.ui.tooling)
+    // debug diagnostics, ported from Neiro: memory leaks in debug builds, its
+    // launcher icon kept off in app/src/debug/res/values/leakcanary.xml
+    debugImplementation("com.squareup.leakcanary:leakcanary-android:2.14")
     implementation(libs.compose.animation)
     implementation(libs.compose.reorderable)
     implementation(libs.squigglyslider)

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- LeakCanary's launcher icon stays off in debug builds, ported from Neiro. -->
+<resources>
+    <bool name="leak_canary_add_launcher_icon">false</bool>
+</resources>

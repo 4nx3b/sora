@@ -202,10 +202,6 @@ data class Song(
     )
 }
 
-/**
- * Artwork at a given pixel size.
- *
-
 enum class PlaybackSourceType {
     HOME,
     SEARCH,
