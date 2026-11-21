@@ -492,6 +492,8 @@ dependencies {
     implementation(libs.androidx.webkit)
 
     implementation("io.github.kyant0:shapes:1.2.0")
+    // SMB remote libraries, the same client Neiro speaks with (data/smb)
+    implementation("com.hierynomus:smbj:0.15.0")
     testImplementation(libs.junit)
     androidTestImplementation(libs.junit)
     androidTestImplementation("androidx.test:runner:1.6.2")

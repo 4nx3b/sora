@@ -53,6 +53,7 @@ import com.mochyy.mochymusic.R
 import com.mochyy.mochymusic.ui.player.styles.StyleActions
 import com.mochyy.mochymusic.ui.player.styles.styleInsets
 import com.mochyy.mochymusic.utils.makeTimeString
+import kotlinx.coroutines.launch
 
 @Composable
 fun NamidaQueue(
@@ -70,6 +71,7 @@ fun NamidaQueue(
     var searchOpen by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
+    val jumpScope = androidx.compose.runtime.rememberCoroutineScope()
 
     // namida's queue follower: open the list at the playing song
     LaunchedEffect(queueItems.size, windowIndex) {
@@ -234,7 +236,7 @@ fun NamidaQueue(
                         .background(palette.scaffold)
                         .clickable(enabled = !preview) {
                             if (windowIndex in queueItems.indices) {
-                                listState.animateScrollToItem(windowIndex)
+                                jumpScope.launch { listState.animateScrollToItem(windowIndex) }
                             }
                         }
                         .padding(10.dp),

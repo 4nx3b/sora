@@ -435,8 +435,8 @@ fun NamidaPlayerStyle(actions: StyleActions, modifier: Modifier, preview: Boolea
                             .size(36.dp)
                             .clip(CircleShape)
                             .clickable(enabled = !preview) {
-                                connection?.run {
-                                    repeatMode.value = when (repeatMode.value) {
+                                connection?.repeatMode?.let { flow ->
+                                    flow.value = when (repeatMode) {
                                         androidx.media3.common.Player.REPEAT_MODE_OFF -> androidx.media3.common.Player.REPEAT_MODE_ALL
                                         androidx.media3.common.Player.REPEAT_MODE_ALL -> androidx.media3.common.Player.REPEAT_MODE_ONE
                                         else -> androidx.media3.common.Player.REPEAT_MODE_OFF

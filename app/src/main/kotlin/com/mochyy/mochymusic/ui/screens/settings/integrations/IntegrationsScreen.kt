@@ -82,6 +82,12 @@ fun IntegrationsScreen(navController: NavController) {
                 onClick = { navController.navigate(YouTubeSyncRoute) },
             )
             IntegrationRow(
+                name = stringResource(R.string.sources),
+                description = stringResource(R.string.addon_sources_desc),
+                icon = R.drawable.extension,
+                onClick = { navController.navigate(SourcesRoute) },
+            )
+            IntegrationRow(
                 name = stringResource(R.string.integration_backup_name),
                 description = stringResource(R.string.integration_backup_desc),
                 icon = R.drawable.backup,

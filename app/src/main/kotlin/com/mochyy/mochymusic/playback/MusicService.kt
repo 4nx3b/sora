@@ -4048,7 +4048,11 @@ class MusicService :
 
     private fun createDataSourceFactory(): DataSource.Factory {
         // songs already on the phone are read straight from their file; only what comes over the network goes through the caches
-        val upstream = LocalBypassDataSource.Factory(DefaultDataSource.Factory(this), createCacheDataSource())
+        // smb:// (the remote:// spelling) reads straight off the share; everything else through the usual stack
+        val upstream = LocalBypassDataSource.Factory(
+            com.mochyy.mochymusic.remote.SmbDataSource.RoutingFactory(this, DefaultDataSource.Factory(this)),
+            createCacheDataSource(),
+        )
         return ResolvingDataSource.Factory(upstream) { dataSpec ->
             // a stream a source module or backend resolved to a real URL (an HLS playlist, given
             // as a data: URI when the module rewrote it, and its segments) carries no media id:
@@ -5284,6 +5288,15 @@ class MusicService :
         // offline: no provider is asked; the song plays if it's cached, and is skipped if not.
         // An imported file is never looked for online, even one whose file has gone missing.
         if (com.mochyy.mochymusic.utils.OfflineMode.isOn || mediaId.startsWith("LOCAL_")) return null
+        // a remote library's file (a WebDAV URL or an SMB share): it plays as the address
+        // it already is, never re-resolved — the credentials ride the stored server, not the id
+        remoteRoute(mediaId)?.let { return it }
+        // Muzo Data first, as Neiro's resolver walks it: one video id answered with the
+        // 24-bit FLAC for exactly that recording. Without a key the source is inert by
+        // design (Neiro's MuzoSource: the opt-in is the credential itself), a miss lets
+        // the walk step on, and a capped request never pays lossless bytes for it.
+        muzoRoute(mediaId)?.let { return it }
+        addonRoute(mediaId)?.let { return it }
         forcedRoutes[mediaId]?.let { forced ->
             if (forced.providerId == com.mochyy.mochymusic.modules.SourceModules.YouTubeId) return youTubeRoute(mediaId)
             forcedModuleStream(mediaId, forced)?.let { return it }
@@ -5345,6 +5358,101 @@ class MusicService :
             isDash = stream.format == com.mochyy.mochymusic.module.StreamFormat.Dash,
             source = "${module.info.name} · ${stream.qualityLabel}",
             widevineLicense = (stream.drm as? com.mochyy.mochymusic.module.StreamDrm.Widevine)?.license,
+            cacheKey = cacheKey,
+        )
+    }
+
+    /**
+     * A remote library's file, as its own stream: the WebDAV file's URL (with its
+     * basic-auth header registered for the fetch) or the SMB file's remote:// URI
+     * the SmbDataSource reads. The cache key is the media id, so bytes are shared
+     * between plays and the header injection branch catches it.
+     */
+    private suspend fun remoteRoute(mediaId: String): com.mochyy.mochymusic.playback.custom.CustomStreamResult? {
+        val (serverId, path) = com.mochyy.mochymusic.remote.RemoteLibraries.parseMediaId(mediaId) ?: return null
+        val server = com.mochyy.mochymusic.remote.RemoteLibraries.servers(this).firstOrNull { it.id == serverId }
+            ?: return null
+        val uri = com.mochyy.mochymusic.remote.RemoteLibraries.uriOf(server, path)
+        resolvedSourceIds[mediaId] = "remote"
+        val name = "Remote · ${server.id}"
+        notePlayingFrom(mediaId, PlayingFrom("remote", name, null, null))
+        val cacheKey = ModuleCacheKeyPrefix + mediaId
+        if (server.kind == com.mochyy.mochymusic.remote.RemoteServer.Kind.WEBDAV &&
+            (server.username.isNotBlank() || server.password.isNotBlank())
+        ) {
+            moduleStreamHeaders[cacheKey] = mapOf(
+                "Authorization" to okhttp3.Credentials.basic(server.username, server.password),
+            )
+        }
+        Timber.tag("StreamFetch").i("$mediaId plays from ${server.kind} ${server.id}: $path")
+        return com.mochyy.mochymusic.playback.custom.CustomStreamResult(
+            streamUrl = uri.toString(),
+            source = name,
+            cacheKey = cacheKey,
+        )
+    }
+
+    /**
+     * The first addon that has the song, or null to step on — Neiro's walk: the
+     * sources the user added on purpose come before the installed modules. The
+     * match is by name (the addon protocol has no video ids), the stream is the
+     * addon's own URL, and a miss on every addon hands the walk on untouched.
+     */
+    private suspend fun addonRoute(mediaId: String): com.mochyy.mochymusic.playback.custom.CustomStreamResult? {
+        if (com.mochyy.mochymusic.utils.DataSaver.isActive(this)) return null
+        val bases = com.mochyy.mochymusic.muzo.AddonSources.urls(this)
+        if (bases.isEmpty()) return null
+        val track = trackQueryOf(mediaId) ?: return null
+        val title = track.title ?: return null
+        val artist = track.artists.joinToString(", ")
+        for (base in bases) {
+            val found = com.mochyy.mochymusic.muzo.AddonSources.findTrack(base, title, artist) ?: continue
+            val stream = com.mochyy.mochymusic.muzo.AddonSources.stream(base, found.id).getOrNull() ?: continue
+            val url = stream.url.takeIf(String::isNotBlank) ?: continue
+            resolvedSourceIds[mediaId] = "addon"
+            scope.launch(Dispatchers.IO) { recoverSong(mediaId) }
+            val cacheKey = "$ModuleCacheKeyPrefix addon|${found.id}|$mediaId".replace(" ", "")
+            val name = com.mochyy.mochymusic.muzo.AddonSources.manifest(base).getOrNull()?.name?.takeIf(String::isNotBlank) ?: base
+            notePlayingFrom(mediaId, PlayingFrom("addon", name, stream.qualityLabel, found.id))
+            streamFacts.update { it + (mediaId to StreamFacts(codec = stream.codec, fromModule = true)) }
+            Timber.tag("StreamFetch").i("$mediaId plays from addon $name: ${found.title} · ${stream.qualityLabel}")
+            return com.mochyy.mochymusic.playback.custom.CustomStreamResult(
+                streamUrl = url,
+                isHls = stream.isHls,
+                isDash = stream.isDash,
+                source = "$name · ${stream.qualityLabel}",
+                cacheKey = cacheKey,
+            )
+        }
+        return null
+    }
+
+    /**
+     * Muzo Data's answer for this song, or null to step on: the 24-bit FLAC stream for
+     * the exact video id, keyed and announced like a module stream so the CDN's
+     * Authorization header rides the fetch and the stream info names the source. The
+     * credential is the opt-in (Neiro's shape): no key, no ask.
+     */
+    private suspend fun muzoRoute(mediaId: String): com.mochyy.mochymusic.playback.custom.CustomStreamResult? {
+        // a capped request is the one caller that cannot pay lossless bytes for
+        if (com.mochyy.mochymusic.utils.DataSaver.isActive(this)) return null
+        val key = com.mochyy.mochymusic.muzo.MuzoService.apiKey(this) ?: return null
+        val answer = com.mochyy.mochymusic.muzo.MuzoService.lossless(key, mediaId) ?: return null
+        val url = answer.url ?: return null
+        val codec = answer.format?.lowercase() ?: "flac"
+        resolvedSourceIds[mediaId] = MuzoSourceId
+        // the youtube path saves the song, a lossless source has to as well or its plays never reach history
+        scope.launch(Dispatchers.IO) { recoverSong(mediaId) }
+        val cacheKey = "$ModuleCacheKeyPrefix$MuzoSourceId|$mediaId"
+        // the CDN binds its file URLs to the key they were minted for; this header travels with the fetch
+        moduleStreamHeaders[cacheKey] = mapOf("Authorization" to "Bearer $key")
+        val quality = answer.quality?.takeIf { it.isNotBlank() } ?: "lossless"
+        streamFacts.update { it + (mediaId to StreamFacts(codec = codec, fromModule = true)) }
+        notePlayingFrom(mediaId, PlayingFrom(MuzoSourceId, "Muzo Data", quality, mediaId))
+        Timber.tag("StreamFetch").i("$mediaId plays from Muzo Data: $codec $quality")
+        return com.mochyy.mochymusic.playback.custom.CustomStreamResult(
+            streamUrl = url,
+            source = "Muzo Data · $quality",
             cacheKey = cacheKey,
         )
     }
@@ -5680,6 +5788,8 @@ class MusicService :
          * media id - see the data source factory.
          */
         const val ModuleCacheKeyPrefix = "module|"
+        /** Muzo Data, when its key is set: answers a video id with its 24-bit FLAC */
+        const val MuzoSourceId = "muzo"
 
         // a blended skip crosses the two songs over in the fade's Length; never shorter than this, or it's a click
         const val SkipBlendMinMs = 300L

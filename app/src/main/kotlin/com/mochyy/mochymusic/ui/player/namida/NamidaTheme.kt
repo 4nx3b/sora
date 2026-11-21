@@ -102,7 +102,7 @@ class NamidaPalette(
 }
 
 val LocalNamidaPalette = staticCompositionLocalOf {
-    NamidaPalette(Color(0xFF5468A0), Color(0xFF16161C), dark = true)
+    NamidaPalette(Color(0xFF5468A0), Color(0xFF16161C), Color.White, dark = true)
 }
 
 @Composable

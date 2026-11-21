@@ -10,7 +10,9 @@ package com.mochyy.mochymusic.ui.player.namida
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -45,7 +47,7 @@ private fun rememberWaveformBars(songId: String?, barCount: Int): BarsValue {
         fun noise(i: Int) = sin(i * 12.9898 + seed * 0.0001) * 43758.5453
         val out = FloatArray(barCount) { i ->
             val raw = abs(noise(i) % 1.0).toFloat()
-            val envelope = sin(Math.PI * (i + 0.5) / barCount).coerceIn(0.25f, 1f)
+            val envelope = sin(Math.PI * (i + 0.5) / barCount).toFloat().coerceIn(0.25f, 1f)
             (0.22f + raw * 0.78f) * envelope
         }
         BarsValue(out.toList())
