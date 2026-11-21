@@ -2051,15 +2051,30 @@ private fun SuggestSongCard(
     }
 }
 
-/** The app's own search sources, one query — the first rows that answer. */
+/**
+ * The app's own search, one query — the song rows YouTube answers with. The
+ * Neiro original walked its SourceRegistry modules; sora's rows come straight
+ * from innertube, the same search the app's own search page runs.
+ */
 internal suspend fun searchSongs(query: String): List<Song> = withContext(Dispatchers.IO) {
-    val found = mutableListOf<Song>()
-    for (source in com.mochyy.mochymusic.ported.together.sources.SourceRegistry.active()) {
-        val results = runCatching { source.search(query, limit = 12) }.getOrNull().orEmpty()
-        found += results.filter { it.videoId.isNotBlank() }
-        if (found.size >= 12) break
+    val results = runCatching {
+        com.music.innertube.YouTube.search(query, com.music.innertube.YouTube.SearchFilter.FILTER_SONG).getOrNull()
+    }.getOrNull() ?: return@withContext emptyList()
+    results.items.filterIsInstance<com.music.innertube.models.SongItem>().take(12).map { item ->
+        Song(
+            videoId = item.id,
+            title = item.title,
+            artist = item.artists.joinToString { it.name },
+            thumbnailUrl = item.thumbnail,
+            durationText = item.duration?.let { seconds -> "%d:%02d".format(seconds / 60, seconds % 60) },
+            artistId = item.artists.firstOrNull()?.id,
+            artists = item.artists.map { com.mochyy.mochymusic.ported.together.model.ArtistRef(name = it.name, browseId = it.id) },
+            albumId = item.album?.id,
+            albumName = item.album?.title,
+            isExplicit = item.explicit,
+            setVideoId = item.setVideoId,
+        )
     }
-    found
 }
 
 /**

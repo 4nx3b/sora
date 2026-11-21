@@ -1,6 +1,19 @@
 package com.mochyy.mochymusic.ported.together.ui.haptics
 
+import android.content.Context
+import android.database.ContentObserver
+import android.media.AudioAttributes
+import android.os.Build
+import android.os.VibrationAttributes
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
+import android.provider.Settings
+import androidx.annotation.RequiresApi
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * What a touch *meant*, not what it should feel like — the shape of the buzz is
