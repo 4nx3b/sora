@@ -82,6 +82,8 @@ val PauseOnMute = booleanPreferencesKey("pauseOnMute")
 // keep playing when another app makes sound, and don't pause that app either
 val MixWithOtherAppsKey = booleanPreferencesKey("mixWithOtherApps")
 val ResumeOnBluetoothConnectKey = booleanPreferencesKey("resumeOnBluetoothConnect")
+// keep the CPU awake while playing, ported from Neiro (ArchiveTune's keep awake)
+val KeepCpuAwakeKey = booleanPreferencesKey("keepCpuAwake")
 val StopPlaybackOnTaskRemovedKey = booleanPreferencesKey("stopPlaybackOnTaskRemoved")
 val KeepScreenOn = booleanPreferencesKey("keepScreenOn")
 // there's no limit to the larp

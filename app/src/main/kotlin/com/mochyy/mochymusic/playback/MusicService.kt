@@ -155,6 +155,7 @@ import com.mochyy.mochymusic.constants.PlayerVolumeKey
 import com.mochyy.mochymusic.constants.RememberShuffleAndRepeatKey
 import com.mochyy.mochymusic.constants.RepeatModeKey
 import com.mochyy.mochymusic.constants.ResumeOnBluetoothConnectKey
+import com.mochyy.mochymusic.constants.KeepCpuAwakeKey
 import com.mochyy.mochymusic.constants.ScrobbleDelayPercentKey
 import com.mochyy.mochymusic.constants.ScrobbleDelaySecondsKey
 import com.mochyy.mochymusic.constants.ScrobbleMinSongDurationKey
@@ -312,6 +313,12 @@ class MusicService :
     MediaLibraryService(),
     Player.Listener,
     PlaybackStatsListener.Callback {
+    override fun onIsPlayingChanged(isPlaying: Boolean) {
+        // the CPU wake lock follows playback; the setting is read inside so a
+        // change under it is picked up on the next transition (Neiro's shape)
+        updatePlaybackWakeLock()
+    }
+
     @Inject
     lateinit var database: MusicDatabase
 
@@ -768,9 +775,21 @@ class MusicService :
         }
     }
 
+    /**
+     * Keep CPU awake during playback, ported from Neiro (ArchiveTune's fork
+     * behaviour): a partial wake lock held only while [KeepCpuAwakeKey] is on
+     * and the player is actually playing, so a paused or torn-down service
+     * never keeps the device's CPU standing for it.
+     */
+    private var playbackWakeLock: android.os.PowerManager.WakeLock? = null
+
     override fun onCreate() {
         super.onCreate()
         isRunning = true
+
+        playbackWakeLock = getSystemService(android.os.PowerManager::class.java)
+            ?.newWakeLock(android.os.PowerManager.PARTIAL_WAKE_LOCK, "mochy:playback")
+            ?.apply { setReferenceCounted(false) }
 
         playerInitialized.value = false
 
@@ -4570,6 +4589,8 @@ class MusicService :
     }
 
     override fun onDestroy() {
+        runCatching { playbackWakeLock?.let { if (it.isHeld) it.release() } }
+        playbackWakeLock = null
         isRunning = false
 
         audioManager.unregisterAudioDeviceCallback(audioDeviceCallback)
