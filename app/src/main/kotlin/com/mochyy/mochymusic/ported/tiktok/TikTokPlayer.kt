@@ -556,11 +556,11 @@ private fun TikTokTopNavigation(
         remember(context) {
             listOf(
                 TikTokFeedTab(
-                    label = context.getString(R.string.home),
+                    label = context.getString(R.string.ported_home),
                     route = "home",
                 ),
                 TikTokFeedTab(
-                    label = context.getString(R.string.filter_library),
+                    label = context.getString(R.string.ported_filter_library),
                     route = "library",
                 ),
             )
@@ -690,7 +690,7 @@ private fun TikTokTopNavigation(
                 } else {
                     Icon(
                         painter = painterResource(R.drawable.solar_magnifer_linear),
-                        contentDescription = stringResource(R.string.search),
+                        contentDescription = stringResource(R.string.ported_search),
                         tint = Color.White,
                         modifier = Modifier.size(22.dp),
                     )

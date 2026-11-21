@@ -179,6 +179,7 @@ import androidx.media3.exoplayer.source.ShuffleOrder.DefaultShuffleOrder
 import androidx.navigation.NavController
 import com.mochyy.mochymusic.ported.bridge.LocalDatabase
 import com.mochyy.mochymusic.ported.bridge.ArtistEntity
+import com.mochyy.mochymusic.ported.bridge.upsert
 import com.mochyy.mochymusic.ported.bridge.YouTube
 import com.mochyy.mochymusic.ported.bridge.LocalLyricsScrollListener
 import java.time.LocalDateTime
@@ -263,6 +264,10 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.ui.input.pointer.pointerInput
 import com.mochyy.mochymusic.ported.bridge.isLocalMediaId
+import com.mochyy.mochymusic.ported.bridge.localPlayer
+import com.mochyy.mochymusic.ported.bridge.isMusicVideo
+import com.mochyy.mochymusic.ported.bridge.source
+import com.mochyy.mochymusic.ported.bridge.crossfadeMixing
 
 private const val AnimDurationMillis = 300
 private const val ShareAlbumKey = "flamingoAlbum"
@@ -2101,7 +2106,7 @@ private fun FlamingoTranslationPopup(
                         R.string.show_romanization
                     },
                 ),
-                iconRes = R.drawable.language,
+                iconRes = R.drawable.ported_language,
                 onClick = onToggleRomanization,
             )
         }
@@ -2347,7 +2352,7 @@ private fun FlamingoArtistPickerSheet(
                                     contentAlignment = Alignment.Center,
                                 ) {
                                     Icon(
-                                        painter = painterResource(R.drawable.artist),
+                                        painter = painterResource(R.drawable.ported_artist),
                                         contentDescription = null,
                                         tint = Color.White.copy(alpha = 0.6f),
                                         modifier = Modifier.size(20.dp),

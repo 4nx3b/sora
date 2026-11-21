@@ -94,6 +94,7 @@ import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
+import com.mochyy.mochymusic.ported.bridge.localPlayer
 
 private val QueuePillHeight = 48.dp
 private val QueuePillCornerRadius = 16.dp
@@ -278,7 +279,7 @@ fun AppleMusicQueueSheet(
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
-                    painter = painterResource(R.drawable.shuffle),
+                    painter = painterResource(R.drawable.ported_shuffle),
                     contentDescription = "Shuffle",
                     tint = adaptivePrimary,
                     modifier = Modifier.size(24.dp),
@@ -299,8 +300,8 @@ fun AppleMusicQueueSheet(
                     painter =
                         painterResource(
                             when (repeatMode) {
-                                Player.REPEAT_MODE_ONE -> R.drawable.repeat_one
-                                else -> R.drawable.repeat
+                                Player.REPEAT_MODE_ONE -> R.drawable.ported_repeat_one
+                                else -> R.drawable.ported_repeat
                             },
                         ),
                     contentDescription = "Repeat",
@@ -327,7 +328,7 @@ fun AppleMusicQueueSheet(
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
-                        painter = painterResource(R.drawable.bedtime),
+                        painter = painterResource(R.drawable.ported_bedtime),
                         contentDescription = "Sleep Timer",
                         tint = adaptivePrimary,
                         modifier = Modifier.size(24.dp),
@@ -350,7 +351,7 @@ fun AppleMusicQueueSheet(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = stringResource(R.string.queue),
+                text = stringResource(R.string.ported_queue),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 color = adaptivePrimary,
@@ -367,7 +368,7 @@ fun AppleMusicQueueSheet(
                 }
                 IconButton(onClick = { locked = !locked }) {
                     Icon(
-                        painter = painterResource(if (locked) R.drawable.lock else R.drawable.lock_open),
+                        painter = painterResource(if (locked) R.drawable.ported_lock else R.drawable.ported_lock_open),
                         contentDescription = if (locked) "Unlock Queue" else "Lock Queue",
                         tint = adaptiveSecondary,
                     )
@@ -459,7 +460,7 @@ fun AppleMusicQueueSheet(
                                             },
                                         ) {
                                             Icon(
-                                                painter = painterResource(R.drawable.more_vert),
+                                                painter = painterResource(R.drawable.ported_more_vert),
                                                 contentDescription = "Options",
                                                 tint = adaptivePrimary,
                                             )
@@ -471,7 +472,7 @@ fun AppleMusicQueueSheet(
                                                 modifier = Modifier.draggableHandle(),
                                             ) {
                                                 Icon(
-                                                    painter = painterResource(R.drawable.drag_handle),
+                                                    painter = painterResource(R.drawable.ported_drag_handle),
                                                     contentDescription = "Drag to reorder",
                                                     tint = adaptivePrimary,
                                                 )

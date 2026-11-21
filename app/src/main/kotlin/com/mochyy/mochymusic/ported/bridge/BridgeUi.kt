@@ -20,11 +20,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.datastore.preferences.core.Preferences
 import androidx.navigation.NavController
-import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.mochyy.mochymusic.ui.player.driftArtworkSlot as soraDriftArtworkSlot
-import com.kyant.backdrop.backdrops.layerBackdrop as kyantLayerBackdrop
-
-typealias PlatformBackdrop = com.kyant.backdrop.backdrops.LayerBackdrop
 
 // ---- preferences
 
@@ -43,14 +39,6 @@ fun rememberLowDataModeActive(): Boolean = com.mochyy.mochymusic.utils.rememberD
 
 @Composable
 fun rememberLiquidGlassEnabled(): Boolean = com.mochyy.mochymusic.ui.component.liquid.LocalLiquidGlass.current.enabled
-
-@Composable
-fun rememberBackdrop(color: Color): PlatformBackdrop = rememberLayerBackdrop {
-    drawRect(color)
-    drawContent()
-}
-
-fun Modifier.layerBackdrop(backdrop: PlatformBackdrop): Modifier = kyantLayerBackdrop(backdrop)
 
 // ---- drift: the one artwork flight every sora style shares
 
