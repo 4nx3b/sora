@@ -5,6 +5,7 @@
 
 package com.mochyy.mochymusic.ui.player.namida
 
+import com.mochyy.mochymusic.ui.player.driftArtworkSlot
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.CubicBezierEasing
@@ -251,7 +252,9 @@ fun NamidaPlayerStyle(actions: StyleActions, modifier: Modifier, preview: Boolea
                                 ArtworkWithGlow(
                                     url = track.artwork,
                                     dim = !playing,
-                                    modifier = Modifier.fillMaxSize(),
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .then(if (preview) Modifier else Modifier.driftArtworkSlot(NamidaPanelCorner)),
                                 )
                             }
                         }
@@ -474,7 +477,7 @@ private fun NamidaTransport(
         horizontalArrangement = Arrangement.spacedBy(NamidaControlGap),
     ) {
         NamidaIconButton(
-            R.drawable.avd_skip_previous,
+            R.drawable.skip_previous,
             palette,
             iconSize = NamidaSkipIcon,
             enabled = canPrevious,
@@ -515,7 +518,7 @@ private fun NamidaTransport(
             )
         }
         NamidaIconButton(
-            R.drawable.avd_skip_next,
+            R.drawable.skip_next,
             palette,
             iconSize = NamidaSkipIcon,
             enabled = canNext,

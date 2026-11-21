@@ -36,6 +36,16 @@ fun AppSwitch(
     enabled: Boolean = true,
     thumbContent: (@Composable () -> Unit)? = null,
 ) {
+    val glass = com.mochyy.mochymusic.ui.component.liquid.LocalLiquidGlass.current
+    if (onCheckedChange != null && glass.surface(glass.toggles)) {
+        com.mochyy.mochymusic.ui.component.liquid.LiquidGlassSwitch(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            modifier = modifier,
+            enabled = enabled,
+        )
+        return
+    }
     val alpha = if (enabled) 1f else 0.38f
     val animSpec = tween<Color>(150)
 

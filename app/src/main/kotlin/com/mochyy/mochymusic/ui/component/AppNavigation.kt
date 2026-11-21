@@ -2,6 +2,7 @@
 
 package com.mochyy.mochymusic.ui.component
 
+import com.mochyy.mochymusic.ui.component.liquid.liquidGlassSurface
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
@@ -270,13 +271,18 @@ fun AppNavigationBar(
                     if (moduleGlass?.outline != false) drawChromeOutline(Offset.Zero, size, cornerRadius = size.height / 2f)
                 }
         ) {
-            FrostedChromeGlass(
-                state = glassState,
-                pureBlack = pureBlack,
-                accentWash = accentWash,
-                modifier = Modifier.fillMaxSize(),
-                pill = glassPill,
-            )
+            val liquid = com.mochyy.mochymusic.ui.component.liquid.LocalLiquidGlass.current
+            if (liquid.surface(liquid.navBar)) {
+                Box(Modifier.fillMaxSize().liquidGlassSurface(NavBarShape))
+            } else {
+                FrostedChromeGlass(
+                    state = glassState,
+                    pureBlack = pureBlack,
+                    accentWash = accentWash,
+                    modifier = Modifier.fillMaxSize(),
+                    pill = glassPill,
+                )
+            }
 
             Row(
                 modifier = Modifier
