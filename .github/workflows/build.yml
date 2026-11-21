@@ -4,7 +4,7 @@ name: Android Release APK
 # this fork ships — the signed arm64-v8a phone release — and nothing else.
 on:
   push:
-    branches: [main]
+    branches: [main, dev]
     paths-ignore:
       - 'README.md'
       - 'fastlane/**'

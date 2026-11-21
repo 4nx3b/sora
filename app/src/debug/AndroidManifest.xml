@@ -22,4 +22,16 @@
         android:name="android.permission.REQUEST_INSTALL_PACKAGES"
         tools:node="replace" />
 
+    <!--
+      Debug diagnostics, ported from Neiro: a ContentProvider that boots before
+      the application, so StrictMode is watching from the very first access.
+      LeakCanary's config is set there too. Debug builds only.
+    -->
+    <application>
+        <provider
+            android:name="com.mochyy.mochymusic.debug.DebugDiagnosticsProvider"
+            android:authorities="${applicationId}.debug-diagnostics"
+            android:exported="false" />
+    </application>
+
 </manifest>

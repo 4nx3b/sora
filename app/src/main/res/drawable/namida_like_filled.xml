@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- namida like_filled icon, extracted verbatim from its broken_filled.ttf -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="1024"
+    android:viewportHeight="1024">
+    <group
+        android:scaleX="1"
+        android:scaleY="-1"
+        android:translateY="1024">
+        <path
+            android:fillColor="#FF000000"
+            android:pathData="M352 161V610Q352 637 367 660L488 839Q502 861 533.5 872.5Q565 884 595 873Q627 862 645.5 830.5Q664 799 657 767L634 622Q632 602 644 588Q656 574 674 574H856Q911 574 939 535Q965 498 947 449L839 118Q832 90 811.5 67.5Q791 45 763.5 31.5Q736 18 706 18H534Q511 18 484.5 25.5Q458 33 444 48L387 91Q352 117 352 161ZM212 696H166Q115 696 92.5 675.0Q70 654 70 605V160Q70 111 92.5 89.5Q115 68 166 68H212Q263 68 285.5 89.5Q308 111 308 160V605Q308 654 285.5 675.0Q263 696 212 696Z" />
+    </group>
+</vector>

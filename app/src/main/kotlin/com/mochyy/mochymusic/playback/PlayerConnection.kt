@@ -599,6 +599,9 @@ class PlayerConnection(
                 } else {
                     castHandler.play()
                 }
+            } else if (service.partyLockedTransport(!service.player.isPlaying)) {
+                // a Listen Together room locked to its host: the press moved this
+                // device alone, through the ported engine's door, and nothing else
             } else {
                 service.transport.togglePlayPause()
             }

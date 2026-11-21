@@ -1340,6 +1340,34 @@ class MainActivity : ComponentActivity() {
                     // action feedback ("Added to Queue", "Undo"...) drops in over the sheets too
                     com.mochyy.mochymusic.ui.component.TopToastHost()
 
+                    // the Listen Together port's invite door: an invite link reveals the
+                    // room page, which joins on its own once it is on screen
+                    val pendingListenInvite by com.mochyy.mochymusic.ported.together.ListenTogetherInvite.pending.collectAsState()
+                    LaunchedEffect(pendingListenInvite) {
+                        if (pendingListenInvite != null) {
+                            navController.navigate("listen_together") { launchSingleTop = true }
+                        }
+                    }
+                    // a chat notification's shade tap asked for the chat page by name:
+                    // open it over whatever the listener was on, once
+                    val pendingOpenChat by com.mochyy.mochymusic.ported.together.ListenTogetherInvite.openChat.collectAsState()
+                    LaunchedEffect(pendingOpenChat) {
+                        if (pendingOpenChat) {
+                            if (com.mochyy.mochymusic.ported.together.ListenTogether.manager?.isInRoom == true) {
+                                navController.navigate("listen_together_chat") { launchSingleTop = true }
+                            }
+                            com.mochyy.mochymusic.ported.together.ListenTogetherInvite.chatHandled()
+                        }
+                    }
+                    // the room's chat popup: the newest message over the app while the
+                    // chat page is closed
+                    Box(Modifier.fillMaxSize()) {
+                        com.mochyy.mochymusic.ported.together.ui.ListenTogetherChatPopup(
+                            onOpenChat = { navController.navigate("listen_together_chat") { launchSingleTop = true } },
+                            modifier = Modifier.align(Alignment.TopCenter),
+                        )
+                    }
+
                     // "share song" from any menu opens here, over the app and the player
                     com.mochyy.mochymusic.ui.player.share.song.SongShareHost()
 
@@ -1545,6 +1573,15 @@ class MainActivity : ComponentActivity() {
         if (intent.action == com.mochyy.mochymusic.link.phone.PhoneLinkService.ActionOpenTvLink) {
             intent.action = null
             openDevicesRequests++
+            return
+        }
+        // a Listen Together invite link: the ported object takes it (raising its
+        // pending flow, which the composable navigates on); anything else falls
+        // through to the music links below
+        com.mochyy.mochymusic.ported.together.ListenTogetherInvite.consume(intent)
+        if (com.mochyy.mochymusic.ported.together.ListenTogetherInvite.pending.value != null) {
+            intent.data = null
+            intent.removeExtra(Intent.EXTRA_TEXT)
             return
         }
         if (importSharedAudio(intent)) return

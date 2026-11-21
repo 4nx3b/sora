@@ -29,6 +29,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -396,6 +397,31 @@ fun PlayerActionMenu(
                 KeepScreenOnRow()
                 Spacer(modifier = Modifier.height(8.dp))
                 FloatingLyricsRow()
+                // the Listen Together port's door into the player menu: the room page
+                // behind it carries the live state (members, the code, the queue)
+                if (onOpenRoute != null) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    val partyState by com.mochyy.mochymusic.ported.together.ListenTogether.state.collectAsState()
+                    MenuRow(
+                        icon = R.drawable.connect_people,
+                        title = androidx.compose.ui.res.stringResource(R.string.ported_listen_together),
+                        onClick = {
+                            onDismiss()
+                            onOpenRoute("listen_together")
+                        },
+                        trailing = if (partyState.inParty && partyState.members.isNotEmpty()) {
+                            {
+                                Text(
+                                    text = partyState.members.size.toString(),
+                                    style = MaterialTheme.typography.labelLarge,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        } else {
+                            null
+                        },
+                    )
+                }
                 Spacer(modifier = Modifier.height(8.dp))
                 MenuRow(
                     icon = R.drawable.speed,

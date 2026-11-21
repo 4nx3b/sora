@@ -1,5 +1,7 @@
 // ActionPromptDialog and the pieces it draws with, taken verbatim from Neiro (archivetune ui/component/Dialog.kt).
 
+@file:OptIn(ExperimentalMaterial3ExpressiveApi::class)
+
 package com.mochyy.mochymusic.ported.bridge
 
 import androidx.compose.animation.core.Spring
@@ -81,6 +83,14 @@ import androidx.compose.runtime.setValue
 val LocalUnglassColorScheme: ProvidableCompositionLocal<ColorScheme?> =
     compositionLocalOf { null }
 
+/** Verbatim from Neiro's archivetune ui/component/SettingsDialogBlur.kt. */
+val LocalSettingsDialogShowing: ProvidableCompositionLocal<androidx.compose.runtime.MutableState<Boolean>> =
+    compositionLocalOf { androidx.compose.runtime.mutableStateOf(false) }
+
+@Composable
+fun rememberSettingsDialogHostState(): androidx.compose.runtime.MutableState<Boolean> =
+    androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+
 
 @Composable
 fun UnglassedDialogTheme(content: @Composable () -> Unit) {
@@ -89,6 +99,26 @@ fun UnglassedDialogTheme(content: @Composable () -> Unit) {
         colorScheme = unglassed ?: MaterialTheme.colorScheme,
         content = content,
     )
+}
+
+@Composable
+private fun DialogIconChip(content: @Composable () -> Unit) {
+    Surface(
+        shape = CircleShape,
+        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f),
+        modifier = Modifier.size(34.dp),
+    ) {
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier.fillMaxSize(),
+        ) {
+            CompositionLocalProvider(
+                LocalContentColor provides MaterialTheme.colorScheme.onPrimaryContainer,
+            ) {
+                content()
+            }
+        }
+    }
 }
 
 @Composable

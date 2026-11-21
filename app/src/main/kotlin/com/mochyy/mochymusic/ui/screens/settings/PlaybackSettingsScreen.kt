@@ -22,6 +22,7 @@ import com.mochyy.mochymusic.constants.DontSkipOnFailureKey
 import com.mochyy.mochymusic.constants.MixWithOtherAppsKey
 import com.mochyy.mochymusic.constants.PauseOnMute
 import com.mochyy.mochymusic.constants.PersistentQueueKey
+import com.mochyy.mochymusic.constants.KeepCpuAwakeKey
 import com.mochyy.mochymusic.constants.PersistentShuffleAcrossQueuesKey
 import com.mochyy.mochymusic.constants.ResumeOnBluetoothConnectKey
 import com.mochyy.mochymusic.constants.SkipSilenceKey
@@ -59,7 +60,8 @@ private fun listeningItems(): List<SettingsItem> {
     val (resumeOnBluetooth, onResumeOnBluetoothChange) = rememberPreference(ResumeOnBluetoothConnectKey, defaultValue = false)
     val (pauseOnMute, onPauseOnMuteChange) = rememberPreference(PauseOnMute, defaultValue = false)
     val (persistentQueue, onPersistentQueueChange) = rememberPreference(PersistentQueueKey, defaultValue = true)
-    val (persistentShuffle, onPersistentShuffleChange) = rememberPreference(PersistentShuffleAcrossQueuesKey, defaultValue = true)
+    val (keepCpuAwake, onKeepCpuAwakeChange) = rememberPreference(KeepCpuAwakeKey, defaultValue = false)
+    val (persistentShuffle, onPersistentShuffleChange) = rememberPreference(PersistentShuffleAcrossQueuesKey, defaultValue = false)
     val (skipSilence, onSkipSilenceChange) = rememberPreference(SkipSilenceKey, defaultValue = false)
     return listOf(
         switchItem(
@@ -104,6 +106,15 @@ private fun listeningItems(): List<SettingsItem> {
             icon = painterResource(R.drawable.cached),
             checked = persistentQueue,
             onCheckedChange = onPersistentQueueChange,
+        ),
+        // keep the CPU awake while playing, ported from Neiro (ArchiveTune's keep awake)
+        switchItem(
+            key = "Keep CPU awake",
+            title = stringResource(R.string.playback_keep_cpu_awake),
+            description = stringResource(R.string.playback_keep_cpu_awake_desc),
+            icon = painterResource(R.drawable.bolt),
+            checked = keepCpuAwake,
+            onCheckedChange = onKeepCpuAwakeChange,
         ),
         // shuffle stays on from one playlist to the next, like spotify, until it's turned off
         switchItem(

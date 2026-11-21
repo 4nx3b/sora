@@ -45,7 +45,9 @@ class VideoArtworkState internal constructor(
     val hasPlaybackFailed: Boolean get() = session.failures >= GiveUpAfterFailures + resyncs * GiveUpAfterFailures
     val videoAspectRatio: Float? get() = session.aspect.takeIf { it > 0f }
 
-    fun requestResync() {
+    fun requestResync(position: Long, isPlaying: Boolean) {
+        // Neiro's signature, verbatim call shape; sora's video session drives itself,
+        // so the resync only counts towards the give-up budget.
         resyncs++
     }
 }

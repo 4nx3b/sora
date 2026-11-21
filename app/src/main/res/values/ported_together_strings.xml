@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The Listen Together port's strings, verbatim from Neiro (app + sharedUi
+     composeResources). ported_ names carry Neiro's wording where sora already
+     had a string of the same name with another value. -->
+<resources>
+    <string name="listen_together_away">Away — their slot is held</string>
+    <string name="listen_together_chat_all_emojis">All emojis</string>
+    <string name="listen_together_chat_copy">Copy</string>
+    <string name="listen_together_chat_delete_for_everyone">Delete for everyone</string>
+    <string name="listen_together_chat_edit_message">Edit message</string>
+    <string name="listen_together_chat_edited">edited</string>
+    <string name="listen_together_chat_empty">No messages yet</string>
+    <string name="listen_together_chat_empty_body">Messages sent in this room appear here.</string>
+    <string name="listen_together_chat_message_copied">Message copied</string>
+    <string name="listen_together_chat_message_deleted">This message was deleted</string>
+    <string name="listen_together_chat_nothing_playing">Nothing is playing right now</string>
+    <string name="listen_together_chat_notifications">Chat message notifications</string>
+    <string name="listen_together_chat_notifications_desc">Show a notification with a direct reply action whenever someone chats in the room</string>
+    <string name="listen_together_chat_now_playing">Now playing</string>
+    <string name="listen_together_chat_older_messages">Older messages</string>
+    <string name="listen_together_chat_pick_song_hint">Search songs to share</string>
+    <string name="listen_together_chat_pick_song_no_results">No results found</string>
+    <string name="listen_together_chat_pick_song_title">Share a song</string>
+    <string name="listen_together_chat_pin">Pin</string>
+    <string name="listen_together_chat_pinned_position">%1$d of %2$d</string>
+    <string name="listen_together_chat_play_song">Play song in the room</string>
+    <string name="listen_together_chat_reply_failed">Reply not delivered — open the app to reconnect</string>
+    <string name="listen_together_chat_reply_label">Reply</string>
+    <string name="listen_together_chat_typing">typing…</string>
+    <string name="listen_together_chat_unpin">Unpin</string>
+    <string name="listen_together_chat_unsupported_server">Chat is not supported by this server</string>
+    <string name="listen_together_chat_you">You</string>
+    <string name="listen_together_connection_timeout">The Listen Together server did not connect in time. Try again or choose another server in settings.</string>
+    <string name="listen_together_custom_avatar">Custom profile picture</string>
+    <string name="listen_together_custom_avatar_desc">Pick any photo from your gallery as your Listen Together avatar; everyone in the room sees it</string>
+    <string name="listen_together_custom_avatar_failed">Could not save that picture</string>
+    <string name="listen_together_host">Host</string>
+    <string name="listen_together_host_not_allowed">This server does not allow this client to host a room. Choose another server to create a room.</string>
+    <string name="listen_together_in_app_notifications">In-app notifications</string>
+    <string name="listen_together_in_app_notifications_desc">Show the newest chat message as a popup while the app is open and the chat page is closed</string>
+    <string name="listen_together_in_party">In a party · %1$s</string>
+    <string name="listen_together_invalid_room_response">The server returned an invalid room response. Try reconnecting or choose another server.</string>
+    <string name="listen_together_manage">Manage</string>
+    <string name="listen_together_queue_empty">The room queue is empty</string>
+    <string name="listen_together_queue_more">…and %d more</string>
+    <string name="listen_together_reconnect">Reconnect</string>
+    <string name="listen_together_room_queue">Room queue</string>
+    <string name="listen_together_room_request_timeout">The room request timed out. Check the room code and host, then try again.</string>
+    <string name="listen_together_settings_diagnostics_header">Diagnostics</string>
+    <string name="listen_together_settings_notifications_header">Notifications</string>
+    <string name="listen_together_settings_playback_header">Playback</string>
+    <string name="listen_together_settings_rooms_header">Rooms</string>
+    <string name="listen_together_suggest_song">Suggest a song</string>
+    <string name="listen_together_suggest_song_desc">Search and send a track to the host</string>
+    <string name="listen_together_suggestion_auto_approve">Auto-approve song suggestions</string>
+    <string name="listen_together_suggestion_auto_approve_desc">Guest song changes and suggestions play for everyone immediately; turn off to review each one</string>
+    <string name="listen_together_suggestion_toast">%1$s suggested %2$s</string>
+    <string name="listen_together_you">You</string>
+    <string name="ok">OK</string>
+    <string name="ported_comments">Chat</string>
+    <string name="ported_copied_to_clipboard">Copied log to clipboard</string>
+    <string name="ported_listen_together">Listen together</string>
+    <string name="ported_listen_together_background_disconnect_note">Note: You may get disconnected if you create a room while no music is playing and then switch to another app, or if you connect to the server but remain idle without joining a room for 15 minutes.</string>
+    <string name="ported_listen_together_custom_server">Use your own server</string>
+    <string name="ported_listen_together_disconnected">Offline</string>
+</resources>

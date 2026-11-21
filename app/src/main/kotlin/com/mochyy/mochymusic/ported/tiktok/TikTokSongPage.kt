@@ -8,7 +8,6 @@
 package com.mochyy.mochymusic.ported.tiktok
 
 import com.mochyy.mochymusic.ported.bridge.bitChordWander // BRIDGE(neiro): wander
-import com.mochyy.mochymusic.ported.bridge.driftArtworkSlot // BRIDGE(neiro): drift
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
@@ -284,7 +283,7 @@ internal fun TikTokSongPage(
                                 modifier =
                                     Modifier
                                         .size(artSize)
-                                        .driftArtworkSlot(active = isCurrentPage, cornerDp = cornerRadius.value) // BRIDGE(neiro): drift
+                                        
                                         .graphicsLayer {
                                             scaleX = artworkScale
                                             scaleY = artworkScale

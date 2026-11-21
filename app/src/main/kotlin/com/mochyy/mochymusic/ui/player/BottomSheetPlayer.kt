@@ -946,10 +946,6 @@ private fun PlayerSheet(
                 .background(Color.Black)
         )
 
-        val driftAnimations = animationsEnabled()
-        val driftSlot = remember(state, playerStyle, landscapeFlagship, driftAnimations) {
-            ArtworkDriftSlot(progressProvider, enabled = driftAnimations && !playerStyle.flagshipFamily && !landscapeFlagship)
-        }
         BottomSheet(
             state = state,
 
@@ -989,8 +985,7 @@ private fun PlayerSheet(
             pureBlack = pureBlack,
             background = {},
             sharedContent = {
-                androidx.compose.runtime.CompositionLocalProvider(LocalArtworkDriftSlot provides driftSlot) {
-                    MorphingCover(
+                MorphingCover(
                         progressProvider = progressProvider,
                         horizontalOffsetProvider = horizontalOffsetProvider,
                         trackInfo = trackInfo,
@@ -1033,7 +1028,6 @@ private fun PlayerSheet(
                         ambient = if (isFlagship || backgroundStyle == PlayerBackgroundStyle.AMBIENT) ambient else null,
                         frostedCover = isFlagship,
                     )
-                }
             },
             onDismiss = {
                 playerConnection.service.clearAutomix()
@@ -1041,7 +1035,6 @@ private fun PlayerSheet(
                 playerConnection.player.clearMediaItems()
             },
             collapsedContent = {},
-            overlayContent = { if (driftSlot.enabled) DriftCopyOverlay(driftSlot) },
         ) {
 
             // Alternate styles replace the player outright rather than drawing over it, so none
@@ -1107,16 +1100,14 @@ private fun PlayerSheet(
                         com.mochyy.mochymusic.ui.player.styles.LocalStyleCovered provides styleCoveredNow,
                         com.mochyy.mochymusic.ui.player.styles.LocalModuleEditor provides moduleEditor,
                     ) {
-                        androidx.compose.runtime.CompositionLocalProvider(LocalArtworkDriftSlot provides driftSlot) {
-                            com.mochyy.mochymusic.ui.player.styles.AlternatePlayerStyle(
-                                style = playerStyle,
-                                actions = styleActions,
-                                // under a lyrics page that fills the screen it needn't be drawn
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .graphicsLayer { alpha = if (styleCovered || styleQueueCovered) 0f else 1f },
-                            )
-                        }
+                        com.mochyy.mochymusic.ui.player.styles.AlternatePlayerStyle(
+                            style = playerStyle,
+                            actions = styleActions,
+                            // under a lyrics page that fills the screen it needn't be drawn
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .graphicsLayer { alpha = if (styleCovered || styleQueueCovered) 0f else 1f },
+                        )
                     }
                 }
                 // closed with the player, so it isn't still up the next time it opens

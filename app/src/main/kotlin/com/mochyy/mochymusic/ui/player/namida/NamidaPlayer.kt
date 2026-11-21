@@ -1,22 +1,21 @@
-// The namida player style: a rounded panel tinted by the cover's colour, the artwork big in the
-// middle with the song's words beneath it, a waveform for a seek bar, and the queue as a page
-// that slides up over the player. Its look is its own — Lexend type, its own inks, its own
-// buttons — none of it borrowed from the player's other looks.
+// namida player style — the player itself, ported 1:1 from namida's
+// packages/miniplayer_base.dart: the same colour-tinted panel card, the same top
+// row (collapse arrow, index/total over the album name, the more chip), the
+// artwork riding namida's geometry with swipe parallax — centred the way
+// namida's Align+padding centres it, painted 1.13x past its box like namida's
+// thumbnail scale — the waveform seek bar with drag-up-to-cancel, the controls
+// (prev, the gradient play/pause circle, next) with the position and duration
+// at the row's two ends, the bottom row (repeat, sound, lyrics, queue) at the
+// right like namida's, and the track info with its like button — all placed by
+// NamidaGeometry, namida's own math, through NamidaScale's device ramp.
 
 package com.mochyy.mochymusic.ui.player.namida
 
-import com.mochyy.mochymusic.ui.player.driftArtworkSlot
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.CubicBezierEasing
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.togetherWith
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
-import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -24,11 +23,17 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsIgnoringVisibility
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -38,9 +43,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -48,518 +53,566 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.mochyy.mochymusic.LocalArtworkColor
 import com.mochyy.mochymusic.LocalPlayerConnection
 import com.mochyy.mochymusic.R
-import com.mochyy.mochymusic.extensions.toggleRepeatMode
 import com.mochyy.mochymusic.ui.component.LocalPlayerBottomSheetState
-import com.mochyy.mochymusic.ui.player.styles.LocalStyleInteractive
 import com.mochyy.mochymusic.ui.player.styles.StyleActions
 import com.mochyy.mochymusic.ui.player.styles.StyleFrame
-import com.mochyy.mochymusic.ui.player.styles.StyleMenu
 import com.mochyy.mochymusic.ui.player.styles.StyleTones
 import com.mochyy.mochymusic.ui.player.styles.rememberDurationMs
 import com.mochyy.mochymusic.ui.player.styles.rememberLivePosition
-import com.mochyy.mochymusic.ui.player.styles.rememberPlayedSeconds
 import com.mochyy.mochymusic.ui.player.styles.rememberStyleLyrics
 import com.mochyy.mochymusic.ui.player.styles.rememberStyleTrack
 import com.mochyy.mochymusic.ui.player.styles.styleInsets
-import com.mochyy.mochymusic.ui.player.styles.whileStyleInteractive
-import com.mochyy.mochymusic.utils.makeTimeString
-import kotlinx.coroutines.launch
+import kotlin.math.abs
+import kotlin.math.roundToInt
 
-/** namida's panel: the corner it keeps when the player stands open. */
-private val NamidaPanelCorner = 17.dp
+/** namida's _kTopBottomMargin. */
+private val TopBottomMargin = 8.dp
 
-/** how much of the width the artwork takes, and the room the words keep at the sides. */
-private const val NamidaArtworkWidthFraction = 0.80f
-private val NamidaSidePadding = 20.dp
+/** namida's kSiParallax: how far the incoming artwork follows before it lands. */
+private const val ImageParallax = 1.15f
 
-/** the play button's circle and the icon inside it, namida's sizes. */
-private val NamidaPlayCircle = 68.dp
-private val NamidaPlayIcon = 40.dp
-private val NamidaSkipIcon = 32.dp
-private val NamidaControlGap = 14.dp
+/** namida's MiniplayerThumbnailScale._base: the picture paints this far past its box. */
+private const val ThumbnailPaintScale = 1.13f
 
-/** how far a tap on the time labels seeks, namida's seek Duration default. */
-private const val NamidaTapSeekMs = 5_000L
-
-/** The namida look on the player. [preview] draws it as a selector card, still and untouchable. */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 fun NamidaPlayerStyle(actions: StyleActions, modifier: Modifier, preview: Boolean) {
-    val seed = LocalArtworkColor.current
-    val palette = remember(seed) { namidaPalette(seed) }
     val connection = LocalPlayerConnection.current
+    val seed = LocalArtworkColor.current
+    val palette = rememberNamidaPalette(seed)
     val track = rememberStyleTrack()
     val position = rememberLivePosition(animated = !preview)
     val durationMs = rememberDurationMs()
-    val lyrics = rememberStyleLyrics(readings = !preview)
     val transport = connection?.uiState?.transportState?.collectAsState()?.value
-    val trackInfo = connection?.uiState?.trackInfo?.collectAsState()?.value
     val playing = transport?.isPlaying == true
     val sheet = LocalPlayerBottomSheetState.current
-    val interactive = LocalStyleInteractive.current
-    var lyricsOpen by remember { mutableStateOf(false) }
-    var queueOpen by remember { mutableStateOf(false) }
-    val tones = StyleTones(
-        played = palette.accent,
-        remaining = palette.surface,
-        ink = palette.onSurface,
-        inkSoft = palette.onSurfaceSoft,
-        chip = palette.secondaryContainer,
+    val lyrics = rememberStyleLyrics(readings = !preview)
+    val queueItems = connection?.queueItems?.collectAsState()?.value
+    val windowIndex = connection?.currentWindowIndex?.collectAsState()?.value ?: -1
+    val metadata = connection?.mediaMetadata?.collectAsState()?.value
+    // namida's like state is the favourite playlist reading the database; sora's
+    // equivalent is currentSong, which re-emits the row the moment it is toggled
+    val currentSong = connection?.currentSong?.collectAsState(null)?.value
+    val liked = currentSong?.song?.liked == true
+    val repeatMode = connection?.repeatMode?.collectAsState()?.value
+    val muted = connection?.isMuted?.collectAsState()?.value == true
+
+    // namida's expansion parameter: 1 = the player, 2 = the queue page sliding over it
+    var pageTarget by remember { mutableFloatStateOf(1f) }
+    val p by animateFloatAsState(
+        targetValue = pageTarget,
+        animationSpec = spring(dampingRatio = 0.9f, stiffness = 380f),
+        label = "namidaP",
     )
+    var lyricsOpen by remember { mutableStateOf(false) }
+    var menuOpen by remember { mutableStateOf(false) }
+    var draggingWave by remember { mutableStateOf(false) }
+    var dragUpCancel by remember { mutableFloatStateOf(0f) }
+    var seekPreviewMs by remember { mutableStateOf<Long?>(null) }
 
     CompositionLocalProvider(LocalNamidaPalette provides palette) {
         StyleFrame(
-            preview, modifier, tones,
+            preview, modifier,
+            StyleTones(
+                played = palette.currentColor,
+                remaining = palette.waveBehind,
+                ink = palette.textLarge,
+                inkSoft = palette.textMedium,
+                chip = palette.secondaryContainer,
+            ),
             background = {
-                // namida's panel: the surface, with its light-to-shade overlay of the song's colour
+                // namida's scaffold behind the panel card
+                Box(Modifier.fillMaxSize().background(palette.scaffold))
+            },
+        ) { landscape, _, _ ->
+            BoxWithConstraints(Modifier.fillMaxSize()) {
+                val insets = styleInsets(landscape)
+                // namida reads viewPadding, which keeps the bars' heights while they are
+                // hidden; the stable ones are that, so the geometry never shifts under a hide
+                val stableBottom = WindowInsets.navigationBarsIgnoringVisibility
+                    .union(WindowInsets.displayCutout)
+                    .asPaddingValues().calculateBottomPadding().value.toDouble()
+                val scale = remember(maxWidth, maxHeight) {
+                    NamidaScale(screenWidthDp = maxWidth.value.toDouble(), screenHeightDp = maxHeight.value.toDouble())
+                }
+                val geometry = remember { NamidaLayout() }
+                geometry.update(
+                    p.toDouble(),
+                    NamidaLayout.Inputs(
+                        screenWidth = scale.virtualWidth,
+                        // namida's update() derives maxOffset as the screen height minus the
+                        // nav bar; the panel adds the nav bar back inside
+                        maxOffset = scale.virtualHeight - scale.virtual(stableBottom),
+                        topInset = scale.virtual(insets.top.value.toDouble()),
+                        bottomInset = scale.virtual(stableBottom),
+                        navBarHeight = scale.virtual(stableBottom),
+                        imageAspectRatio = 1.0,
+                    ),
+                )
+
+                // ── the panel card: namida's rounded, colour-tinted panel ──
                 Box(
                     Modifier
-                        .fillMaxSize()
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth()
+                        .height(scale.dp(geometry.panelHeight))
+                        .graphicsLayer {
+                            shape = RoundedCornerShape(
+                                topStart = scale.dp(geometry.panelTopRadius),
+                                topEnd = scale.dp(geometry.panelTopRadius),
+                            )
+                            clip = true
+                        }
                         .drawBehind {
-                            drawRect(palette.surface)
+                            drawRect(palette.panelBackground)
                             drawRect(
                                 Brush.verticalGradient(
-                                    0f to palette.onSurface.copy(alpha = 0.39f).compositeOver(palette.accent.copy(alpha = 0.38f)),
-                                    1f to palette.onSurface.copy(alpha = 0.16f).compositeOver(palette.accent.copy(alpha = 0.10f)),
+                                    0f to palette.panelGradientTop,
+                                    1f to palette.panelGradientBottom,
                                 ),
                             )
                         },
                 )
-            },
-        ) { landscape, menuOpen, setMenuOpen ->
-            val insets = styleInsets(landscape)
-            BoxWithConstraints(Modifier.fillMaxSize()) {
-                val artworkSize = (maxWidth * NamidaArtworkWidthFraction).coerceAtMost(maxHeight * 0.46f)
 
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
+                // ── the top row: collapse, index/total + album, more ──
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
-                        .fillMaxSize()
-                        .padding(
-                            top = insets.top + 8.dp,
-                            start = insets.start + NamidaSidePadding,
-                            end = insets.end + NamidaSidePadding,
-                            bottom = insets.bottom + 8.dp,
-                        ),
+                        .align(Alignment.TopStart)
+                        .fillMaxWidth()
+                        .padding(top = insets.top + TopBottomMargin)
+                        .padding(horizontal = 6.dp),
                 ) {
-                    // ── the top bar: collapse chevron, the count and the album, the more button ──
-                    val queueInfo = connection?.queueItems?.collectAsState()?.value
-                    val currentIndex = connection?.currentWindowIndex?.collectAsState()?.value ?: -1
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        modifier = Modifier.fillMaxWidth(),
+                    Icon(
+                        painter = painterResource(R.drawable.namida_arrow_down_2),
+                        contentDescription = null,
+                        tint = palette.onSecondaryContainer,
+                        modifier = Modifier
+                            .size(38.dp)
+                            .clip(CircleShape)
+                            .clickable(enabled = !preview) { pageTarget = 1f; sheet?.collapseSoft() }
+                            .padding(8.dp),
+                    )
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier
+                            .weight(1f)
+                            .clickable(enabled = !preview && metadata?.album?.id != null) {
+                                metadata?.album?.id?.let(actions.onOpenAlbum)
+                            }
+                            .padding(horizontal = 8.dp),
                     ) {
-                        Icon(
-                            painter = painterResource(R.drawable.expand_more),
-                            contentDescription = null,
-                            tint = palette.onSecondaryContainer,
-                            modifier = Modifier
-                                .size(38.dp)
-                                .clip(CircleShape)
-                                .clickable(enabled = !preview) { sheet?.collapseSoft() }
-                                .padding(8.dp),
+                        Text(
+                            text = "${windowIndex + 1}/${queueItems?.size ?: 0}",
+                            color = palette.onSecondaryContainer.copy(alpha = 0.8f),
+                            fontSize = scale.sp(12.0),
+                            fontWeight = FontWeight.W500,
+                            fontFamily = NamidaFontFamily,
                         )
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier
-                                .weight(1f)
-                                .clip(RoundedCornerShape(14.dp))
-                                .padding(horizontal = 8.dp, vertical = 2.dp),
-                        ) {
-                            if (queueInfo != null && queueInfo.isNotEmpty()) {
-                                Text(
-                                    text = "${(currentIndex + 1).coerceIn(1, queueInfo.size)}/${queueInfo.size}",
-                                    color = palette.onSecondaryContainer.copy(alpha = 0.8f),
-                                    fontSize = 12.sp,
-                                    fontFamily = NamidaFontFamily,
-                                    fontWeight = FontWeight.Medium,
-                                )
-                            }
-                            if (track.album.isNotBlank()) {
-                                Text(
-                                    text = track.album,
-                                    color = palette.onSecondaryContainer.copy(alpha = 0.9f),
-                                    fontSize = 16.sp,
-                                    fontFamily = NamidaFontFamily,
-                                    fontWeight = FontWeight.SemiBold,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                )
-                            }
-                        }
-                        Box(
-                            contentAlignment = Alignment.Center,
-                            modifier = Modifier
-                                .size(30.dp)
-                                .clip(CircleShape)
-                                .background(palette.secondaryContainer)
-                                .clickable(enabled = !preview) { actions.onOtherMenu() },
-                        ) {
-                            Icon(
-                                painter = painterResource(R.drawable.more_horiz),
-                                contentDescription = null,
-                                tint = palette.onSecondaryContainer,
-                                modifier = Modifier.size(22.dp),
-                            )
-                        }
+                        Text(
+                            text = track.album.ifBlank { track.title },
+                            textAlign = TextAlign.Center,
+                            softWrap = false,
+                            overflow = TextOverflow.Ellipsis,
+                            color = palette.onSecondaryContainer.copy(alpha = 0.9f),
+                            fontSize = scale.sp(16.0),
+                            fontWeight = FontWeight.W600,
+                            fontFamily = NamidaFontFamily,
+                        )
                     }
+                    Icon(
+                        painter = painterResource(R.drawable.namida_more),
+                        contentDescription = null,
+                        tint = palette.onSecondaryContainer,
+                        modifier = Modifier
+                            .size(38.dp)
+                            .clip(CircleShape)
+                            .background(palette.secondaryContainer.copy(alpha = 0.2f))
+                            .clickable(enabled = !preview) { menuOpen = true }
+                            .padding(8.dp),
+                    )
+                }
 
-                    Spacer(Modifier.weight(0.5f))
-
-                    // ── the artwork, or the lyrics in its place ──
-                    AnimatedContent(
-                        targetState = lyricsOpen && lyrics.lines.isNotEmpty(),
-                        transitionSpec = { fadeIn(tween(300)) togetherWith fadeOut(tween(300)) },
-                        label = "namidaArtwork",
-                    ) { showLyrics ->
-                        Box(
-                            contentAlignment = Alignment.Center,
-                            modifier = Modifier
-                                .size(artworkSize)
-                                .clip(RoundedCornerShape(NamidaPanelCorner))
-                                .then(if (showLyrics) Modifier.background(palette.surface) else Modifier)
-                                .then(
-                                    if (preview) Modifier else Modifier.pointerInput(Unit) {
-                                        whileStyleInteractive(interactive) {
-                                            detectTapGestures(onTap = { lyricsOpen = !lyricsOpen })
-                                        }
-                                    },
-                                ),
-                        ) {
-                            if (showLyrics && !preview) {
-                                NamidaLyrics(
-                                    palette = palette,
-                                    lines = lyrics.lines,
-                                    position = position,
-                                    onSeek = { connection?.seekTo(it) },
-                                )
-                            } else {
-                                ArtworkWithGlow(
-                                    url = track.artwork,
-                                    dim = !playing,
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .then(if (preview) Modifier else Modifier.driftArtworkSlot(NamidaPanelCorner)),
-                                )
-                            }
-                        }
-                    }
-
-                    Spacer(Modifier.weight(0.6f))
-
-                    // ── the words: the title big, the artist beneath, the heart at the right ──
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Column(Modifier.weight(1f)) {
-                            Text(
-                                text = track.title,
-                                color = palette.onSurface,
-                                fontSize = 20.sp,
-                                fontFamily = NamidaFontFamily,
-                                fontWeight = FontWeight.SemiBold,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.basicMarquee(iterations = Int.MAX_VALUE),
-                            )
-                            Spacer(Modifier.height(4.dp))
-                            Text(
-                                text = track.artist,
-                                color = palette.onSurfaceSoft,
-                                fontSize = 15.sp,
-                                fontFamily = NamidaFontFamily,
-                                fontWeight = FontWeight.SemiBold,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.basicMarquee(iterations = Int.MAX_VALUE),
+                // ── the artwork: namida's image slot, centred like its Align+padding
+                //    centres it, painted 1.13x past its box like its thumbnail scale ──
+                val slot = geometry.imageSlot(1.0)
+                var swipeX by remember { mutableFloatStateOf(0f) }
+                Box(
+                    Modifier
+                        .align(Alignment.BottomStart)
+                        .offset { IntOffset(scale.dp(slot.leftOffset).roundToPx(), scale.dp(slot.vOffset).roundToPx()) }
+                        .size(scale.dp(slot.boxWidth), scale.dp(slot.boxHeight))
+                        .pointerInput(preview, track.title) {
+                            if (preview) return@pointerInput
+                            detectTapGestures(
+                                onLongPress = { if (lyrics.lines.isNotEmpty()) lyricsOpen = true },
                             )
                         }
-                        Spacer(Modifier.width(12.dp))
-                        val heartScale = remember { Animatable(1f) }
-                        val scope = rememberCoroutineScope()
-                        Icon(
-                            painter = painterResource(
-                                if (trackInfo?.liked == true) R.drawable.ic_untitled_heart
-                                else R.drawable.ic_untitled_heart_unfill,
-                            ),
-                            contentDescription = null,
-                            tint = palette.accent.copy(alpha = 0.75f),
-                            modifier = Modifier
-                                .size(32.dp)
-                                .graphicsLayer {
-                                    scaleX = heartScale.value
-                                    scaleY = heartScale.value
-                                }
-                                .clickable(enabled = !preview) {
-                                    scope.launch {
-                                        heartScale.animateTo(0.8f, tween(120))
-                                        heartScale.animateTo(1f, tween(240))
+                        .pointerInput(preview, track.title) {
+                            if (preview) return@pointerInput
+                            detectDragGestures(
+                                onDragEnd = {
+                                    if (abs(swipeX) > size.width / 3) {
+                                        if (swipeX < 0) connection?.seekToNext() else connection?.skipToPreviousSong()
                                     }
-                                    connection?.toggleLike()
+                                    swipeX = 0f
+                                },
+                            ) { change, dragAmount ->
+                                change.consume()
+                                swipeX = (swipeX + dragAmount.x).coerceIn(-size.width * ImageParallax, size.width * ImageParallax)
+                            }
+                        },
+                ) {
+                    // namida's ArtworkWidget radius: 6.0 + 8.0 * (width * 0.004)
+                    val corner = scale.scaled((6.0 + 8.0 * (slot.boxWidth * 0.004)).dp)
+                    val paint = ThumbnailPaintScale
+                    AsyncImage(
+                        model = track.artwork,
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(RoundedCornerShape(corner))
+                            .graphicsLayer {
+                                scaleX = paint
+                                scaleY = paint
+                            },
+                    )
+                    if (swipeX != 0f) {
+                        AsyncImage(
+                            model = track.artwork,
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clip(RoundedCornerShape(corner))
+                                .graphicsLayer {
+                                    scaleX = paint
+                                    scaleY = paint
+                                    translationX = if (swipeX < 0) {
+                                        size.width * ImageParallax + swipeX
+                                    } else {
+                                        -size.width * ImageParallax + swipeX
+                                    }
+                                    alpha = abs(swipeX) / (size.width * ImageParallax)
                                 },
                         )
                     }
+                }
 
-                    Spacer(Modifier.height(10.dp))
-
-                    // ── the waveform, and the times at its ends ──
-                    if (!preview) {
-                        NamidaWaveform(
-                            palette = palette,
-                            position = position,
-                            durationMs = durationMs,
-                            songKey = track.title + track.artist,
-                            onSeek = { connection?.seekTo(it) },
-                        )
-                        val seconds = rememberPlayedSeconds(position)
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 12.dp),
-                        ) {
-                            TimeLabel(
-                                text = makeTimeString(seconds * 1000L),
-                                palette = palette,
-                                onSeek = { connection?.seekTo((position.positionMs() - NamidaTapSeekMs).coerceAtLeast(0L)) },
-                            )
-                            Spacer(Modifier.weight(1f))
-                            TimeLabel(
-                                text = makeTimeString(durationMs),
-                                palette = palette,
-                                onSeek = { connection?.seekTo((position.positionMs() + NamidaTapSeekMs).coerceAtMost(durationMs)) },
-                            )
-                        }
-                    }
-
-                    Spacer(Modifier.height(6.dp))
-
-                    // ── the transport: prev, the big play, next ──
-                    NamidaTransport(
-                        palette = palette,
-                        playing = playing,
-                        canPrevious = transport?.canSkipPrevious == true,
-                        canNext = transport?.canSkipNext == true,
-                        ended = transport?.playbackState == androidx.media3.common.Player.STATE_ENDED,
-                        onPrevious = { connection?.seekToPrevious() },
-                        onToggle = {
-                            if (transport?.playbackState == androidx.media3.common.Player.STATE_ENDED) {
-                                connection?.player?.seekTo(0, 0)
-                                connection?.player?.playWhenReady = true
-                            } else {
-                                connection?.togglePlayPause()
-                            }
-                        },
-                        onNext = { connection?.seekToNext() },
-                    )
-
-                    Spacer(Modifier.height(12.dp))
-
-                    // ── the bottom row: repeat, lyrics, queue, at the right ──
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.End),
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        val repeatMode = transport?.repeatMode
-                        NamidaIconButton(
-                            when (repeatMode) {
-                                androidx.media3.common.Player.REPEAT_MODE_ONE -> R.drawable.repeat_one
-                                else -> R.drawable.repeat
+                // ── the waveform seek bar, with namida's drag-up-to-cancel ──
+                val waveformHeight = scale.dp(64.0 * geometry.waveformYScale)
+                Box(
+                    Modifier
+                        .align(Alignment.BottomStart)
+                        .offset { IntOffset(0, scale.dp(geometry.vOffsetWaveform).roundToPx()) }
+                        .fillMaxWidth()
+                        .height(waveformHeight)
+                        .padding(horizontal = 16.dp)
+                        .graphicsLayer { alpha = 1f - (p - 1f).coerceIn(0f, 1f) * 0.85f },
+                ) {
+                    NamidaWaveform(
+                        positionMs = seekPreviewMs ?: position.positionMs(),
+                        durationMs = durationMs,
+                        dragging = draggingWave,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .pointerInput(preview, durationMs) {
+                                if (preview || durationMs <= 0) return@pointerInput
+                                detectDragGestures(
+                                    onDragStart = {
+                                        draggingWave = true
+                                        dragUpCancel = 0f
+                                    },
+                                    onDragEnd = {
+                                        draggingWave = false
+                                        if (dragUpCancel < 5f) {
+                                            seekPreviewMs?.let { connection?.seekTo(it) }
+                                        }
+                                        seekPreviewMs = null
+                                        dragUpCancel = 0f
+                                    },
+                                    onDragCancel = {
+                                        draggingWave = false
+                                        seekPreviewMs = null
+                                    },
+                                ) { change, dragAmount ->
+                                    change.consume()
+                                    // namida: five notches of upward drag cancels the seek
+                                    dragUpCancel -= dragAmount.y * 0.1f
+                                    if (dragUpCancel > 5f) {
+                                        seekPreviewMs = null
+                                        return@detectDragGestures
+                                    }
+                                    val fraction = (change.position.x / size.width).coerceIn(0f, 1f)
+                                    seekPreviewMs = (fraction * durationMs).toLong()
+                                }
                             },
-                            palette,
-                            iconSize = 20.dp,
-                            active = repeatMode != null && repeatMode != androidx.media3.common.Player.REPEAT_MODE_OFF,
-                        ) { connection?.player?.toggleRepeatMode() }
-                        NamidaIconButton(R.drawable.lyrics, palette, iconSize = 20.dp, active = lyricsOpen) { lyricsOpen = !lyricsOpen }
-                        NamidaIconButton(R.drawable.queue_music, palette, iconSize = 20.dp) { queueOpen = true }
+                    )
+                }
+
+                // ── the controls row: the times at both ends, prev / play / next centred
+                //    over them, exactly where namida's controls Stack puts them ──
+                Box(
+                    Modifier
+                        .align(Alignment.BottomStart)
+                        .offset { IntOffset(0, scale.dp(geometry.vOffsetControls).roundToPx()) }
+                        .fillMaxWidth()
+                        .graphicsLayer { alpha = 1f - (p - 1f).coerceIn(0f, 1f) * 0.85f },
+                ) {
+                    // namida's positionDurationRowChild: spaceBetween, the row padded 24
+                    // (positionRowPadding) and each text a further 12
+                    Row(
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = scale.scaled(24.dp) + scale.scaled(12.dp)),
+                    ) {
+                        val posText = seekPreviewMs?.let { previewMs ->
+                            val diff = previewMs - position.positionMs()
+                            val sign = if (diff < 0) "" else "+"
+                            sign + namidaFormatMillis(abs(diff))
+                        } ?: namidaFormatMillis(position.positionMs())
+                        Text(posText, color = palette.textSmall, fontSize = scale.sp(13.0), fontWeight = FontWeight.W400, fontFamily = NamidaFontFamily)
+                        Text(namidaFormatMillis(durationMs), color = palette.textSmall, fontSize = scale.sp(13.0), fontWeight = FontWeight.W400, fontFamily = NamidaFontFamily)
+                    }
+                    // namida's buttonsRow, pushed left from the right edge by buttonsRightPadding
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center,
+                        modifier = Modifier
+                            .align(Alignment.CenterEnd)
+                            .padding(end = scale.dp(geometry.buttonsRightPadding)),
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.namida_previous),
+                            contentDescription = null,
+                            tint = palette.secondary,
+                            modifier = Modifier
+                                .size(scale.dp(geometry.nextPrevIconSize + geometry.nextPrevIconPadding * 2))
+                                .clickable(enabled = !preview) { connection?.skipToPreviousSong() }
+                                .padding(scale.dp(geometry.nextPrevIconPadding)),
+                        )
+                        val iconSize = NamidaPlayPauseMetrics.iconSize(p.toDouble())
+                        val boxSize = NamidaPlayPauseMetrics.boxSize(iconSize)
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier
+                                .size(scale.dp(boxSize))
+                                .shadow(
+                                    8.dp, CircleShape,
+                                    ambientColor = palette.playShadow,
+                                    spotColor = palette.playShadow,
+                                )
+                                .clip(CircleShape)
+                                .background(
+                                    // namida's gradient: the current colour into its grey blend, 0 -> 0.7 stops
+                                    Brush.linearGradient(
+                                        colors = palette.playGradient,
+                                        start = androidx.compose.ui.geometry.Offset.Zero,
+                                        end = androidx.compose.ui.geometry.Offset(1000f, 1000f),
+                                    ),
+                                )
+                                .clickable(enabled = !preview) {
+                                    connection?.run { if (playing) pause() else play() }
+                                },
+                        ) {
+                            Icon(
+                                painter = painterResource(if (playing) R.drawable.namida_pause else R.drawable.namida_play),
+                                contentDescription = null,
+                                tint = palette.playIcon,
+                                modifier = Modifier.size(scale.dp(iconSize)),
+                            )
+                        }
+                        Icon(
+                            painter = painterResource(R.drawable.namida_next),
+                            contentDescription = null,
+                            tint = palette.secondary,
+                            modifier = Modifier
+                                .size(scale.dp(geometry.nextPrevIconSize + geometry.nextPrevIconPadding * 2))
+                                .clickable(enabled = !preview) { connection?.seekToNext() }
+                                .padding(scale.dp(geometry.nextPrevIconPadding)),
+                        )
                     }
                 }
 
-                // the queue over the player, sliding up the way namida's does
-                AnimatedContent(
-                    targetState = queueOpen,
-                    transitionSpec = {
-                        slideInVertically(
-                            animationSpec = tween(300, easing = CubicBezierEasing(0.150f, 0.96f, 0.28f, 1.04f)),
-                            initialOffsetY = { it / 2 },
-                        ) + fadeIn(tween(300)) togetherWith fadeOut(tween(200))
-                    },
-                    label = "namidaQueue",
-                ) { open ->
-                    if (open && !preview) {
-                        Box(
-                            Modifier
-                                .fillMaxSize()
-                                .padding(top = insets.top + 40.dp, bottom = insets.bottom),
-                        ) {
-                            NamidaQueue(palette = palette, onClose = { queueOpen = false })
+                // ── the bottom row: namida's repeat, sound, lyrics and queue at the right ──
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .padding(
+                            start = 6.dp,
+                            end = 6.dp,
+                            // namida pads the row by viewPadding.bottom, which stays the nav
+                            // bar's height even while the bar itself is hidden
+                            bottom = stableBottom.dp + TopBottomMargin,
+                        )
+                        .graphicsLayer { alpha = 1f - (p - 1f).coerceIn(0f, 1f) * 0.85f },
+                ) {
+                    Spacer(Modifier.weight(1f))
+                    val repeatIcon = when (repeatMode) {
+                        androidx.media3.common.Player.REPEAT_MODE_ONE -> R.drawable.namida_repeate_one
+                        androidx.media3.common.Player.REPEAT_MODE_ALL -> R.drawable.namida_repeat
+                        else -> R.drawable.namida_repeate_music
+                    }
+                    Icon(
+                        painter = painterResource(repeatIcon),
+                        contentDescription = null,
+                        tint = palette.onSecondaryContainer,
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .clickable(enabled = !preview) {
+                                connection?.repeatMode?.let { flow ->
+                                    flow.value = when (repeatMode) {
+                                        androidx.media3.common.Player.REPEAT_MODE_OFF -> androidx.media3.common.Player.REPEAT_MODE_ALL
+                                        androidx.media3.common.Player.REPEAT_MODE_ALL -> androidx.media3.common.Player.REPEAT_MODE_ONE
+                                        else -> androidx.media3.common.Player.REPEAT_MODE_OFF
+                                    }
+                                }
+                            }
+                            .padding(8.dp),
+                    )
+                    Icon(
+                        painter = painterResource(R.drawable.namida_sound),
+                        contentDescription = null,
+                        tint = if (muted) {
+                            palette.onSecondaryContainer.copy(alpha = 0.4f)
+                        } else {
+                            palette.onSecondaryContainer
+                        },
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .clickable(enabled = !preview) { connection?.toggleMute() }
+                            .padding(8.dp),
+                    )
+                    Icon(
+                        painter = painterResource(R.drawable.namida_document),
+                        contentDescription = null,
+                        tint = palette.onSecondaryContainer,
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .clickable(enabled = !preview && lyrics.lines.isNotEmpty()) { lyricsOpen = true }
+                            .padding(8.dp),
+                    )
+                    Icon(
+                        painter = painterResource(R.drawable.namida_row_vertical),
+                        contentDescription = null,
+                        tint = palette.onSecondaryContainer,
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .clickable(enabled = !preview) { pageTarget = if (pageTarget > 1.5f) 1f else 2f }
+                            .padding(8.dp),
+                    )
+                }
+
+                // ── the track info: title, second line, the like button ──
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .offset { IntOffset(0, scale.dp(geometry.vOffsetTrackInfo).roundToPx()) }
+                        .fillMaxWidth()
+                        .height(scale.dp(geometry.trackInfoBoxHeight))
+                        .padding(horizontal = scale.scaled(24.dp))
+                        .graphicsLayer { alpha = 1f - (p - 1f).coerceIn(0f, 1f) * 0.85f },
+                ) {
+                    Column(
+                        verticalArrangement = Arrangement.Center,
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(end = scale.scaled(32.dp)),
+                    ) {
+                        Text(
+                            track.title,
+                            maxLines = if (track.artist.isNotBlank()) 1 else 2,
+                            overflow = TextOverflow.Ellipsis,
+                            color = palette.textMedium,
+                            fontSize = scale.sp(20.0),
+                            fontWeight = FontWeight.W600,
+                            fontFamily = NamidaFontFamily,
+                        )
+                        if (track.artist.isNotBlank()) {
+                            Spacer(Modifier.height(4.dp))
+                            Text(
+                                track.artist,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                color = palette.textMedium,
+                                fontSize = scale.sp(15.0),
+                                fontWeight = FontWeight.W600,
+                                fontFamily = NamidaFontFamily,
+                            )
                         }
                     }
+                    Icon(
+                        painter = painterResource(if (liked) R.drawable.namida_heart_filled else R.drawable.namida_heart),
+                        contentDescription = null,
+                        tint = if (liked) palette.currentColor.copy(alpha = 0.75f) else palette.secondary.copy(alpha = 0.75f),
+                        modifier = Modifier
+                            .size(scale.scaled(38.dp))
+                            .clip(CircleShape)
+                            .clickable(enabled = !preview) { connection?.toggleLike() }
+                            .padding(3.dp),
+                    )
                 }
 
-                // the style's own chevron menu, for everything else (edit, rotate, the song's own menu)
-                StyleMenu(
-                    open = menuOpen,
-                    onOpenChange = setMenuOpen,
-                    tones = tones,
-                    actions = actions,
-                    atBottom = false,
-                    end = insets.end + 16.dp,
-                    edge = insets.top + 16.dp,
-                )
+                // ── the queue page, sliding up over the player (p > 1) ──
+                if (p > 1.02f) {
+                    NamidaQueue(
+                        visibleFraction = (p - 1f).coerceIn(0f, 1f),
+                        actions = actions,
+                        preview = preview,
+                        onCollapse = { pageTarget = 1f },
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                }
+
+                // ── the lyrics page, over everything ──
+                if (lyricsOpen) {
+                    NamidaLyrics(
+                        fullscreen = true,
+                        onDismiss = { lyricsOpen = false },
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                }
+
+                // ── namida's track dialog, from the more chip ──
+                if (menuOpen) {
+                    NamidaTrackMenu(
+                        actions = actions,
+                        onDismiss = { menuOpen = false },
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                }
             }
         }
     }
 }
 
-/** the artwork with namida's shadow beneath it, its glow dimmed while paused. */
-@Composable
-private fun ArtworkWithGlow(url: String?, dim: Boolean, modifier: Modifier) {
-    val glow = remember { Animatable(1f) }
-    androidx.compose.runtime.LaunchedEffect(dim) {
-        glow.animateTo(
-            targetValue = if (dim) 0.35f else 1f,
-            animationSpec = tween(if (dim) 500 else 800, easing = CubicBezierEasing(0.33f, 1f, 0.68f, 1f)),
-        )
-    }
-    Box(
-        modifier = modifier
-            .shadow(
-                elevation = 6.dp,
-                shape = RoundedCornerShape(NamidaPanelCorner),
-                ambientColor = Color(0x28121212),
-                spotColor = Color(0x28121212),
-            )
-            .clip(RoundedCornerShape(NamidaPanelCorner)),
-    ) {
-        AsyncImage(
-            model = url,
-            contentDescription = null,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier
-                .fillMaxSize()
-                .graphicsLayer { alpha = glow.value },
-        )
-    }
-}
-
-/** the transport row: the skips flat, the play a filled gradient circle, namida's shapes. */
-@Composable
-private fun NamidaTransport(
-    palette: NamidaPalette,
-    playing: Boolean,
-    canPrevious: Boolean,
-    canNext: Boolean,
-    ended: Boolean,
-    onPrevious: () -> Unit,
-    onToggle: () -> Unit,
-    onNext: () -> Unit,
-) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(NamidaControlGap),
-    ) {
-        NamidaIconButton(
-            R.drawable.skip_previous,
-            palette,
-            iconSize = NamidaSkipIcon,
-            enabled = canPrevious,
-        ) { onPrevious() }
-        // the play button: a circle of the song's colour, its gradient to grey at the low corner
-        val press = remember { Animatable(1f) }
-        val scope = rememberCoroutineScope()
-        Box(
-            contentAlignment = Alignment.Center,
-            modifier = Modifier
-                .size(NamidaPlayCircle)
-                .graphicsLayer {
-                    scaleX = press.value
-                    scaleY = press.value
-                }
-                .clip(CircleShape)
-                .background(
-                    Brush.linearGradient(
-                        colors = listOf(
-                            palette.accent.copy(alpha = 0.95f),
-                            palette.accent.copy(alpha = 0.78f).compositeOver(Color(0xFF808080)),
-                        ),
-                    ),
-                )
-                .clickable {
-                    scope.launch {
-                        press.animateTo(0.97f, tween(120))
-                        press.animateTo(1f, tween(400))
-                    }
-                    onToggle()
-                },
-        ) {
-            Icon(
-                painter = painterResource(if (playing && !ended) R.drawable.pause else R.drawable.play),
-                contentDescription = null,
-                tint = Color.White.copy(alpha = 0.71f),
-                modifier = Modifier.size(NamidaPlayIcon),
-            )
-        }
-        NamidaIconButton(
-            R.drawable.skip_next,
-            palette,
-            iconSize = NamidaSkipIcon,
-            enabled = canNext,
-        ) { onNext() }
-    }
-}
-
-/** a flat icon button in namida's inks; [active] takes the song's colour. */
-@Composable
-private fun NamidaIconButton(
-    icon: Int,
-    palette: NamidaPalette,
-    iconSize: Dp,
-    enabled: Boolean = true,
-    active: Boolean = false,
-    onClick: () -> Unit,
-) {
-    Icon(
-        painter = painterResource(icon),
-        contentDescription = null,
-        tint = if (active) palette.accent else palette.onSecondaryContainer,
-        modifier = Modifier
-            .size(40.dp)
-            .graphicsLayer { alpha = if (enabled) 1f else 0.4f }
-            .clip(CircleShape)
-            .clickable(enabled = enabled, onClick = onClick)
-            .padding((40.dp - iconSize) / 2),
-    )
-}
-
-/** one of the times under the waveform; a tap seeks five seconds namida's way. */
-@Composable
-private fun TimeLabel(text: String, palette: NamidaPalette, onSeek: () -> Unit) {
-    Text(
-        text = text,
-        color = palette.onSurfaceSoft,
-        fontSize = 13.sp,
-        fontFamily = NamidaFontFamily,
-        modifier = Modifier
-            .clip(RoundedCornerShape(6.dp))
-            .clickable(onClick = onSeek)
-            .padding(horizontal = 6.dp, vertical = 4.dp),
-    )
+/** namida's milliSecondsLabel: h:mm:ss or m:ss. */
+internal fun namidaFormatMillis(ms: Long): String {
+    val totalSec = ms / 1000
+    val h = totalSec / 3600
+    val m = (totalSec % 3600) / 60
+    val s = totalSec % 60
+    return if (h > 0) "%d:%02d:%02d".format(h, m, s) else "%d:%02d".format(m, s)
 }
