@@ -263,10 +263,6 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.ui.input.pointer.pointerInput
 import com.mochyy.mochymusic.ported.bridge.isLocalMediaId
-import com.mochyy.mochymusic.ported.bridge.localPlayer
-import com.mochyy.mochymusic.ported.bridge.isMusicVideo
-import com.mochyy.mochymusic.ported.bridge.source
-import com.mochyy.mochymusic.ported.bridge.crossfadeMixing
 
 private const val AnimDurationMillis = 300
 private const val ShareAlbumKey = "flamingoAlbum"
@@ -2105,7 +2101,7 @@ private fun FlamingoTranslationPopup(
                         R.string.show_romanization
                     },
                 ),
-                iconRes = R.drawable.ported_language,
+                iconRes = R.drawable.language,
                 onClick = onToggleRomanization,
             )
         }
@@ -2351,7 +2347,7 @@ private fun FlamingoArtistPickerSheet(
                                     contentAlignment = Alignment.Center,
                                 ) {
                                     Icon(
-                                        painter = painterResource(R.drawable.ported_artist),
+                                        painter = painterResource(R.drawable.artist),
                                         contentDescription = null,
                                         tint = Color.White.copy(alpha = 0.6f),
                                         modifier = Modifier.size(20.dp),

@@ -22,11 +22,13 @@ typealias ArtistEntity = com.mochyy.mochymusic.db.entities.ArtistEntity
 typealias Artist = com.mochyy.mochymusic.db.entities.Artist
 typealias SleepTimer = com.mochyy.mochymusic.playback.SleepTimer
 typealias BottomSheetState = com.mochyy.mochymusic.ui.component.BottomSheetState
+typealias BottomSheetPageState = com.mochyy.mochymusic.ui.component.PopupSheetState
 typealias LiquidGlassTuning = com.mochyy.mochymusic.ui.component.liquid.LiquidGlassTuning
 
 val LocalPlayerConnection = com.mochyy.mochymusic.LocalPlayerConnection
 val LocalDatabase = com.mochyy.mochymusic.LocalDatabase
 val LocalSyncUtils = com.mochyy.mochymusic.LocalSyncUtils
+val LocalBottomSheetPageState = com.mochyy.mochymusic.ui.component.LocalBottomSheetPageState
 
 val LocalAnimationsDisabled = staticCompositionLocalOf { false }
 val LocalStableSystemBarsTopPadding = compositionLocalOf<Dp> { 0.dp }
@@ -68,7 +70,7 @@ fun <T> MutableList<T>.move(fromIndex: Int, toIndex: Int): MutableList<T> = sora
 
 val MediaMetadata.isMusicVideo: Boolean get() = isVideoSong
 
-val PlayerConnection.localPlayer: androidx.media3.exoplayer.ExoPlayer get() = player
+val PlayerConnection.localPlayer: Player get() = player
 
 val com.mochyy.mochymusic.playback.MusicService.crossfadeMixing: StateFlow<Boolean> get() = AutoMixUiState.mixing
 
