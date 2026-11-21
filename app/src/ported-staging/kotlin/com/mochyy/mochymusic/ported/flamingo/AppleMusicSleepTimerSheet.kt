@@ -153,7 +153,7 @@ fun AppleMusicSleepTimerSheet(
                 }
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = stringResource(R.string.ported_sleep_timer),
+                        text = stringResource(R.string.sleep_timer),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                     )
@@ -210,7 +210,7 @@ fun AppleMusicSleepTimerSheet(
                 SleepTimerPresetChip(
                     text = stringResource(R.string.sleep_timer_end_of_song),
                     selected = isEndOfSong,
-                    leadingIconRes = R.drawable.ported_skip_next,
+                    leadingIconRes = R.drawable.skip_next,
                     onClick = {
                         sleepTimer.start(-1)
                         onDismiss()
@@ -233,7 +233,7 @@ fun AppleMusicSleepTimerSheet(
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text(
-                        text = stringResource(R.string.ported_sleep_timer_custom).uppercase(),
+                        text = stringResource(R.string.sleep_timer_custom).uppercase(),
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary,

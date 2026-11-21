@@ -596,7 +596,7 @@ private fun TikTokPausedOverlay(visible: Boolean) {
         ) {
             Icon(
                 painter = painterResource(R.drawable.solar_play_linear),
-                contentDescription = stringResource(R.string.ported_play),
+                contentDescription = stringResource(R.string.play),
                 tint = Color.White.copy(alpha = 0.92f),
                 modifier = Modifier.size(64.dp),
             )
@@ -710,7 +710,7 @@ private fun TikTokSongInfo(
                                     },
                         ) {
                             Icon(
-                                painter = painterResource(R.drawable.ported_more_horiz),
+                                painter = painterResource(R.drawable.more_horiz),
                                 contentDescription = stringResource(R.string.more),
                                 tint = Color.White,
                                 modifier = Modifier.size(20.dp),

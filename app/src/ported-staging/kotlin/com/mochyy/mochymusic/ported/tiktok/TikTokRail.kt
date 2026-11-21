@@ -200,7 +200,7 @@ internal fun TikTokRail(
         ) {
             TikTokRailButton(
                 iconRes = R.drawable.solar_chat_round_linear,
-                contentDescription = stringResource(R.string.ported_lyrics),
+                contentDescription = stringResource(R.string.lyrics),
                 tint = if (lyricsActive) TIKTOK_RED else Color.White,
             ) {
                 haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
@@ -215,7 +215,7 @@ internal fun TikTokRail(
         ) {
             TikTokRailButton(
                 iconRes = R.drawable.solar_bookmark_linear,
-                contentDescription = stringResource(R.string.ported_add_to_playlist),
+                contentDescription = stringResource(R.string.add_to_playlist),
             ) {
                 haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                 onAddToPlaylist()
@@ -229,7 +229,7 @@ internal fun TikTokRail(
         ) {
             TikTokRailButton(
                 iconRes = R.drawable.solar_share_linear,
-                contentDescription = stringResource(R.string.ported_share),
+                contentDescription = stringResource(R.string.share),
             ) {
                 haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                 if (isLocal) {
@@ -358,7 +358,7 @@ private fun TikTokArtistAvatar(
         )
 
         if (!isSubscribed) {
-            val subscribeLabel = stringResource(R.string.ported_subscribe)
+            val subscribeLabel = stringResource(R.string.subscribe)
             Box(
                 contentAlignment = Alignment.Center,
                 modifier =
@@ -458,7 +458,7 @@ private fun TikTokLikeRailButton(
     likeCountLabel: String?,
     onLike: () -> Unit,
 ) {
-    val likeLabel = stringResource(R.string.ported_action_like)
+    val likeLabel = stringResource(R.string.action_like)
     val scale = remember { Animatable(1f) }
 
     var wasLiked by remember { mutableStateOf(liked) }
