@@ -89,6 +89,17 @@ fun ExperimentalSettingsScreen(navController: NavController) {
             SettingsGroup(
                 style = SettingsGroupStyle.Grouped,
                 items = buildList {
+                    if (com.mochyy.mochymusic.BuildConfig.DEBUG) {
+                        add(
+                            SettingsItem(
+                                title = { Text(stringResource(R.string.debug_crash_now)) },
+                                descriptionText = stringResource(R.string.debug_crash_now_desc),
+                                icon = painterResource(R.drawable.info),
+                                iconShape = androidx.compose.foundation.shape.CircleShape,
+                                onClick = { throw RuntimeException("forced crash test") },
+                            )
+                        )
+                    }
                     add(
                         SettingsItem(
                             title = { Text(unlockLandscapeTitle) },

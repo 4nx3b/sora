@@ -199,6 +199,8 @@ fun BottomSheet(
     // false while what's on the open sheet handles every swipe itself; the sheet then leaves them all alone
     dragsWhenOpen: () -> Boolean = { true },
     sharedContent: @Composable (BoxScope.() -> Unit)? = null,
+    // drawn above everything else on the sheet (the artwork drift's flying cover)
+    overlayContent: @Composable (BoxScope.() -> Unit)? = null,
     content: @Composable BoxScope.() -> Unit,
 ) {
     val density = LocalDensity.current
@@ -310,6 +312,10 @@ fun BottomSheet(
                         modifier = Modifier.fillMaxSize(),
                         content = sharedContent
                     )
+                }
+
+                if (overlayContent != null) {
+                    Box(modifier = Modifier.fillMaxSize(), content = overlayContent)
                 }
             }
         } else {
@@ -730,6 +736,10 @@ fun BottomSheet(
                         ) {
                             content()
                         }
+                    }
+
+                    if (overlayContent != null) {
+                        Box(modifier = Modifier.fillMaxSize(), content = overlayContent)
                     }
                 }
 

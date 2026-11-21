@@ -2,6 +2,7 @@
 
 package com.mochyy.mochymusic
 
+import com.kyant.backdrop.backdrops.layerBackdrop
 import android.Manifest
 import android.annotation.SuppressLint
 import android.app.PendingIntent
@@ -627,6 +628,11 @@ class MainActivity : ComponentActivity() {
                     .background(if (pureBlack) Color.Black else MaterialTheme.colorScheme.surface)
             ) {
                 val glassState = remember { GlassState() }
+                val liquidGlass = com.mochyy.mochymusic.ui.component.liquid.rememberLiquidGlassConfig()
+                val recordsBackdrop = androidx.compose.runtime.rememberUpdatedState(liquidGlass.anySurface)
+                val appBackdrop = com.kyant.backdrop.backdrops.rememberLayerBackdrop(
+                    onDraw = remember { { if (recordsBackdrop.value) drawContent() } },
+                )
                 val hideAppChrome = remember { mutableStateOf(false) }
                 val detailAccentColor = remember { mutableStateOf<Color?>(null) }
                 val focusManager = LocalFocusManager.current
@@ -910,6 +916,8 @@ class MainActivity : ComponentActivity() {
 
                     LocalPlayerConnection provides playerConnection,
                     LocalGlassState provides glassState,
+                    com.mochyy.mochymusic.ui.component.liquid.LocalLiquidGlass provides liquidGlass,
+                    com.mochyy.mochymusic.ui.component.liquid.LocalAppBackdrop provides appBackdrop,
                     LocalHideAppChrome provides hideAppChrome,
                     LocalDetailAccentColor provides detailAccentColor,
                     LocalArtworkColor provides themeColor,
@@ -1217,6 +1225,7 @@ class MainActivity : ComponentActivity() {
                                             .fillMaxSize()
                                             .windowInsetsPadding(WindowInsets.stableSystemBars.only(WindowInsetsSides.Horizontal))
                                             .glassRoot(glassState, isActive = { true })
+                                            .layerBackdrop(appBackdrop)
                                     ) {
                                     if (settingsPane) {
                                         com.mochyy.mochymusic.ui.screens.settings.SettingsListPane(

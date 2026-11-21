@@ -2,6 +2,7 @@
 
 package com.mochyy.mochymusic.ui.player
 
+import com.mochyy.mochymusic.ui.component.liquid.liquidGlassSurface
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
@@ -25,6 +26,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.ui.graphics.asComposeRenderEffect
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.nativeCanvas
@@ -341,12 +343,22 @@ private fun Modifier.morphLayout(
     endpointsPx: MorphEndpointsPx,
     element: MorphElement,
     lyricsProgressProvider: () -> Float = { 0f },
+    drift: ArtworkDriftSlot? = null,
 ) = this.layout { measurable, constraints ->
     val p = progressProvider()
     val hOffset = horizontalOffsetProvider()
 
     val (x, y, w, h) = when (element) {
-        MorphElement.ART -> endpointsPx.artRect(p, hOffset, lyricsProgressProvider())
+        MorphElement.ART -> drift?.rect?.let { open ->
+            val m = endpointsPx.artRect(0f, hOffset, 0f)
+            val r = driftRect(
+                Rect(m[0], m[1], m[0] + m[2], m[1] + m[3]),
+                open.translate(Offset(hOffset, 0f)),
+                p,
+                endpointsPx.fullHeightPx - endpointsPx.miniHeightPx,
+            )
+            floatArrayOf(r.left, r.top, r.width, r.height)
+        } ?: endpointsPx.artRect(p, hOffset, lyricsProgressProvider())
         MorphElement.PLAY -> {
             val playX = lerpF(endpointsPx.miniPlayXPx, endpointsPx.fullPlayXPx, p)
             val playY = lerpF(endpointsPx.miniPlayYPx, endpointsPx.fullPlayYPx, p)
@@ -702,9 +714,11 @@ fun MorphingCover(
 
     // (The mini player's press tilt is the sheet's own now - see BottomSheet - so it tilts the
     // pill's outline with what's in it, and eases out into the open instead of snapping off.)
+    val driftSlot = LocalArtworkDriftSlot.current?.takeIf { alternateStyle }
     Box(
         modifier = modifier
             .glassRoot(glassState, isActive = { !editMode || glassActiveInEdit() })
+            .driftOrigin(driftSlot)
     ) {
 
         SheetPillGlass(
@@ -852,14 +866,25 @@ fun MorphingCover(
                         endpointsPx = endpointsPx,
                         element = MorphElement.ART,
                         lyricsProgressProvider = lyricsProgressProvider,
+                        drift = driftSlot,
                     )
+                    .driftCopySource(driftSlot)
                     .then(studioArtModifier)
                     .graphicsLayer {
                         val p = progressProvider()
-                        if (alternateStyle) alpha = (1f - p / 0.4f).coerceIn(0f, 1f)
+                        val driftCorner = driftSlot?.takeIf { it.rect != null }?.cornerPx
+                        val driftOpen = driftCorner != null
+                        if (alternateStyle) {
+                            alpha = if (driftOpen) {
+                                if (p < DriftRestAt) 1f else 0f
+                            } else {
+                                (1f - p / 0.4f).coerceIn(0f, 1f)
+                            }
+                        }
 
-                        scaleX = animatedPauseScale
-                        scaleY = animatedPauseScale
+                        val pauseScale = if (driftOpen) 1f else animatedPauseScale
+                        scaleX = pauseScale
+                        scaleY = pauseScale
                         // A colour filter on a layer forces it offscreen - the whole cover rendered
                         // into a buffer of its own every frame of the morph. While playing the
                         // matrix is the identity anyway, so it's only set while the cover is
@@ -885,8 +910,12 @@ fun MorphingCover(
                             0.dp
                         }
                         // the corners round with the size, so a cover still travelling small keeps its thumbnail corners
-                        val base = lerp(ThumbnailCornerRadius, expandedRadius, coverGrowth(p, endpointsPx.growLate))
-                        artShape.radius = lerp(base, LyricsHeaderCornerRadius, lyricsProgressProvider())
+                        if (driftCorner != null) {
+                            artShape.radius = lerp(ThumbnailCornerRadius, driftCorner.toDp(), p)
+                        } else {
+                            val base = lerp(ThumbnailCornerRadius, expandedRadius, coverGrowth(p, endpointsPx.growLate))
+                            artShape.radius = lerp(base, LyricsHeaderCornerRadius, lyricsProgressProvider())
+                        }
                         shape = artShape
                     }
                     .then(
@@ -1896,15 +1925,32 @@ private fun SheetPillGlass(
                 else Modifier
             ),
     ) {
+        val liquid = com.mochyy.mochymusic.ui.component.liquid.LocalLiquidGlass.current
+        val liquidPill = liquid.surface(liquid.miniPlayer)
         FrostedChromeGlass(
             state = glassState,
             pureBlack = pureBlack,
             accentWash = accentWash,
-            modifier = Modifier.fillMaxSize(),
+            modifier = if (liquidPill) {
+                Modifier.fillMaxSize().graphicsLayer { alpha = (progressProvider() / MiniGlassOutBy).coerceIn(0f, 1f) }
+            } else {
+                Modifier.fillMaxSize()
+            },
             surface = com.mochyy.mochymusic.ui.component.ChromeSurface.MiniPlayer,
         )
+        if (liquidPill) {
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .graphicsLayer { alpha = 1f - (progressProvider() / MiniGlassOutBy).coerceIn(0f, 1f) }
+                    .liquidGlassSurface(androidx.compose.foundation.shape.RoundedCornerShape(50)),
+            )
+        }
     }
 }
+
+/** the liquid glass pill hands over to the frosted backdrop by this much open, so it never shows on the open player */
+private const val MiniGlassOutBy = 0.02f
 
 /**
  * The open player's backdrop, growing with the sheet. Solid by [BackdropSolidAt], over the pill's

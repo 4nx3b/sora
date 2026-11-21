@@ -6,6 +6,7 @@
 
 package com.mochyy.mochymusic.ui.player.applemusic
 
+import com.mochyy.mochymusic.ui.player.driftArtworkSlot
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
@@ -201,6 +202,7 @@ fun AppleMusicPlayerStyle(actions: StyleActions, modifier: Modifier, preview: Bo
                             Box(
                                 modifier = Modifier
                                     .fillMaxSize()
+                                    .then(if (preview) Modifier else Modifier.driftArtworkSlot(8.dp))
                                     .clip(RoundedCornerShape(8.dp))
                                     .then(
                                         if (preview) Modifier else Modifier.pointerInput(Unit) {

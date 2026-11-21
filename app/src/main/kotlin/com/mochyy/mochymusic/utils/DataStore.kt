@@ -75,6 +75,10 @@ object PreferencesCache {
             store.edit { it[key] = value }
         }
     }
+
+    fun edit(store: DataStore<Preferences>, block: (androidx.datastore.preferences.core.MutablePreferences) -> Unit) {
+        writeScope.launch { store.edit { block(it) } }
+    }
 }
 
 operator fun <T> DataStore<Preferences>.get(key: Preferences.Key<T>): T? =
