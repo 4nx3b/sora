@@ -5,5 +5,7 @@
 # Measured on Home scrolling: about twice the slow frames until then.
 HSPLcom/mochyy/mochymusic/**->**(**)**
 HSPLcom/music/**->**(**)**
+HSPLcom/kyant/backdrop/**->**(**)**
 Lcom/mochyy/mochymusic/**;
 Lcom/music/**;
+Lcom/kyant/backdrop/**;

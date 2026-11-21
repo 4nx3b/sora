@@ -82,7 +82,7 @@ internal object TransferArchive {
     // top-level things in the files folder that stay behind: the streaming cache, settings (sent as json),
     // caches, crash notes, the saved queue (java objects tied to class names) and folder picks android won't hand over
     private val FilesLeftBehind = setOf(
-        "exoplayer", "datastore", "cipher_cache", "local_music_folders.txt", "last_crash.txt",
+        "exoplayer", "datastore", "cipher_cache", "local_music_folders.txt", "last_crash.txt", "crash",
         "persistent_queue.data", "persistent_automix.data", "persistent_player_state.data",
     )
 

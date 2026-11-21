@@ -253,6 +253,7 @@ extensions.configure<ApplicationExtension> {
         jvmToolchain(21)
         compilerOptions {
             freeCompilerArgs.add("-Xannotation-default-target=param-property")
+            freeCompilerArgs.add("-Xcontext-parameters")
             jvmTarget.set(JvmTarget.JVM_21)
         }
     }
@@ -391,6 +392,7 @@ dependencies {
     debugImplementation(libs.compose.ui.tooling)
     implementation(libs.compose.animation)
     implementation(libs.compose.reorderable)
+    implementation(libs.squigglyslider)
 
     implementation(libs.viewmodel)
     implementation(libs.viewmodel.compose)
@@ -489,6 +491,7 @@ dependencies {
     implementation(libs.androidx.core.splashscreen)
     implementation(libs.androidx.webkit)
 
+    implementation("io.github.kyant0:shapes:1.2.0")
     testImplementation(libs.junit)
     androidTestImplementation(libs.junit)
     androidTestImplementation("androidx.test:runner:1.6.2")

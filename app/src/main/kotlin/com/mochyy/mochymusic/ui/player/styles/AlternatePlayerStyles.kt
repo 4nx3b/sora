@@ -1,5 +1,6 @@
 package com.mochyy.mochymusic.ui.player.styles
 
+import com.mochyy.mochymusic.ui.player.driftArtworkSlot
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.layout.Arrangement
@@ -77,6 +78,12 @@ fun AlternatePlayerStyle(
     modifier: Modifier = Modifier,
     preview: Boolean = false,
 ) {
+    if (preview && com.mochyy.mochymusic.ui.player.LocalArtworkDriftSlot.current != null) {
+        androidx.compose.runtime.CompositionLocalProvider(com.mochyy.mochymusic.ui.player.LocalArtworkDriftSlot provides null) {
+            AlternatePlayerStyle(style, actions, modifier, preview)
+        }
+        return
+    }
     when (style) {
         PlayerStyle.POSTER -> PosterPlayerStyle(actions, modifier, preview)
         PlayerStyle.TIMELINE -> TimelinePlayerStyle(actions, modifier, preview)
@@ -86,8 +93,8 @@ fun AlternatePlayerStyle(
         PlayerStyle.BEDSIDE -> com.mochyy.mochymusic.ui.player.bedside.BedsidePlayerStyle(actions, modifier, preview)
         PlayerStyle.BEDSIDE_TILES -> com.mochyy.mochymusic.ui.player.bedside.BedsideTilesStyle(actions, modifier, preview)
         PlayerStyle.NAMIDA -> com.mochyy.mochymusic.ui.player.namida.NamidaPlayerStyle(actions, modifier, preview)
-        PlayerStyle.APPLE_MUSIC -> com.mochyy.mochymusic.ui.player.applemusic.AppleMusicPlayerStyle(actions, modifier, preview)
-        PlayerStyle.TIKTOK -> com.mochyy.mochymusic.ui.player.tiktok.TikTokPlayerStyle(actions, modifier, preview)
+        PlayerStyle.APPLE_MUSIC -> com.mochyy.mochymusic.ported.PortedPlayerHost(style, actions, modifier, preview)
+        PlayerStyle.TIKTOK -> com.mochyy.mochymusic.ported.PortedPlayerHost(style, actions, modifier, preview)
         PlayerStyle.MODULE -> ModulePlayerStyle(actions, modifier, preview)
         PlayerStyle.FLAGSHIP, PlayerStyle.CLASSIC, PlayerStyle.TURNTABLE -> Unit
     }
@@ -734,6 +741,7 @@ private fun TimelinePlayerStyle(actions: StyleActions, modifier: Modifier, previ
                     fallbackUrl = track.artwork,
                     modifier = Modifier
                         .size(if (landscape) icon * 0.86f else icon)
+                        .then(if (preview) Modifier else Modifier.driftArtworkSlot((if (landscape) icon * 0.86f else icon) * 0.26f))
                         .clip(RoundedCornerShape(icon * 0.26f))
                         .background(Color.White.copy(alpha = 0.08f)),
                 ) { url, pictureModifier ->

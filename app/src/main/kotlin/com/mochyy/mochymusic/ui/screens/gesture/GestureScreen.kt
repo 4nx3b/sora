@@ -125,6 +125,7 @@ private enum class CustomiseSection(@StringRes val titleRes: Int, val keys: List
     PLAYER(R.string.customise_player_styles, listOf("Player styles"), "player styles flagship turntable ipod poster timeline lyrics editor customize landscape sideways full cover square"),
     HOME(R.string.customise_home_styles, listOf("Home styles"), "home styles mochyy listen now hop in hero"),
     BLUR(R.string.appearance_blur, listOf("Blur", "Progressive blur", "Blur quality", "Blur strength"), "blur glass frosted progressive flat quality low high strength px"),
+    LIQUID_GLASS(R.string.customise_liquid_glass, listOf("Liquid glass", "Acrylic blur"), "liquid glass acrylic refraction lens blur frosted nav bar miniplayer slider toggle switch"),
     ELEMENT_BLUR(R.string.customise_element_blur, listOf("Element blur"), "element blur lyrics lines cover zoom titles menus page swipes"),
     ANIMATION(R.string.appearance_animation, listOf("Animation", "Animation speed"), "animation speed motion transitions off faster slower"),
     LYRICS(R.string.appearance_lyrics_animation, listOf("Lyrics animation"), "lyrics animation style 1 2 boring plain shader glow wave"),
@@ -191,7 +192,7 @@ fun CustomisationScreen(navController: NavController) {
                 shown.forEachIndexed { index, section ->
                     if (index > 0) SectionRule()
                     Box(Modifier.highlightTarget(section.keys)) {
-                        CustomiseSectionContent(section)
+                        CustomiseSectionContent(section, onOpenLiquidGlass = { navController.navigate(com.mochyy.mochymusic.ui.screens.settings.LiquidGlassSettingsRoute) })
                     }
                 }
             }
@@ -200,7 +201,7 @@ fun CustomisationScreen(navController: NavController) {
 }
 
 @Composable
-private fun CustomiseSectionContent(section: CustomiseSection) {
+private fun CustomiseSectionContent(section: CustomiseSection, onOpenLiquidGlass: () -> Unit = {}) {
     val pagerBleed = Modifier.bleedHorizontally(CustomisePageMargin)
     when (section) {
         CustomiseSection.ICONS -> IconsSection()
@@ -240,6 +241,11 @@ private fun CustomiseSectionContent(section: CustomiseSection) {
             ) { HomeStylePreview(style = it, coverRadius = coverRadiusPx.dp) }
         }
         CustomiseSection.BLUR -> BlurSection()
+        CustomiseSection.LIQUID_GLASS -> com.mochyy.mochymusic.ui.component.PreferenceEntry(
+            title = { androidx.compose.material3.Text(androidx.compose.ui.res.stringResource(R.string.customise_liquid_glass)) },
+            description = "Liquid glass and acrylic blur",
+            onClick = onOpenLiquidGlass,
+        )
         CustomiseSection.ELEMENT_BLUR -> ElementBlurSection()
         CustomiseSection.ANIMATION -> AnimationSection()
         CustomiseSection.LYRICS -> LyricsStyleSection(modifier = pagerBleed)
