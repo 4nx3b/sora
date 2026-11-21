@@ -2070,7 +2070,7 @@ internal suspend fun searchSongs(query: String): List<Song> = withContext(Dispat
             artistId = item.artists.firstOrNull()?.id,
             artists = item.artists.map { com.mochyy.mochymusic.ported.together.model.ArtistRef(name = it.name, browseId = it.id) },
             albumId = item.album?.id,
-            albumName = item.album?.title,
+            albumName = item.album?.name,
             isExplicit = item.explicit,
             setVideoId = item.setVideoId,
         )
