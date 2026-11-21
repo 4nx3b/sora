@@ -209,7 +209,7 @@ fun PlayerMenu(
                     NewActionGrid(
                         actions =
                             buildList {
-                                if (!isLocalMedia && !mediaMetadata.isPodcast) {
+                                if (!isLocalMedia) {
                                     add(
                                         NewAction(
                                             icon = {

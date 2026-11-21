@@ -39,8 +39,7 @@ fun rememberLowDataModeActive(): Boolean = com.mochyy.mochymusic.utils.rememberD
 fun rememberLiquidGlassEnabled(): Boolean = com.mochyy.mochymusic.ui.component.liquid.LocalLiquidGlass.current.enabled
 
 // ---- cast: sora has none, so the output button falls through to the system output picker
-
-class NewAction(val onClick: () -> Unit)
+// (Neiro's own NewAction, from the vendored NewMenuComponents, is the action's type)
 
 @Composable
 fun rememberCastPlayerMenuAction(@Suppress("UNUSED_PARAMETER") renderSheet: Boolean = true): NewAction? = null

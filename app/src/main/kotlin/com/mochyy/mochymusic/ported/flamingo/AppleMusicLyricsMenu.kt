@@ -225,7 +225,7 @@ fun AnchoredLyricsOverflowMenu(
                     .verticalScroll(rememberScrollState())
                     .padding(vertical = 10.dp),
             ) {
-                fun row(label: String, icon: Int, onClick: () -> Unit) {
+                @Composable fun row(label: String, icon: Int, onClick: () -> Unit) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()

@@ -14,6 +14,7 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -112,7 +113,7 @@ fun NamidaTrackMenu(
             .graphicsLayer { alpha = appear.value }
             .background(Color.Black.copy(alpha = 0.5f * appear.value))
             .pointerInput(Unit) {
-                androidx.compose.foundation.gestures.detectTapGestures { close() }
+                detectTapGestures { close() }
             },
         contentAlignment = Alignment.Center,
     ) {
@@ -207,7 +208,7 @@ fun NamidaTrackMenu(
                 val iconTint = palette.currentColor.copy(alpha = 0.47f).compositeOver(palette.textMedium)
                 val titleTint = palette.currentColor.copy(alpha = 0.16f).compositeOver(palette.textMedium)
 
-                fun row(label: String, icon: Int, closeAfter: Boolean = true, tint: Color = titleTint, iconColor: Color = iconTint, onClick: () -> Unit) {
+                @Composable fun row(label: String, icon: Int, closeAfter: Boolean = true, tint: Color = titleTint, iconColor: Color = iconTint, onClick: () -> Unit) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
