@@ -1,5 +1,7 @@
 // Three functions taken verbatim from Neiro (archivetune ui/player/PlayerComponents.kt and QueueComponents.kt).
 
+@file:OptIn(ExperimentalMaterial3ExpressiveApi::class)
+
 package com.mochyy.mochymusic.ported.bridge
 
 import androidx.compose.foundation.layout.Arrangement
@@ -12,14 +14,17 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -87,10 +92,10 @@ fun StyledPlaybackSlider(
                     )
                 }
             sliderState.value = value
+            sliderState.onValueChange = onValueChange // BRIDGE(neiro): alpha18 carries the callbacks on the state
+            sliderState.onValueChangeFinished = onValueChangeFinished
             Slider(
                 state = sliderState,
-                onValueChange = onValueChange,
-                onValueChangeFinished = onValueChangeFinished,
                 colors = PlayerSliderColors.thickSliderColors(activeColor),
                 thumb = { Spacer(modifier = Modifier.size(0.dp)) },
                 track = { state ->
@@ -130,10 +135,10 @@ fun StyledPlaybackSlider(
                     )
                 }
             sliderState.value = value
+            sliderState.onValueChange = onValueChange // BRIDGE(neiro): alpha18 carries the callbacks on the state
+            sliderState.onValueChangeFinished = onValueChangeFinished
             Slider(
                 state = sliderState,
-                onValueChange = onValueChange,
-                onValueChangeFinished = onValueChangeFinished,
                 colors = PlayerSliderColors.simpleSliderColors(activeColor),
                 thumb = { Spacer(modifier = Modifier.size(0.dp)) },
                 track = { state ->
@@ -161,6 +166,7 @@ internal fun PlayerTextBackdrop(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SleepTimerDialog(
     onDismiss: () -> Unit,

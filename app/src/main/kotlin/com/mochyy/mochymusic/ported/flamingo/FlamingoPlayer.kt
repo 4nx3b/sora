@@ -210,7 +210,7 @@ import com.mochyy.mochymusic.ported.bridge.isLossless
 import com.mochyy.mochymusic.ported.bridge.metadata
 import com.mochyy.mochymusic.ported.bridge.move
 import com.mochyy.mochymusic.ported.bridge.LyricsUtils
-import com.mochyy.mochymusic.ported.bridge.MediaMetadata
+import com.mochyy.mochymusic.models.MediaMetadata // BRIDGE(neiro): the real class, so its nested Artist resolves (typealiases hide nested types)
 import com.mochyy.mochymusic.ported.bridge.PlayerConnection
 import com.mochyy.mochymusic.ported.bridge.BottomSheetPageState
 import com.mochyy.mochymusic.ported.bridge.BottomSheetState
@@ -4047,13 +4047,11 @@ private fun FlamingoPlayerControl(
                             SliderState(
                                 value = sliderPosition.floatValue,
                                 steps = 0,
-                                trackRange = 0f..playingDuration.longValue.toFloat().coerceAtLeast(0f),
+                                valueRange = 0f..playingDuration.longValue.toFloat().coerceAtLeast(0f), // BRIDGE(neiro): material3 1.5.0-alpha18 names it valueRange
                             )
                         }
                     seekSliderState.value = sliderPosition.floatValue
-                    Slider(
-                        state = seekSliderState,
-                        onValueChange = { newValue ->
+                    seekSliderState.onValueChange = { newValue -> // BRIDGE(neiro): alpha18 carries the callbacks on the state
                             isSliding.value = true
 
                             sliderPosition.floatValue = newValue
@@ -4066,13 +4064,15 @@ private fun FlamingoPlayerControl(
 
                             onSliderValueChange(newValue.toLong())
                             onSlider()
-                        },
-                        onValueChangeFinished = {
+                        }
+                    seekSliderState.onValueChangeFinished = {
                             FlamingoHaptics.longClick(context)
                             player.seekTo(sliderPosition.floatValue.toLong())
                             onSliderValueChangeFinished()
                             isSliding.value = false
-                        },
+                        }
+                    Slider(
+                        state = seekSliderState,
                         colors = SliderDefaults.colors(
                             activeTrackColor = Color.White,
                             inactiveTrackColor = Color(0x0DFFFFFF),
@@ -4395,18 +4395,22 @@ private fun FlamingoVolumeSlider(
             val volumeSliderState =
                 rememberSliderState(
                     value = animatedProgress.value,
-                    trackRange = 0f..1f,
+                    valueRange = 0f..1f, // BRIDGE(neiro): material3 1.5.0-alpha18 names it valueRange
                 )
             volumeSliderState.value = animatedProgress.value
+            volumeSliderState.onValueChange = { newValue -> // BRIDGE(neiro): alpha18 carries the callbacks on the state
+                sliding.value = true
+                sliderPosition.floatValue = newValue
+                onVolumeChange(newValue)
+                onSlider()
+            }
+            volumeSliderState.onValueChangeFinished = {
+                FlamingoHaptics.longClick(context)
+                sliding.value = false
+            }
 
             Slider(
                 state = volumeSliderState,
-                onValueChange = { newValue ->
-                    sliding.value = true
-                    sliderPosition.floatValue = newValue
-                    onVolumeChange(newValue)
-                    onSlider()
-                },
                 colors = SliderDefaults.colors(
                     activeTrackColor = Color.White,
                     inactiveTrackColor = Color(0x0DFFFFFF),
@@ -4422,10 +4426,6 @@ private fun FlamingoVolumeSlider(
                         activeFraction = animatedProgress.value.coerceIn(0f, 1f),
                         height = 7.dp + 4.dp * volumeEngage,
                     )
-                },
-                onValueChangeFinished = {
-                    FlamingoHaptics.longClick(context)
-                    sliding.value = false
                 },
             )
         }
