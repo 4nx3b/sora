@@ -54,6 +54,7 @@ import android.view.Surface
 import android.view.ViewGroup
 import android.view.TextureView
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
+import com.mochyy.mochymusic.utils.get
 
 private object CanvasVideoCache {
     @Volatile private var cache: SimpleCache? = null

@@ -49,6 +49,10 @@ import moe.rukamori.archivetune.modules.ModuleExtensionReader
 import moe.rukamori.archivetune.modules.parseJsonValue
 import moe.rukamori.archivetune.modules.jsonValue
 import com.mochyy.mochymusic.BuildConfig
+import moe.rukamori.archivetune.modules.readModuleBytes
+import moe.rukamori.archivetune.modules.strings
+import moe.rukamori.archivetune.modules.requireCompatible
+import moe.rukamori.archivetune.modules.acceptsValue
 
 data class ArchModuleMetadata(val name: String, val author: String, val description: String)
 

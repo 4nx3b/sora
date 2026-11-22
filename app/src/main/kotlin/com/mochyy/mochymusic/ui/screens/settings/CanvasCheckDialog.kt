@@ -31,13 +31,15 @@ import com.mochyy.mochymusic.constants.SpotifyCanvasKey
 import com.mochyy.mochymusic.ui.component.DefaultDialog
 import com.mochyy.mochymusic.ui.theme.InterFontFamily
 import com.mochyy.mochymusic.utils.dataStore
-import com.music.vivi.applecanvas.AppleMusicCanvasProvider
-import com.music.vivi.canvas.MonochromeApiCanvas
+import com.mochyy.mochymusic.applecanvas.AppleMusicCanvasProvider
+import com.mochyy.mochymusic.canvas.MonochromeApiCanvas
+import com.mochyy.mochymusic.arch.ArchQualityTag
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withTimeoutOrNull
+import com.mochyy.mochymusic.utils.get
 
 /** what one provider's check came to */
 private enum class CheckState { RUNNING, REACHABLE, UNREACHABLE, NOT_CONNECTED }

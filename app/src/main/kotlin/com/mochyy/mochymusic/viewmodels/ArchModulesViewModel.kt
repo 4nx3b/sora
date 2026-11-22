@@ -59,7 +59,7 @@ class ArchModulesViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val busy = MutableStateFlow<String?>(null)
-    private val message = MutableStateFlow<Pair<Int, String?]?>(null)
+    private val message: MutableStateFlow<Pair<Int, String?>?> = MutableStateFlow(null)
     private val openUri = MutableStateFlow<String?>(null)
     private val review = MutableStateFlow<ArchPendingInstall?>(null)
 

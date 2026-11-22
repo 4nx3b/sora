@@ -5,6 +5,7 @@ package com.mochyy.mochymusic.lyrics
 import android.content.Context
 import com.music.innertube.YouTube
 import com.mochyy.mochymusic.utils.dataStore
+import com.mochyy.mochymusic.utils.get
 
 object YouTubeSubtitleLyricsProvider : LyricsProvider {
     // Must match the registry key, not the display name: this string is what gets persisted on

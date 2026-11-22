@@ -32,6 +32,7 @@ import com.mochyy.mochymusic.ui.menu.AddToPlaylistDialog
 import com.mochyy.mochymusic.utils.rememberPreference
 import com.mochyy.mochymusic.utils.dataStore
 import kotlinx.coroutines.flow.flowOf
+import com.mochyy.mochymusic.utils.get
 
 /** What the extra chevron actions do, and whether each one is on right now. */
 class PlayerMenuExtras internal constructor(

@@ -23,6 +23,7 @@ import com.mochyy.mochymusic.ui.component.SubSettingsScaffold
 import com.mochyy.mochymusic.ui.screens.devices.rememberDevicesLink
 import com.mochyy.mochymusic.ui.screens.settings.importsync.YouTubeSyncRoute
 import com.mochyy.mochymusic.ui.screens.settings.integrations.discord.DiscordRoute
+import com.mochyy.mochymusic.ui.screens.devices.showDeviceIntegration
 
 const val IntegrationsRoute = "integrations_settings"
 

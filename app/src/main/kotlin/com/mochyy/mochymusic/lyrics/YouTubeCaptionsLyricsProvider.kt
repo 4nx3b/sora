@@ -5,6 +5,7 @@ package com.mochyy.mochymusic.lyrics
 import android.content.Context
 import com.music.innertube.YouTube
 import com.mochyy.mochymusic.utils.dataStore
+import com.mochyy.mochymusic.utils.get
 
 /**
  * The video's captions: YouTube's auto-generated ones, or a track uploaded in the same language.

@@ -6,6 +6,7 @@ import android.content.Context
 import com.music.innertube.YouTube
 import com.music.innertube.models.WatchEndpoint
 import com.mochyy.mochymusic.utils.dataStore
+import com.mochyy.mochymusic.utils.get
 
 object YouTubeLyricsProvider : LyricsProvider {
     // Must match the registry key (see YouTubeSubtitleLyricsProvider): a spaced name never

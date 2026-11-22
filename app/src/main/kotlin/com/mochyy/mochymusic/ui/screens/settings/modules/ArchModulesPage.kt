@@ -52,6 +52,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.mochyy.mochymusic.R
 import com.mochyy.mochymusic.arch.ArchInstalledModule
+import com.mochyy.mochymusic.arch.ArchQualityTag
 import com.mochyy.mochymusic.arch.ArchSavedCatalog
 import com.mochyy.mochymusic.arch.ModuleCheckStatus
 import com.mochyy.mochymusic.arch.ModuleHealth
@@ -360,8 +361,10 @@ private fun ArchModuleDetails(
         }
         val tags = archQualityTags(manifest.labels, manifest.settings)
         if (tags.isNotEmpty()) {
+            val hiResLabel = stringResource(R.string.arch_modules_quality_hi_res)
+            val maxLabel = stringResource(R.string.arch_modules_quality_max)
             Text(
-                tags.joinToString(" · ") { stringResource(if (it == com.mochyy.mochymusic.arch.ArchQualityTag.HI_RES) R.string.arch_modules_quality_hi_res else R.string.arch_modules_quality_max) },
+                tags.joinToString(" · ") { if (it == ArchQualityTag.HI_RES) hiResLabel else maxLabel },
                 fontSize = 11.sp, fontWeight = FontWeight.SemiBold,
                 color = Color.White.copy(alpha = 0.6f),
                 modifier = Modifier.padding(horizontal = 4.dp),
@@ -523,9 +526,9 @@ private fun ArchModuleDetails(
             onDismiss = { editingMetadata = false },
             title = { Text(stringResource(R.string.arch_modules_edit_metadata)) },
         ) {
-            ArchField(stringResource(R.string.arch_modules_metadata_name), name) { name = it }
-            ArchField(stringResource(R.string.arch_modules_metadata_author), author) { author = it }
-            ArchField(stringResource(R.string.arch_modules_metadata_description), description) { description = it }
+            ArchField(stringResource(R.string.arch_modules_metadata_name), name, onValueChange = { name = it })
+            ArchField(stringResource(R.string.arch_modules_metadata_author), author, onValueChange = { author = it })
+            ArchField(stringResource(R.string.arch_modules_metadata_description), description, onValueChange = { description = it })
             Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
                 TextButton(onClick = { editingMetadata = false }) { Text(stringResource(R.string.cancel)) }
                 TextButton(
@@ -672,8 +675,9 @@ private fun ArchCatalogDetails(
                     iconShape = CircleShape,
                     enabled = entry.supported,
                     onClick = {
-                        if (entry.supported && !busy && entry.downloadUrl != null) {
-                            viewModel.installFromCatalog(entry.downloadUrl, entry.sha256)
+                        val downloadUrl = entry.downloadUrl
+                        if (entry.supported && !busy && downloadUrl != null) {
+                            viewModel.installFromCatalog(downloadUrl, entry.sha256)
                         }
                     },
                     trailingContent = {

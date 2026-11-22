@@ -27,6 +27,7 @@ import com.mochyy.mochymusic.ui.component.SettingsGroup
 import com.mochyy.mochymusic.ui.component.SettingsGroupStyle
 import com.mochyy.mochymusic.ui.component.SettingsItem
 import com.mochyy.mochymusic.ui.theme.InterFontFamily
+import androidx.compose.ui.res.stringResource
 
 // a section's title (if it has one) and its grouped rows, left out whole when the search hides every row
 @Composable

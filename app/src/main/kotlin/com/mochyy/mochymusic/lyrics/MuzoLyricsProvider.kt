@@ -29,6 +29,7 @@ import kotlinx.serialization.json.Json
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import com.mochyy.mochymusic.utils.dataStore
+import com.mochyy.mochymusic.utils.get
 
 object MuzoLyricsProvider : LyricsProvider {
     override val name = "Muzo"

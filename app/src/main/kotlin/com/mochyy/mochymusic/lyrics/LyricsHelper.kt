@@ -27,6 +27,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import com.mochyy.mochymusic.utils.get
 
 class LyricsHelper
 @Inject
