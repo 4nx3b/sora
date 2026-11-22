@@ -523,6 +523,8 @@
     <string name="debug_crash_now">Crash now</string>
     <string name="debug_crash_now_desc">Debug builds only: throws on the main thread so a crash log is written, then saved to Download/Mochy on the next launch</string>
     <string name="customise_liquid_glass">Liquid glass</string>
+    <string name="customise_acrylic_on">Acrylic on</string>
+    <string name="customise_liquid_glass_desc">The app\'s own glass over every page, with acrylic blur where the device can\'t draw it</string>
     <string name="crash_log_saved_one">Crash log saved to %1$s</string>
     <string name="crash_log_saved_many">%1$d crash logs saved to %2$s</string>
 </resources>
