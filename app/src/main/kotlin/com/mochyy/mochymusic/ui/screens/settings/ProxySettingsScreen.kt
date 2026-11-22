@@ -2,6 +2,7 @@
 
 package com.mochyy.mochymusic.ui.screens.settings
 
+import com.mochyy.mochymusic.ui.screens.settings.previews.ProxyPreview
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -96,6 +97,8 @@ fun ProxySettingsScreen(navController: NavController) {
         title = stringResource(R.string.proxy),
         onBack = { navController.navigateUp() },
     ) {
+        com.mochyy.mochymusic.ui.screens.gesture.PortedPreviewHeader { ProxyPreview() }
+        androidx.compose.foundation.layout.Spacer(androidx.compose.ui.Modifier.height(16.dp))
         Text(
             text = stringResource(R.string.proxy_intro),
             style = MaterialTheme.typography.bodyMedium,

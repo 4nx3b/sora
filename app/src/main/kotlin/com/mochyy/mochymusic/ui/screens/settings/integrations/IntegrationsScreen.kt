@@ -15,6 +15,14 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.mochyy.mochymusic.R
+import com.mochyy.mochymusic.ui.screens.gesture.PreviewCard
+import com.mochyy.mochymusic.ui.screens.settings.previews.DevicesPreview
+import com.mochyy.mochymusic.ui.screens.settings.previews.DiscordPreview
+import com.mochyy.mochymusic.ui.screens.settings.previews.ListenBrainzPreview
+import com.mochyy.mochymusic.ui.screens.settings.previews.ListenTogetherPreview
+import com.mochyy.mochymusic.ui.screens.settings.previews.ScrobblePreview
+import com.mochyy.mochymusic.ui.screens.settings.previews.SourcesPreview
+import com.mochyy.mochymusic.ui.screens.settings.previews.YouTubeSyncPreview
 import com.mochyy.mochymusic.constants.WorkOutGenresKey
 import com.mochyy.mochymusic.utils.rememberPreference
 import com.mochyy.mochymusic.scrobble.ScrobbleSite
@@ -40,31 +48,27 @@ fun IntegrationsScreen(navController: NavController) {
         title = stringResource(R.string.integrations),
         onBack = { navController.navigateUp() },
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            IntegrationRow(
-                name = "Discord",
-                description = stringResource(R.string.integration_discord_desc),
-                icon = R.drawable.integration_discord,
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            PreviewCard(
+                category = stringResource(if (rpc) R.string.preview_status_sharing else R.string.preview_status_off),
+                title = "Discord",
                 onClick = { navController.navigate(DiscordRoute) },
-            )
-            IntegrationRow(
-                name = ScrobbleSite.LASTFM.label,
-                description = stringResource(R.string.integration_scrobbling_desc, ScrobbleSite.LASTFM.label),
-                icon = R.drawable.integration_lastfm,
+            ) { DiscordPreview() }
+            PreviewCard(
+                category = status(lastFm),
+                title = ScrobbleSite.LASTFM.label,
                 onClick = { navController.navigate(scrobbleServiceRoute(ScrobbleSite.LASTFM)) },
-            )
-            IntegrationRow(
-                name = ScrobbleSite.LIBREFM.label,
-                description = stringResource(R.string.integration_scrobbling_desc, ScrobbleSite.LIBREFM.label),
-                icon = R.drawable.integration_librefm,
+            ) { ScrobblePreview(ScrobbleSite.LASTFM) }
+            PreviewCard(
+                category = status(libreFm),
+                title = ScrobbleSite.LIBREFM.label,
                 onClick = { navController.navigate(scrobbleServiceRoute(ScrobbleSite.LIBREFM)) },
-            )
-            IntegrationRow(
-                name = "ListenBrainz",
-                description = stringResource(R.string.integration_listenbrainz_desc),
-                icon = R.drawable.integration_librefm,
+            ) { ScrobblePreview(ScrobbleSite.LIBREFM) }
+            PreviewCard(
+                category = status(listenBrainz),
+                title = "ListenBrainz",
                 onClick = { navController.navigate(ListenBrainzRoute) },
-            )
+            ) { ListenBrainzPreview() }
             // the genres the stats page shows are asked of Last.fm, artist names only; the
             // switch travels with the scrobbling services that share its account
             var workOutGenres by rememberPreference(WorkOutGenresKey, defaultValue = true)
@@ -77,11 +81,9 @@ fun IntegrationsScreen(navController: NavController) {
                 checked = workOutGenres,
                 onCheckedChange = { workOutGenres = it },
             )
-            IntegrationRow(
-                name = stringResource(R.string.module_youtube_name),
-                description = stringResource(R.string.module_youtube_desc),
-                icon = R.drawable.provider_youtube_music,
-                iconBackground = YouTubeMusicRed,
+            PreviewCard(
+                category = stringResource(R.string.module_youtube_desc),
+                title = stringResource(R.string.module_youtube_name),
                 onClick = { navController.navigate(YouTubeSyncRoute) },
             )
             // the listen together rooms, ported from Neiro, live here with the other things that reach out
@@ -108,4 +110,11 @@ fun IntegrationsScreen(navController: NavController) {
 
         Spacer(Modifier.height(140.dp))
     }
+}
+
+@Composable
+private fun rememberScrobbleConnected(site: ScrobbleSite): Boolean {
+    val (enabled) = rememberPreference(site.enabledKey, false)
+    val (session) = rememberPreference(site.sessionKey, "")
+    return enabled && session.isNotBlank()
 }

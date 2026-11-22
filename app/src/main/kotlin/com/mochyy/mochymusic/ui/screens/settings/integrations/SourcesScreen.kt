@@ -4,6 +4,7 @@
 
 package com.mochyy.mochymusic.ui.screens.settings.integrations
 
+import com.mochyy.mochymusic.ui.screens.settings.previews.SourcesPreview
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -97,6 +98,8 @@ fun SourcesScreen(
         title = stringResource(R.string.sources),
         onBack = { navController.navigateUp() },
     ) {
+        com.mochyy.mochymusic.ui.screens.gesture.PortedPreviewHeader { SourcesPreview() }
+        androidx.compose.foundation.layout.Spacer(androidx.compose.ui.Modifier.height(16.dp))
         Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
             // the horizontal switch pill the page turns on: the sources on one side, the remote libraries on the other
             LabSegmented(

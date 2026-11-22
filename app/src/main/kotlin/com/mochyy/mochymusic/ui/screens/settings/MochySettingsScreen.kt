@@ -2,6 +2,12 @@
 
 package com.mochyy.mochymusic.ui.screens.settings
 
+import com.mochyy.mochymusic.ui.screens.settings.previews.StorageCategoryPreview
+import com.mochyy.mochymusic.ui.screens.settings.previews.PlaybackCategoryPreview
+import com.mochyy.mochymusic.ui.screens.settings.previews.IntegrationsCategoryPreview
+import com.mochyy.mochymusic.ui.screens.settings.previews.CustomisationCategoryPreview
+import com.mochyy.mochymusic.ui.screens.settings.previews.AudioLabCategoryPreview
+import com.mochyy.mochymusic.ui.screens.settings.previews.AppBehaviourCategoryPreview
 import com.mochyy.mochymusic.modules.browser.ModuleFeed
 import com.mochyy.mochymusic.ui.screens.settings.modules.ModuleBrowserRoute
 import com.mochyy.mochymusic.ui.component.navigateToTab
@@ -307,6 +313,9 @@ private val SettingsIndex = listOf(
 )
 
 internal val BubbleColor = Color(0xFF1C1C1E)
+
+// the categories on the settings list: a little shorter than the Customisation cards, so all six show at once
+private val SettingsCategoryCardHeight = 150.dp
 private val SelectedBubbleColor = Color(0xFF3A3A3E)
 
 // the header holds the mochy mark with the big "Settings" under it, taller than search's title-only header
@@ -503,44 +512,46 @@ fun MochySettingsScreen(navController: NavController, pane: SettingsPane? = null
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         // in the order of the design: sound first, then how the app acts and looks, then the rest
-                        CategoryBubble(
+                        com.mochyy.mochymusic.ui.screens.gesture.PreviewCard(
+                            category = stringResource(R.string.preview_cat_sound),
                             title = stringResource(R.string.settings_audio_lab_category),
-                            iconRes = R.drawable.equalizer,
                             selected = selected == "audio_lab",
-                            onClick = { open("audio_lab") }
-                        )
+                            onClick = { open("audio_lab") },
+                            height = SettingsCategoryCardHeight,
+                        ) { AudioLabCategoryPreview() }
 
-                        CategoryBubble(
+                        com.mochyy.mochymusic.ui.screens.gesture.PreviewCard(
+                            category = stringResource(R.string.preview_cat_listening),
                             title = stringResource(R.string.settings_playback_category),
-                            iconRes = R.drawable.play,
                             selected = selected == PlaybackSettingsRoute,
                             onClick = { open(PlaybackSettingsRoute) }
                         )
 
                         CategoryBubble(
                             title = stringResource(R.string.settings_app_behaviour),
-                            iconRes = R.drawable.settings,
                             selected = selected == "general_settings",
-                            onClick = { open("general_settings") }
-                        )
+                            onClick = { open("general_settings") },
+                            height = SettingsCategoryCardHeight,
+                        ) { AppBehaviourCategoryPreview() }
 
-                        CategoryBubble(
+                        com.mochyy.mochymusic.ui.screens.gesture.PreviewCard(
+                            category = stringResource(R.string.preview_cat_look),
                             title = stringResource(R.string.settings_customisation_category),
-                            iconRes = R.drawable.palette,
                             selected = selected == "customisation_settings",
-                            onClick = { open("customisation_settings") }
-                        )
+                            onClick = { open("customisation_settings") },
+                            height = SettingsCategoryCardHeight,
+                        ) { CustomisationCategoryPreview() }
 
-                        CategoryBubble(
+                        com.mochyy.mochymusic.ui.screens.gesture.PreviewCard(
+                            category = stringResource(R.string.preview_cat_space),
                             title = stringResource(R.string.storage),
-                            iconRes = R.drawable.storage,
                             selected = selected == "storage_settings",
-                            onClick = { open("storage_settings") }
-                        )
+                            onClick = { open("storage_settings") },
+                            height = SettingsCategoryCardHeight,
+                        ) { StorageCategoryPreview() }
 
                         CategoryBubble(
                             title = stringResource(R.string.integrations),
-                            iconRes = R.drawable.integration,
                             selected = selected == IntegrationsRoute,
                             onClick = { open(IntegrationsRoute) }
                         )

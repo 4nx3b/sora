@@ -58,6 +58,7 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
@@ -420,20 +421,34 @@ private fun StyleCard(
     highlighted: Boolean,
     onClick: () -> Unit,
     preview: @Composable BoxScope.() -> Unit,
+) = PreviewCard(category = category, title = title, onClick = onClick, ringed = highlighted, preview = preview)
+
+// a settings door with a little lit screen of what lies behind it: the Customisation style cards, the settings
+// list's categories and every page link that leads somewhere with something to show
+@Composable
+internal fun PreviewCard(
+    category: String,
+    title: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    selected: Boolean = false,
+    ringed: Boolean = false,
+    height: Dp = StyleCardHeight,
+    preview: @Composable BoxScope.() -> Unit,
 ) {
     val ring by animateColorAsState(
-        targetValue = if (highlighted) HighlightColor else Color.Transparent,
+        targetValue = if (ringed || selected) HighlightColor else Color.Transparent,
         animationSpec = tween(220),
         label = "styleHighlight",
     )
     val interaction = remember { MutableInteractionSource() }
     Box(
-        modifier = Modifier
+        modifier = modifier
             .pressBounce(interaction, pressedScale = 0.97f)
             .fillMaxWidth()
-            .height(StyleCardHeight)
+            .height(height)
             .clip(CardShape)
-            .background(LabColors.Card)
+            .background(if (selected) SelectedCardColor else LabColors.Card)
             .clickable(interactionSource = interaction, indication = RemoteFocus, onClick = onClick),
     ) {
         PreviewFrame(modifier = Modifier.align(Alignment.BottomEnd), content = preview)
@@ -448,7 +463,7 @@ private fun StyleCard(
             text = title,
             style = CardValueStyle,
             maxLines = 1,
-            autoSize = TextAutoSize.StepBased(minFontSize = 20.sp, maxFontSize = 32.sp),
+            autoSize = TextAutoSize.StepBased(minFontSize = 17.sp, maxFontSize = 32.sp),
             modifier = Modifier
                 .align(Alignment.BottomStart)
                 .padding(start = CardTextInset, bottom = 24.dp, end = PreviewWidth + 28.dp),
@@ -457,3 +472,5 @@ private fun StyleCard(
         Box(modifier = Modifier.matchParentSize().border(2.dp, ring, CardShape))
     }
 }
+
+private val SelectedCardColor = Color(0xFF3A3A3E)
