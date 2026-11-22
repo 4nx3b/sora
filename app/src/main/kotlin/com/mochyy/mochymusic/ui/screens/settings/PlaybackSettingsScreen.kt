@@ -11,6 +11,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.res.painterResource
@@ -19,6 +20,10 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.mochyy.mochymusic.R
 import com.mochyy.mochymusic.constants.DontSkipOnFailureKey
+import com.mochyy.mochymusic.constants.HistoryDuration
+import com.mochyy.mochymusic.constants.PreloadSongsCountKey
+import com.mochyy.mochymusic.constants.PreloadSongsDefault
+import com.mochyy.mochymusic.constants.PreloadSongsMax
 import com.mochyy.mochymusic.constants.MixWithOtherAppsKey
 import com.mochyy.mochymusic.constants.PauseOnMute
 import com.mochyy.mochymusic.constants.PersistentQueueKey
@@ -48,6 +53,8 @@ fun PlaybackSettingsScreen(navController: NavController) {
     ) {
         SettingsSection(stringResource(R.string.settings_section_listening), listeningItems().matching(query))
         SettingsSection(stringResource(R.string.settings_section_failures), failureItems().matching(query))
+        SettingsSection(stringResource(R.string.settings_section_content_preferences), contentItems().matching(query))
+        SettingsSection(stringResource(R.string.settings_section_local_music), localMusicItems().matching(query))
         SettingsSection(stringResource(R.string.settings_related), relatedItems(navController).matching(query))
         Spacer(Modifier.height(140.dp))
     }
@@ -63,6 +70,8 @@ private fun listeningItems(): List<SettingsItem> {
     val (keepCpuAwake, onKeepCpuAwakeChange) = rememberPreference(KeepCpuAwakeKey, defaultValue = false)
     val (persistentShuffle, onPersistentShuffleChange) = rememberPreference(PersistentShuffleAcrossQueuesKey, defaultValue = false)
     val (skipSilence, onSkipSilenceChange) = rememberPreference(SkipSilenceKey, defaultValue = false)
+    val (historyDuration, onHistoryDurationChange) = rememberPreference(HistoryDuration, defaultValue = 30f)
+    val (preloadSongs, onPreloadSongsChange) = rememberPreference(PreloadSongsCountKey, defaultValue = PreloadSongsDefault)
     return listOf(
         switchItem(
             key = "Keep playing even when closed",
@@ -133,6 +142,102 @@ private fun listeningItems(): List<SettingsItem> {
             checked = skipSilence,
             onCheckedChange = onSkipSilenceChange,
         ),
+        // how long a song plays before it counts in the listening history (ported from Neiro; MusicService already reads it)
+        SettingsItem(
+            title = { ValueTitle(stringResource(R.string.history_duration), stringResource(R.string.history_duration_value, historyDuration.toInt())) },
+            highlightKey = "History duration",
+            searchText = stringResource(R.string.history_duration),
+            description = {
+                DefaultPlayerSeekBarSlider(
+                    value = historyDuration,
+                    onValueChange = { onHistoryDurationChange(it.toInt().toFloat()) },
+                    valueRange = 1f..60f,
+                    steps = 58,
+                    modifier = Modifier.padding(top = 8.dp),
+                )
+            },
+            icon = painterResource(R.drawable.history),
+            iconShape = CircleShape,
+        ),
+        // upcoming songs found and their first seconds cached ahead, so the next one starts at once (Neiro's preload)
+        SettingsItem(
+            title = {
+                ValueTitle(
+                    stringResource(R.string.preload_songs),
+                    if (preloadSongs == 0) stringResource(R.string.preload_songs_off) else androidx.compose.ui.res.pluralStringResource(R.plurals.preload_songs_value, preloadSongs, preloadSongs),
+                )
+            },
+            highlightKey = "Preload songs",
+            searchText = stringResource(R.string.preload_songs),
+            description = {
+                androidx.compose.foundation.layout.Column {
+                androidx.compose.material3.Text(stringResource(R.string.preload_songs_desc), style = androidx.compose.material3.MaterialTheme.typography.bodyMedium)
+                DefaultPlayerSeekBarSlider(
+                    value = preloadSongs.toFloat(),
+                    onValueChange = { onPreloadSongsChange(it.toInt()) },
+                    valueRange = 0f..PreloadSongsMax.toFloat(),
+                    steps = PreloadSongsMax - 1,
+                    modifier = Modifier.padding(top = 8.dp),
+                )
+                }
+            },
+            icon = painterResource(R.drawable.speed),
+            iconShape = CircleShape,
+        ),
+    )
+}
+
+// Neiro's content preferences: Home shelves and videos the listener would rather not see
+@Composable
+private fun contentItems(): List<SettingsItem> {
+    val (hideVideos, onHideVideos) = rememberPreference(com.mochyy.mochymusic.constants.HideVideoSongsKey, defaultValue = false)
+    val (hideRecents, onHideRecents) = rememberPreference(com.mochyy.mochymusic.constants.HideRecentsKey, defaultValue = false)
+    val (hideTopPicks, onHideTopPicks) = rememberPreference(com.mochyy.mochymusic.constants.HideTopPicksKey, defaultValue = false)
+    val (hideMoods, onHideMoods) = rememberPreference(com.mochyy.mochymusic.constants.HideHomeMoodsKey, defaultValue = false)
+    val (squareVideos, onSquareVideos) = rememberPreference(com.mochyy.mochymusic.constants.SquareVideoThumbnailsKey, defaultValue = false)
+    // sora's studio-version switch is Neiro's "Prefer music-only version": a music video plays its song's audio upload
+    val (studioForVideos, onStudioForVideos) = rememberPreference(com.mochyy.mochymusic.constants.StudioForVideosKey, defaultValue = false)
+    return listOf(
+        switchItem(key = "Studio version for music videos", title = stringResource(R.string.settings_studio_for_videos), description = stringResource(R.string.settings_studio_for_videos_desc),
+            icon = painterResource(R.drawable.music_note), checked = studioForVideos, onCheckedChange = onStudioForVideos),
+        switchItem(key = "Hide videos", title = stringResource(R.string.hide_videos), description = stringResource(R.string.hide_videos_desc),
+            icon = painterResource(R.drawable.volume_off), checked = hideVideos, onCheckedChange = onHideVideos),
+        switchItem(key = "Hide Recents", title = stringResource(R.string.hide_recents), description = stringResource(R.string.hide_recents_desc),
+            icon = painterResource(R.drawable.history), checked = hideRecents, onCheckedChange = onHideRecents),
+        switchItem(key = "Hide Top Picks for You", title = stringResource(R.string.hide_top_picks), description = stringResource(R.string.hide_top_picks_desc),
+            icon = painterResource(R.drawable.speed), checked = hideTopPicks, onCheckedChange = onHideTopPicks),
+        switchItem(key = "Hide Find Your Mood", title = stringResource(R.string.hide_home_moods), description = stringResource(R.string.hide_home_moods_desc),
+            icon = painterResource(R.drawable.clear_all), checked = hideMoods, onCheckedChange = onHideMoods),
+        switchItem(key = "Square video thumbnails", title = stringResource(R.string.square_video_thumbnails), description = stringResource(R.string.square_video_thumbnails_desc),
+            icon = painterResource(R.drawable.library_music), checked = squareVideos, onCheckedChange = onSquareVideos),
+    )
+}
+
+// Neiro's local music group: the folder songs are read from (sora's own saved folders) and the non-music filter
+@Composable
+private fun localMusicItems(): List<SettingsItem> {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val importer: com.mochyy.mochymusic.viewmodels.LibraryImportViewModel = androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel()
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    var folders by remember { mutableStateOf(com.mochyy.mochymusic.importer.LocalFolders.read(context)) }
+    val picker = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.OpenDocumentTree()) { tree ->
+        if (tree == null) return@rememberLauncherForActivityResult
+        scope.launch {
+            importer.addFolder(tree)
+            folders = com.mochyy.mochymusic.importer.LocalFolders.read(context)
+        }
+    }
+    val (filterNonMusic, onFilterNonMusic) = rememberPreference(com.mochyy.mochymusic.constants.FilterNonMusicAudioKey, defaultValue = false)
+    val folderSummary = when (folders.size) {
+        0 -> stringResource(R.string.local_music_folder_all)
+        1 -> folders.first().lastPathSegment?.substringAfterLast(':')?.ifBlank { null } ?: stringResource(R.string.local_music_folder_all)
+        else -> androidx.compose.ui.res.pluralStringResource(R.plurals.local_music_folder_count, folders.size, folders.size)
+    }
+    return listOf(
+        linkItem(key = "Local music folder", title = stringResource(R.string.local_music_folder), description = folderSummary,
+            icon = painterResource(R.drawable.library_music), onClick = { picker.launch(null) }),
+        switchItem(key = "Filter non-music audio", title = stringResource(R.string.filter_non_music_audio), description = stringResource(R.string.filter_non_music_audio_desc),
+            icon = painterResource(R.drawable.clear_all), checked = filterNonMusic, onCheckedChange = onFilterNonMusic),
     )
 }
 

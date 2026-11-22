@@ -176,6 +176,10 @@ private fun LoudnessCard(viewModel: AudioLabViewModel) {
         footer = {
             Spacer(Modifier.height(6.dp))
             LabToggleRow(stringResource(R.string.fx_even_out), stringResource(R.string.fx_even_out_sub), normalize, onNormalize)
+            val (offOnSpeaker, onOffOnSpeaker) = rememberPreference(com.mochyy.mochymusic.constants.LoudnessOffOnSpeakerKey, defaultValue = false)
+            LabCollapsible(normalize) {
+                LabToggleRow(stringResource(R.string.loudness_off_on_speaker), stringResource(R.string.loudness_off_on_speaker_sub), offOnSpeaker, onOffOnSpeaker)
+            }
             val rg by viewModel.normalize.collectAsState()
             LabCollapsible(normalize) {
                 Spacer(Modifier.height(4.dp))

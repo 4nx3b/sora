@@ -35,7 +35,6 @@ import com.mochyy.mochymusic.constants.PlayVideoBackgroundKey
 import com.mochyy.mochymusic.constants.ShowFormatBadgeKey
 import com.mochyy.mochymusic.constants.ShowFormatSampleRateKey
 import com.mochyy.mochymusic.constants.SpotifyCanvasKey
-import com.mochyy.mochymusic.constants.StudioForVideosKey
 import com.mochyy.mochymusic.constants.SyncLyricsToVideoKey
 import com.mochyy.mochymusic.constants.VideoQuality
 import com.mochyy.mochymusic.constants.VideoQualityKey
@@ -178,7 +177,6 @@ private fun videoItems(): List<SettingsItem> {
     val (playVideoBackground, onPlayVideoBackgroundChange) = rememberPreference(PlayVideoBackgroundKey, defaultValue = false)
     val (lyricsSync, onLyricsSyncChange) = rememberPreference(YtVideoBackgroundLyricsSyncKey, defaultValue = true)
     val (disableVideoAutoplay, onDisableVideoAutoplayChange) = rememberPreference(DisableVideoAutoplayKey, defaultValue = false)
-    val (studioForVideos, onStudioForVideosChange) = rememberPreference(StudioForVideosKey, defaultValue = false)
     return listOf(
         switchItem(
             key = "Always enable Youtube background",
@@ -206,14 +204,6 @@ private fun videoItems(): List<SettingsItem> {
             icon = painterResource(R.drawable.slow_motion_video),
             checked = disableVideoAutoplay,
             onCheckedChange = onDisableVideoAutoplayChange,
-        ),
-        switchItem(
-            key = "Studio version for music videos",
-            title = stringResource(R.string.settings_studio_for_videos),
-            description = stringResource(R.string.settings_studio_for_videos_desc),
-            icon = painterResource(R.drawable.music_note),
-            checked = studioForVideos,
-            onCheckedChange = onStudioForVideosChange,
         ),
     )
 }

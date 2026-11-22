@@ -43,6 +43,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.wrapContentWidth
+import com.mochyy.mochymusic.ui.component.liquid.glassGlowOverlay
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.Alignment
 import androidx.compose.foundation.layout.size
@@ -255,6 +257,11 @@ fun AppNavigationBar(
         { bar: Size -> pill.forGlass(bar, with(density) { NavRowPadding.toPx() }, tabCount, density) }
     }
 
+    val liquid = com.mochyy.mochymusic.ui.component.liquid.LocalLiquidGlass.current
+    val liquidBar = liquid.surface(liquid.navBar)
+    val style = rememberNavBarStyle(glassBar = liquidBar)
+    val barShape = if (liquidBar) NavBarShape else remember(style.cornerRadius) { RoundedCornerShape(style.cornerRadius) }
+
     Box(modifier = modifier) {
         Box(
             modifier = Modifier
@@ -262,24 +269,30 @@ fun AppNavigationBar(
                 .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Horizontal))
                 .padding(horizontal = 24.dp, vertical = 8.dp)
                 .align(Alignment.TopCenter)
-                .height(NavBarHeight)
+                .wrapContentWidth(Alignment.CenterHorizontally)
+                .fillMaxWidth(style.widthFraction)
+                .height(NavBarHeight * style.heightScale)
                 .press3D(maxTilt = 4f, pressedScale = 0.985f)
-                .then(if (moduleGlass?.shadow == false) Modifier else Modifier.dropShadow(NavBarShape, ChromeShadow))
-                .clip(NavBarShape)
+                .then(if (moduleGlass?.shadow == false) Modifier else Modifier.dropShadow(barShape, ChromeShadow))
+                .clip(barShape)
                 .drawWithContent {
                     drawContent()
-                    if (moduleGlass?.outline != false) drawChromeOutline(Offset.Zero, size, cornerRadius = size.height / 2f)
+                    if (moduleGlass?.outline != false) {
+                        drawChromeOutline(Offset.Zero, size, cornerRadius = minOf(style.cornerRadius.toPx(), size.height / 2f))
+                    }
                 }
+                .then(if (style.glow > 0f) Modifier.glassGlowOverlay(style.glow, barShape) else Modifier)
         ) {
-            val liquid = com.mochyy.mochymusic.ui.component.liquid.LocalLiquidGlass.current
-            if (liquid.surface(liquid.navBar)) {
+            if (liquidBar) {
                 Box(Modifier.fillMaxSize().liquidGlassSurface(NavBarShape))
             } else {
                 FrostedChromeGlass(
                     state = glassState,
                     pureBlack = pureBlack,
                     accentWash = accentWash,
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .then(if (style.surfaceAlpha < 1f) Modifier.graphicsLayer { alpha = style.surfaceAlpha } else Modifier),
                     pill = glassPill,
                 )
             }
@@ -302,6 +315,7 @@ fun AppNavigationBar(
                         isSelected = screen.route == selectedTabRoute,
                         onItemClick = onItemClick,
                         onDoubleTap = onSearchDoubleTap.takeIf { screen == Screens.Search },
+                        label = if (style.showLabels) style.labelSpacing else null,
                     )
                 }
             }
@@ -335,6 +349,8 @@ internal fun RowScope.NavTab(
     isSelected: Boolean,
     onItemClick: (Screens, Boolean) -> Unit,
     onDoubleTap: (() -> Unit)?,
+    // the gap under the glyph when its name shows beneath it (Neiro's Show labels); null: icon only
+    label: androidx.compose.ui.unit.Dp? = null,
 ) {
     val viewConfiguration = LocalViewConfiguration.current
     val interactionSource = remember { MutableInteractionSource() }
@@ -366,10 +382,21 @@ internal fun RowScope.NavTab(
             ),
         contentAlignment = Alignment.Center
     ) {
-        if (screen == Screens.Library) {
-            LibraryDownloadIcon { TabIcons(screen, unlitIcon, litIcon, iconSize) { lit.value } }
-        } else {
-            TabIcons(screen, unlitIcon, litIcon, iconSize) { lit.value }
+        androidx.compose.foundation.layout.Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            if (screen == Screens.Library) {
+                LibraryDownloadIcon { TabIcons(screen, unlitIcon, litIcon, iconSize) { lit.value } }
+            } else {
+                TabIcons(screen, unlitIcon, litIcon, iconSize) { lit.value }
+            }
+            if (label != null) {
+                androidx.compose.foundation.layout.Spacer(Modifier.height(label))
+                androidx.compose.material3.Text(
+                    text = stringResource(screen.titleId),
+                    style = androidx.compose.material3.MaterialTheme.typography.labelSmall,
+                    color = androidx.compose.material3.LocalContentColor.current.copy(alpha = UnlitIconAlpha + (1f - UnlitIconAlpha) * lit.value),
+                    maxLines = 1,
+                )
+            }
         }
     }
 }

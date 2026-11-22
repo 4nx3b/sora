@@ -92,6 +92,7 @@ import com.mochyy.mochymusic.car.CarLyricsPlayer
 import com.mochyy.mochymusic.car.CarLyricsSource
 import com.mochyy.mochymusic.widget.WidgetLyricTracker
 import com.mochyy.mochymusic.constants.AudioNormalizationKey
+import com.mochyy.mochymusic.constants.LoudnessOffOnSpeakerKey
 import com.mochyy.mochymusic.constants.AudioOffload
 import com.mochyy.mochymusic.constants.AudioQualityKey
 import com.mochyy.mochymusic.constants.AutoDownloadOnLikeKey
@@ -111,6 +112,9 @@ import com.mochyy.mochymusic.constants.CrossfadeGaplessKey
 import com.mochyy.mochymusic.constants.SkipBlendKey
 import com.mochyy.mochymusic.constants.SkipBlendAheadKey
 import com.mochyy.mochymusic.constants.SkipBlendAheadMax
+import com.mochyy.mochymusic.constants.PreloadSongsCountKey
+import com.mochyy.mochymusic.constants.PreloadSongsDefault
+import com.mochyy.mochymusic.constants.PreloadSongsMax
 import com.mochyy.mochymusic.constants.StudioForVideosKey
 import com.mochyy.mochymusic.constants.CrossmixMode
 import com.mochyy.mochymusic.constants.HiFiResamplerKey
@@ -585,6 +589,9 @@ class MusicService :
     @Volatile private var skipBlend = false
     // how many songs coming up get their start fetched, so a few skips in a row still blend
     @Volatile private var blendAhead = 1
+
+    // "Preload songs" (Neiro): how many upcoming songs get their stream found and first seconds cached ahead
+    @Volatile private var preloadAhead = 0
     private var prefetchJob: Job? = null
 
     // "studio version for music videos": a music video plays its song's studio upload when there is one
@@ -786,6 +793,12 @@ class MusicService :
      * never keeps the device's CPU standing for it.
      */
     private var playbackWakeLock: android.os.PowerManager.WakeLock? = null
+
+    // loudness normalization, minus the phone's own speaker when "Disable on phone speaker" is on (Neiro's loudnessOffOnSpeaker)
+    private fun normalizationWanted() = combine(
+        dataStore.data.map { (it[AudioNormalizationKey] ?: true) to (it[LoudnessOffOnSpeakerKey] ?: false) },
+        audioOutputs.devices.map { devices -> devices.firstOrNull { it.isActive }?.kind == com.mochyy.mochymusic.playback.audio.AudioOutputs.Kind.PHONE },
+    ) { (normalize, offOnSpeaker), onSpeaker -> normalize && !(offOnSpeaker && onSpeaker) }.distinctUntilChanged()
 
     private fun updatePlaybackWakeLock() {
         val lock = playbackWakeLock ?: return
@@ -1185,9 +1198,7 @@ class MusicService :
 
         combine(
             currentFormat,
-            dataStore.data
-                .map { it[AudioNormalizationKey] ?: true }
-                .distinctUntilChanged(),
+            normalizationWanted(),
         ) { format, normalizeAudio ->
             format to normalizeAudio
         }.collectLatest(scope) { (format, normalizeAudio) ->
@@ -1279,13 +1290,15 @@ class MusicService :
             }
 
         dataStore.data
-            .map { Triple(it[SkipBlendKey] ?: false, it[StudioForVideosKey] ?: false, it[SkipBlendAheadKey] ?: 1) }
+            .map { Triple(it[SkipBlendKey] ?: false, it[StudioForVideosKey] ?: false, it[SkipBlendAheadKey] ?: 1) to (it[PreloadSongsCountKey] ?: PreloadSongsDefault) }
             .distinctUntilChanged()
-            .collect(scope) { (blend, studio, ahead) ->
+            .collect(scope) { (prefs, preload) ->
+                val (blend, studio, ahead) = prefs
                 skipBlend = blend
                 studioForVideos = studio
                 blendAhead = ahead.coerceIn(1, SkipBlendAheadMax)
-                if (blend) prefetchNeighbours() else prefetchJob?.cancel()
+                preloadAhead = preload.coerceIn(0, PreloadSongsMax)
+                if (blend || preloadAhead > 0) prefetchNeighbours() else prefetchJob?.cancel()
             }
 
         if (dataStore.get(PersistentQueueKey, true)) {
@@ -2955,9 +2968,7 @@ class MusicService :
                     player.currentMediaItem?.mediaId
                 }
 
-                val normalizeAudio = withContext(Dispatchers.IO) {
-                    dataStore.data.map { it[AudioNormalizationKey] ?: true }.first()
-                }
+                val normalizeAudio = withContext(Dispatchers.IO) { normalizationWanted().first() }
 
                 // YouTube's loudness numbers describe YouTube's stream: a song from a module plays
                 // another master, and evens out by its own ReplayGain in the sink instead
@@ -4960,12 +4971,15 @@ class MusicService :
     // with "blend skips" on, the songs either side get their first seconds fetched ahead, so a skip either way starts at once
     private fun prefetchNeighbours() {
         prefetchJob?.cancel()
-        if (!skipBlend || player.mediaItemCount == 0 || !canFetchAhead()) return
+        if ((!skipBlend && preloadAhead == 0) || player.mediaItemCount == 0 || !canFetchAhead()) return
         // data saver keeps it to the next one, the extra songs are only worth it on a connection that doesn't count
-        val ahead = if (com.mochyy.mochymusic.utils.DataSaver.isActive(this)) 1 else blendAhead
+        val wanted = maxOf(if (skipBlend) blendAhead else 0, preloadAhead)
+        val metered = runCatching { getSystemService(android.net.ConnectivityManager::class.java)?.isActiveNetworkMetered == true }.getOrDefault(true)
+        val ahead = if (com.mochyy.mochymusic.utils.DataSaver.isActive(this) || metered) minOf(wanted, 1) else wanted
         val upcoming = upcomingIndices(ahead)
-        // the next one first, then back, then the rest coming up
-        val ids = (upcoming.take(1) + player.previousMediaItemIndex + upcoming.drop(1))
+        // the next one first, then back (only for blend skips), then the rest coming up
+        val back = if (skipBlend) listOf(player.previousMediaItemIndex) else emptyList()
+        val ids = (upcoming.take(1) + back + upcoming.drop(1))
             .filter { it != C.INDEX_UNSET && it < player.mediaItemCount }
             .map { player.getMediaItemAt(it).mediaId }
             .distinct()
