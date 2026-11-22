@@ -374,7 +374,7 @@ private fun GestureSection() {
 
 // a section a search result or a related row points at scrolls into view and its outline flashes once
 @Composable
-private fun Modifier.highlightTarget(keys: List<String>): Modifier {
+internal fun Modifier.highlightTarget(keys: List<String>): Modifier {
     val requester = remember { BringIntoViewRequester() }
     val flash = remember { Animatable(0f) }
     val settingsScroll = LocalSettingsScroll.current

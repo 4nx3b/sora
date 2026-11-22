@@ -1,5 +1,9 @@
 package com.mochyy.mochymusic.ui.screens.settings
 
+import com.mochyy.mochymusic.ui.screens.settings.previews.TransitionsPreview
+import com.mochyy.mochymusic.ui.screens.settings.previews.NowPlayingPreview
+import com.mochyy.mochymusic.ui.screens.settings.previews.ModulesPreview
+import com.mochyy.mochymusic.ui.screens.settings.previews.AudioPassPreview
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -307,6 +311,8 @@ private fun relatedItems(navController: NavController): List<SettingsItem> = lis
         description = stringResource(R.string.settings_transition_link_desc),
         icon = painterResource(R.drawable.linear_scale),
         onClick = { navController.navigate("crossmix_settings") },
+        category = androidx.compose.ui.res.stringResource(com.mochyy.mochymusic.R.string.preview_cat_between_songs),
+        preview = { TransitionsPreview() },
     ),
     linkItem(
         key = "Audio Pass output usb dac",
@@ -314,5 +320,7 @@ private fun relatedItems(navController: NavController): List<SettingsItem> = lis
         description = stringResource(R.string.settings_audio_pass_desc),
         icon = rememberVectorPainter(Icons.Rounded.GraphicEq),
         onClick = { navController.navigate("audio_pass") },
+        category = androidx.compose.ui.res.stringResource(com.mochyy.mochymusic.R.string.preview_cat_output),
+        preview = { AudioPassPreview() },
     ),
 )

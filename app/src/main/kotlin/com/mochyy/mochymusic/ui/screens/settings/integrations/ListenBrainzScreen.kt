@@ -5,6 +5,7 @@
 
 package com.mochyy.mochymusic.ui.screens.settings.integrations
 
+import com.mochyy.mochymusic.ui.screens.settings.previews.ListenBrainzPreview
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -64,6 +65,8 @@ fun ListenBrainzScreen(navController: NavController) {
         onBack = { navController.navigateUp() },
         backLabel = stringResource(R.string.integrations),
     ) {
+        com.mochyy.mochymusic.ui.screens.gesture.PortedPreviewHeader { ListenBrainzPreview() }
+        androidx.compose.foundation.layout.Spacer(androidx.compose.ui.Modifier.height(16.dp))
         Column(
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {

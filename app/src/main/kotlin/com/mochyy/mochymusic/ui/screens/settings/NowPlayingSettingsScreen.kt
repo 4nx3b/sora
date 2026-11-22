@@ -1,5 +1,6 @@
 package com.mochyy.mochymusic.ui.screens.settings
 
+import com.mochyy.mochymusic.ui.screens.settings.previews.NowPlayingPreview
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -72,6 +73,8 @@ fun NowPlayingSettingsScreen(navController: NavController) {
         onBack = { navController.navigateUp() },
         searchBar = { SubSettingsSearchBar(query = query, onQueryChange = { query = it }) },
     ) {
+        com.mochyy.mochymusic.ui.screens.gesture.PortedPreviewHeader { NowPlayingPreview() }
+        androidx.compose.foundation.layout.Spacer(androidx.compose.ui.Modifier.height(16.dp))
         SettingsSection(stringResource(R.string.settings_on_the_player), badgeItems().matching(query))
         SettingsSection(stringResource(R.string.settings_section_lyrics), lyricsItems().matching(query))
         SettingsSection(stringResource(R.string.settings_section_videos), videoItems().matching(query))

@@ -13,6 +13,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import com.mochyy.mochymusic.ui.screens.gesture.highlightTarget
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -43,8 +44,29 @@ internal fun SettingsSection(title: String?, items: List<SettingsItem>) {
             modifier = Modifier.padding(bottom = 10.dp, start = 4.dp),
         )
     }
-    SettingsGroup(style = SettingsGroupStyle.Grouped, items = items)
-    Spacer(Modifier.height(18.dp))
+    val runs = mutableListOf<List<SettingsItem>>()
+    items.forEach { item ->
+        val last = runs.lastOrNull()
+        if (item.preview == null && last != null && last.first().preview == null) runs[runs.lastIndex] = last + item
+        else runs += listOf(item)
+    }
+    runs.forEachIndexed { i, run ->
+        val card = run.first()
+        val end = i == runs.lastIndex
+        if (card.preview == null) {
+            SettingsGroup(style = SettingsGroupStyle.Grouped, items = run)
+            Spacer(Modifier.height(if (end) 18.dp else 12.dp))
+        } else if (card.isVisible) {
+            com.mochyy.mochymusic.ui.screens.gesture.PreviewCard(
+                category = card.previewCategory ?: card.descriptionText.orEmpty(),
+                title = card.searchText.orEmpty(),
+                onClick = { card.onClick?.invoke() },
+                modifier = card.highlightKey?.let { Modifier.highlightTarget(listOf(it)) } ?: Modifier,
+                preview = card.preview,
+            )
+            Spacer(Modifier.height(if (end) 18.dp else 12.dp))
+        }
+    }
 }
 
 internal fun List<SettingsItem>.matching(query: String): List<SettingsItem> {
@@ -112,6 +134,8 @@ internal fun linkItem(
     onClick: () -> Unit,
     visible: Boolean = true,
     isSubOption: Boolean = false,
+    category: String? = null,
+    preview: (@Composable androidx.compose.foundation.layout.BoxScope.() -> Unit)? = null,
 ) = SettingsItem(
     title = { Text(title) },
     highlightKey = key,
@@ -123,6 +147,8 @@ internal fun linkItem(
     isSubOption = isSubOption,
     onClick = onClick,
     trailingContent = { NextArrow() },
+    preview = preview,
+    previewCategory = category,
 )
 
 @Composable
