@@ -25,6 +25,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
@@ -365,7 +366,7 @@ internal fun BoxScope.BackupPreview() = PreviewCanvas { t ->
 private val FrameCut = com.mochyy.mochymusic.ui.screens.gesture.FrameFill
 
 private inline fun DrawScope.clipRectWidth(from: Float, to: Float, block: DrawScope.() -> Unit) =
-    androidx.compose.ui.graphics.drawscope.clipRect(left = from, top = 0f, right = to, bottom = size.height, block = block)
+    clipRect(left = from, top = 0f, right = to, bottom = size.height, block = block)
 
 @Composable
 internal fun BoxScope.DiscordPreview() {

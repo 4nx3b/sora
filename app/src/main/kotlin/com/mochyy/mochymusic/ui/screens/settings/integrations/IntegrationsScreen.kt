@@ -43,6 +43,13 @@ fun IntegrationsScreen(navController: NavController) {
     // device integration is a sheet over whatever page asked for it
     val sheets = LocalZoomOutOverlayState.current
     val devices = rememberDevicesLink()
+    val (rpc) = rememberPreference(com.mochyy.mochymusic.constants.EnableDiscordRPCKey, false)
+    val (listenBrainz) = rememberPreference(com.mochyy.mochymusic.constants.ListenBrainzEnabledKey, false)
+    val lastFm = rememberScrobbleConnected(ScrobbleSite.LASTFM)
+    val libreFm = rememberScrobbleConnected(ScrobbleSite.LIBREFM)
+    val status: @Composable (Boolean) -> String = {
+        stringResource(if (it) R.string.preview_status_connected else R.string.preview_status_not_connected)
+    }
 
     SubSettingsScaffold(
         title = stringResource(R.string.integrations),
@@ -85,27 +92,24 @@ fun IntegrationsScreen(navController: NavController) {
                 category = stringResource(R.string.module_youtube_desc),
                 title = stringResource(R.string.module_youtube_name),
                 onClick = { navController.navigate(YouTubeSyncRoute) },
-            )
+            ) { YouTubeSyncPreview() }
             // the listen together rooms, ported from Neiro, live here with the other things that reach out
-            IntegrationRow(
-                name = stringResource(R.string.ported_listen_together),
-                description = stringResource(R.string.settings_listen_together_desc),
-                icon = R.drawable.group,
+            PreviewCard(
+                category = stringResource(R.string.settings_listen_together_desc),
+                title = stringResource(R.string.ported_listen_together),
                 onClick = { navController.navigate("listen_together") },
-            )
+            ) { ListenTogetherPreview() }
             // device integration opens as a sheet rather than its own page
-            IntegrationRow(
-                name = stringResource(R.string.devices_title),
-                description = stringResource(R.string.settings_devices_link_desc),
-                icon = R.drawable.cast_connected,
+            PreviewCard(
+                category = stringResource(R.string.settings_devices_link_desc),
+                title = stringResource(R.string.devices_title),
                 onClick = { sheets.showDeviceIntegration(devices) },
-            )
-            IntegrationRow(
-                name = stringResource(R.string.sources),
-                description = stringResource(R.string.sources_row_desc),
-                icon = R.drawable.extension,
+            ) { DevicesPreview() }
+            PreviewCard(
+                category = stringResource(R.string.sources_row_desc),
+                title = stringResource(R.string.sources),
                 onClick = { navController.navigate(SourcesRoute) },
-            )
+            ) { SourcesPreview() }
         }
 
         Spacer(Modifier.height(140.dp))
