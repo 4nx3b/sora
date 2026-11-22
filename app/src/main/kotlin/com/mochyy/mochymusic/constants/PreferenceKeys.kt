@@ -70,13 +70,26 @@ val CustomFontNameKey = stringPreferencesKey("customFontName")
 // an absolute path under filesDir/fonts, the picked or downloaded file copied in so its grant never runs out
 val CustomFontPathKey = stringPreferencesKey("customFontPath")
 
-// the navigation bar's own look: the glass glow (and its strength) and the labels under the tabs.
-// Neiro's mini player bar behaviour (Adaptive / always expanded / always compact) and the six
-// dimension dials were removed: the fold never sat right and the dials changed nothing.
+// the navigation bar's own look: the glass glow (and its strength), the labels under the tabs,
+// and the six dimension dials. The dials shape both bars — the standard bar and the Liquid Glass
+// bar alike — so moving one always changes something on screen.
 val NavBarGlassGlowKey = booleanPreferencesKey("navBarGlassGlow")
 val NavBarGlassGlowIntensityKey = floatPreferencesKey("navBarGlassGlowIntensity")
 val NavBarShowLabelsKey = booleanPreferencesKey("navBarShowLabels")
+val NavBarWidthKey = floatPreferencesKey("navBarWidth")
+val NavBarHeightKey = floatPreferencesKey("navBarHeight")
+val NavBarOpacityKey = floatPreferencesKey("navBarOpacity")
+val NavBarTransparencyKey = floatPreferencesKey("navBarTransparency")
+val NavBarLabelSpacingKey = floatPreferencesKey("navBarLabelSpacing")
+val NavBarCornerRadiusKey = floatPreferencesKey("navBarCornerRadius")
 const val NavBarGlowIntensityDefault = 1f
+const val NavBarWidthDefault = 1f
+const val NavBarHeightDefault = 1f
+const val NavBarOpacityDefault = 1f
+const val NavBarTransparencyDefault = 0f
+const val NavBarLabelSpacingDefault = 1f
+// sora's pill is fully round at its 64dp height; Neiro's 28dp would square it off for everyone
+const val NavBarCornerRadiusDefault = 32f
 val GridItemsSizeKey = stringPreferencesKey("gridItemSize")
 val SliderStyleKey = stringPreferencesKey("sliderStyle")
 val SquigglySliderKey = booleanPreferencesKey("squigglySlider")

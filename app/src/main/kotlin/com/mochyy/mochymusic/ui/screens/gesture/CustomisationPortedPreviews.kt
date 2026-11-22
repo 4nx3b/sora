@@ -108,12 +108,11 @@ private fun DrawScope.playerBehind() {
     pill(Ink, side, 80.5.dp.toPx(), 30.dp.toPx(), 4.5.dp.toPx())
 }
 
-// the navigation bar as its page sets it: the labels under the tabs, a lit tab sliding along the bar and,
-// with the glass glow on, a sheen running across after each slide. The bar itself keeps sora's shape
-// and size since the dimension dials were removed.
+// the navigation bar as its page sets it: width, height, corner, fill and labels, a lit tab sliding
+// along it and, with the glass glow on, a sheen running across after each slide
 @Composable
 internal fun NavBarStylePreview() {
-    val style = rememberNavBarStyle(glassBar = false)
+    val style = rememberNavBarStyle()
     val labels = animateFloatAsState(if (style.showLabels) 1f else 0f, ChangeSpec, label = "navPreviewLabels")
     val glow = animateFloatAsState(style.glow, ChangeSpec, label = "navPreviewGlow")
     val onScreen = rememberOnScreen()
@@ -141,13 +140,13 @@ internal fun NavBarStylePreview() {
             .drawBehind {
                 playerBehind()
                 val margin = 8.dp.toPx()
-                val width = size.width - margin * 2
-                val height = PreviewBarHeight.toPx()
+                val width = (size.width - margin * 2) * style.widthFraction
+                val height = PreviewBarHeight.toPx() * style.heightScale
                 val left = (size.width - width) / 2f
                 val top = size.height - 14.dp.toPx() - height
-                val radius = height / 2f
+                val radius = (style.cornerRadius.toPx() * BarScale).coerceAtMost(height / 2f)
                 val corner = CornerRadius(radius)
-                drawRoundRect(Bone, Offset(left, top), Size(width, height), corner)
+                drawRoundRect(Bone, Offset(left, top), Size(width, height), corner, alpha = style.surfaceAlpha)
 
                 val tabWidth = width / 3f
                 val lit = tab.value

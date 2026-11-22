@@ -164,6 +164,7 @@ private val SettingsIndex = listOf(
     SettingsEntry("SF Pro fonts", "Customisation", FontCatalogRoute, "sf pro apple font catalog download kouzu", R.string.sf_pro_fonts),
     SettingsEntry("Glass glow", "Customisation", NavigationBarSettingsRoute, "glass glow rim light sheen intensity navigation bar", R.string.navigation_bar_glass_glow),
     SettingsEntry("Show labels", "Customisation", NavigationBarSettingsRoute, "labels tab names under icons navigation bar", R.string.navigation_bar_labels),
+    SettingsEntry("Navigation bar dimensions", "Customisation", NavigationBarSettingsRoute, "width height opacity transparency label spacing corner radius reset navigation bar", R.string.navigation_bar_dimensions),
     SettingsEntry("Blur", "Customisation", "customisation_settings", "blur glass frosted performance lag"),
     SettingsEntry("Progressive blur", "Customisation", "customisation_settings", "gradient fade top bar hairline flat"),
     SettingsEntry("Blur quality", "Customisation", "customisation_settings", "low high glass performance"),
