@@ -1306,6 +1306,21 @@
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </service>
+
+        <!-- the ArchiveTune module port's signed-session callback: a provider's sign-in page
+             sends the grant back to sora://module-session -->
+        <activity
+            android:name="com.mochyy.mochymusic.arch.ArchModuleAuthorizationActivity"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="sora" android:host="module-session" />
+            </intent-filter>
+        </activity>
     </application>
 
 </manifest>
