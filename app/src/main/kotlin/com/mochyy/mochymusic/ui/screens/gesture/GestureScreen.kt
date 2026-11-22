@@ -250,10 +250,26 @@ private fun CustomiseSectionContent(section: CustomiseSection, onOpenLiquidGlass
             ) { HomeStylePreview(style = it, coverRadius = coverRadiusPx.dp) }
         }
         CustomiseSection.BLUR -> BlurSection()
-        CustomiseSection.NAVIGATION_BAR -> NavigationBarSection(onOpen = onOpenNavigationBar)
-        CustomiseSection.FONT -> FontSection(onOpen = onOpenFont)
-        CustomiseSection.AOD -> AodSection(onOpen = onOpenAod)
-        CustomiseSection.LIQUID_GLASS -> LiquidGlassSection(onOpen = onOpenLiquidGlass)
+        CustomiseSection.NAVIGATION_BAR -> com.mochyy.mochymusic.ui.component.PreferenceEntry(
+            title = { androidx.compose.material3.Text(androidx.compose.ui.res.stringResource(R.string.navigation_bar_settings_title)) },
+            description = androidx.compose.ui.res.stringResource(R.string.navigation_bar_settings_desc),
+            onClick = onOpenNavigationBar,
+        )
+        CustomiseSection.FONT -> com.mochyy.mochymusic.ui.component.PreferenceEntry(
+            title = { androidx.compose.material3.Text(androidx.compose.ui.res.stringResource(R.string.font)) },
+            description = androidx.compose.ui.res.stringResource(R.string.font_settings_desc),
+            onClick = onOpenFont,
+        )
+        CustomiseSection.AOD -> com.mochyy.mochymusic.ui.component.PreferenceEntry(
+            title = { androidx.compose.material3.Text(androidx.compose.ui.res.stringResource(R.string.aod_title)) },
+            description = androidx.compose.ui.res.stringResource(R.string.aod_enabled_desc),
+            onClick = onOpenAod,
+        )
+        CustomiseSection.LIQUID_GLASS -> com.mochyy.mochymusic.ui.component.PreferenceEntry(
+            title = { androidx.compose.material3.Text(androidx.compose.ui.res.stringResource(R.string.customise_liquid_glass)) },
+            description = "Liquid glass and acrylic blur",
+            onClick = onOpenLiquidGlass,
+        )
         CustomiseSection.ELEMENT_BLUR -> ElementBlurSection()
         CustomiseSection.ANIMATION -> AnimationSection()
         CustomiseSection.LYRICS -> LyricsStyleSection(modifier = pagerBleed)

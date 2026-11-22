@@ -76,8 +76,6 @@ private fun playerPageItems(navController: NavController): List<SettingsItem> = 
         description = stringResource(R.string.settings_now_playing_link_desc),
         icon = painterResource(R.drawable.lyrics),
         onClick = { navController.navigate(NowPlayingSettingsRoute) },
-        category = androidx.compose.ui.res.stringResource(com.mochyy.mochymusic.R.string.preview_cat_player),
-        preview = { NowPlayingPreview() },
     ),
     linkItem(
         key = "Modules",
@@ -85,8 +83,6 @@ private fun playerPageItems(navController: NavController): List<SettingsItem> = 
         description = stringResource(R.string.settings_modules_link_desc),
         icon = painterResource(R.drawable.library_add),
         onClick = { navController.navigate(ModulesRoute) },
-        category = androidx.compose.ui.res.stringResource(com.mochyy.mochymusic.R.string.preview_cat_addons),
-        preview = { ModulesPreview() },
     ),
 )
 
