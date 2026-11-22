@@ -12,7 +12,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.foundation.layout.height
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.mochyy.mochymusic.R
@@ -65,8 +64,6 @@ fun AodSettingsScreen(navController: NavController) {
         onBack = { navController.navigateUp() },
         backLabel = stringResource(R.string.settings_customisation_category),
     ) {
-        com.mochyy.mochymusic.ui.screens.gesture.PortedPreviewHeader { com.mochyy.mochymusic.ui.screens.gesture.AodPreview() }
-        androidx.compose.foundation.layout.Spacer(androidx.compose.ui.Modifier.height(16.dp))
         SettingsSection(
             stringResource(R.string.aod_title),
             listOf(

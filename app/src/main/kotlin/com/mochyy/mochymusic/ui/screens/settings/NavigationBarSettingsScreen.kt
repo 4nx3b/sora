@@ -57,8 +57,6 @@ fun NavigationBarSettingsScreen(navController: NavController) {
             com.mochyy.mochymusic.constants.MiniPlayerBarBehaviorKey,
             com.mochyy.mochymusic.constants.MiniPlayerBarBehavior.ADAPTIVE,
         )
-        com.mochyy.mochymusic.ui.screens.gesture.PortedPreviewHeader(second = { com.mochyy.mochymusic.ui.screens.gesture.MiniBarBehaviorPreview(behavior) }) { com.mochyy.mochymusic.ui.screens.gesture.NavBarStylePreview() }
-        androidx.compose.foundation.layout.Spacer(androidx.compose.ui.Modifier.height(16.dp))
         SettingsSection(
             stringResource(R.string.navigation_bar_compact_behavior),
             listOf(

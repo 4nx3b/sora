@@ -99,6 +99,4 @@
     <string name="sf_pro_error">Couldn\'t reach the font catalog</string>
     <string name="sf_pro_error_subtitle">Check your connection and try again</string>
     <string name="sf_pro_error_footer">The catalog is fetched from sf-pro.kouzu.in. Tapping a font downloads it once and uses it.</string>
-    <string name="customise_liquid_glass_desc">Liquid glass and acrylic blur</string>
-    <string name="customise_acrylic_on">Acrylic</string>
 </resources>
