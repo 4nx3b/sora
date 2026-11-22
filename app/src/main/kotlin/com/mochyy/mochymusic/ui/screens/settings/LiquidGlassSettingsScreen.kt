@@ -20,6 +20,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.datastore.preferences.core.Preferences
 import androidx.navigation.NavController
+import com.mochyy.mochymusic.ui.component.sliderDragScrollLock
 import com.mochyy.mochymusic.constants.AcrylicBlurKey
 import com.mochyy.mochymusic.constants.LiquidGlassAdaptiveLuminanceKey
 import com.mochyy.mochymusic.constants.LiquidGlassChromaticAberrationKey
@@ -126,7 +127,9 @@ private fun ValueRow(title: String, value: LiquidGlassValue, enabled: Boolean) {
                 onValueChange = onChange,
                 valueRange = value.range,
                 onValueChangeFinished = onFinished,
-                modifier = Modifier.padding(horizontal = 24.dp),
+                modifier = Modifier
+                    .padding(horizontal = 24.dp)
+                    .sliderDragScrollLock(),
             )
         } else {
             Slider(
@@ -134,7 +137,9 @@ private fun ValueRow(title: String, value: LiquidGlassValue, enabled: Boolean) {
                 onValueChange = onChange,
                 onValueChangeFinished = onFinished,
                 valueRange = value.range,
-                modifier = Modifier.padding(horizontal = 24.dp),
+                modifier = Modifier
+                    .padding(horizontal = 24.dp)
+                    .sliderDragScrollLock(),
             )
         }
     }

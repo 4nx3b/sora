@@ -212,7 +212,7 @@ private fun TimingSlider(
             style = MaterialTheme.typography.bodySmall,
             color = Color.White.copy(alpha = 0.5f),
         )
-        Slider(
+        com.mochyy.mochymusic.ui.component.DefaultPlayerSeekBarSlider(
             value = dragging,
             onValueChange = {
                 dragging = it
