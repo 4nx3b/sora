@@ -52,6 +52,8 @@ fun LiquidGlassSettingsScreen(navController: NavController) {
         onBack = { navController.navigateUp() },
         backLabel = "Customisation",
     ) {
+        com.mochyy.mochymusic.ui.screens.gesture.PortedPreviewHeader { com.mochyy.mochymusic.ui.screens.gesture.LiquidGlassPreview() }
+        androidx.compose.foundation.layout.Spacer(androidx.compose.ui.Modifier.height(16.dp))
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             if (!supported) Text("Liquid glass needs Android 12 or newer.", modifier = Modifier.padding(horizontal = 16.dp))
             SwitchPreference(

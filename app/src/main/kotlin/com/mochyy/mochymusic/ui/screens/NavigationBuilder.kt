@@ -572,6 +572,18 @@ fun NavGraphBuilder.navigationBuilder(
     composable(com.mochyy.mochymusic.ui.screens.settings.LiquidGlassSettingsRoute) {
         com.mochyy.mochymusic.ui.screens.settings.LiquidGlassSettingsScreen(navController = navController)
     }
+    composable(com.mochyy.mochymusic.ui.screens.settings.FontSettingsRoute) {
+        com.mochyy.mochymusic.ui.screens.settings.FontSettingsScreen(navController = navController)
+    }
+    composable(com.mochyy.mochymusic.ui.screens.settings.FontCatalogRoute) {
+        com.mochyy.mochymusic.ui.screens.settings.FontCatalogScreen(navController = navController)
+    }
+    composable(com.mochyy.mochymusic.ui.screens.settings.AodSettingsRoute) {
+        com.mochyy.mochymusic.ui.screens.settings.AodSettingsScreen(navController = navController)
+    }
+    composable(com.mochyy.mochymusic.ui.screens.settings.NavigationBarSettingsRoute) {
+        com.mochyy.mochymusic.ui.screens.settings.NavigationBarSettingsScreen(navController = navController)
+    }
 
     composable("audio_lab") {
         com.mochyy.mochymusic.ui.screens.audiolab.AudioLabScreen(navController = navController)

@@ -267,7 +267,7 @@ internal fun SubpageVideoCell(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .aspectRatio(16f / 9f)
+                .aspectRatio(com.mochyy.mochymusic.ui.component.videoThumbnailRatio())
                 .clip(RoundedCornerShape(14.dp))
                 .background(BoneColor)
         ) {

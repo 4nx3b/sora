@@ -334,18 +334,128 @@ internal fun BottomBarSection(modifier: Modifier = Modifier) {
     }
 }
 
+// the navigation bar's page: its look drawn live, and the mini player and bar behaviour as the card's value
+@Composable
+internal fun NavigationBarSection(onOpen: () -> Unit, modifier: Modifier = Modifier) {
+    val (behavior) = rememberEnumPreference(
+        com.mochyy.mochymusic.constants.MiniPlayerBarBehaviorKey,
+        com.mochyy.mochymusic.constants.MiniPlayerBarBehavior.ADAPTIVE,
+    )
+    EffectCard(
+        title = stringResource(R.string.navigation_bar_settings_title),
+        checked = null,
+        onCheckedChange = null,
+        value = stringResource(behaviorLabel(behavior)),
+        onClick = onOpen,
+        preview = { NavBarStylePreview() },
+        modifier = modifier,
+    ) {
+        Text(
+            text = stringResource(R.string.navigation_bar_settings_desc),
+            style = CaptionStyle,
+            color = Color.White.copy(alpha = 0.5f),
+        )
+    }
+}
+
+internal fun behaviorLabel(behavior: com.mochyy.mochymusic.constants.MiniPlayerBarBehavior): Int = when (behavior) {
+    com.mochyy.mochymusic.constants.MiniPlayerBarBehavior.ADAPTIVE -> R.string.navigation_bar_compact_adaptive
+    com.mochyy.mochymusic.constants.MiniPlayerBarBehavior.ALWAYS_EXPANDED -> R.string.navigation_bar_compact_always_expanded
+    com.mochyy.mochymusic.constants.MiniPlayerBarBehavior.ALWAYS_COMPACT -> R.string.navigation_bar_compact_always_compact
+}
+
+// the font the app is set in, picked on its page
+@Composable
+internal fun FontSection(onOpen: () -> Unit, modifier: Modifier = Modifier) {
+    val name = rememberFontName()
+    EffectCard(
+        title = stringResource(R.string.font),
+        checked = null,
+        onCheckedChange = null,
+        value = name,
+        onClick = onOpen,
+        preview = { FontPreview(name) },
+        modifier = modifier,
+    ) {
+        Text(
+            text = stringResource(R.string.font_settings_desc),
+            style = CaptionStyle,
+            color = Color.White.copy(alpha = 0.5f),
+        )
+    }
+}
+
+// the picked font's name as the Font page shows it
+@Composable
+internal fun rememberFontName(): String {
+    val (font) = rememberEnumPreference(com.mochyy.mochymusic.constants.AppFontKey, com.mochyy.mochymusic.constants.AppFont.DEFAULT)
+    val (customName) = rememberPreference(com.mochyy.mochymusic.constants.CustomFontNameKey, "")
+    return when (font) {
+        com.mochyy.mochymusic.constants.AppFont.DEFAULT -> stringResource(R.string.font_sora_default)
+        com.mochyy.mochymusic.constants.AppFont.SF_PRO -> stringResource(R.string.font_sf_pro)
+        com.mochyy.mochymusic.constants.AppFont.SYSTEM -> stringResource(R.string.font_system)
+        com.mochyy.mochymusic.constants.AppFont.CUSTOM -> customName.ifBlank { stringResource(R.string.font_custom) }
+    }
+}
+
+// the always-on playing screen: its switch, and what it shows drawn live
+@Composable
+internal fun AodSection(onOpen: () -> Unit, modifier: Modifier = Modifier) {
+    val (enabled, onEnabled) = rememberPreference(com.mochyy.mochymusic.constants.AodEnabledKey, defaultValue = false)
+    EffectCard(
+        title = stringResource(R.string.aod_title),
+        checked = enabled,
+        onCheckedChange = onEnabled,
+        onClick = onOpen,
+        preview = { AodPreview() },
+        modifier = modifier,
+    ) {
+        Text(
+            text = stringResource(R.string.aod_enabled_desc),
+            style = CaptionStyle,
+            color = Color.White.copy(alpha = 0.5f),
+        )
+    }
+}
+
+// liquid glass: the master switch, set the same way its page sets it so acrylic turns off with it, over the app's own glass
+@Composable
+internal fun LiquidGlassSection(onOpen: () -> Unit, modifier: Modifier = Modifier) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val (enabled) = rememberPreference(com.mochyy.mochymusic.constants.LiquidGlassEnabledKey, defaultValue = false)
+    val (acrylic) = rememberPreference(com.mochyy.mochymusic.constants.AcrylicBlurKey, defaultValue = false)
+    EffectCard(
+        title = stringResource(R.string.customise_liquid_glass),
+        checked = enabled,
+        onCheckedChange = { com.mochyy.mochymusic.ui.component.liquid.setGlassMaterial(context, liquid = it) },
+        value = if (acrylic) stringResource(R.string.customise_acrylic_on) else null,
+        onClick = onOpen,
+        preview = { LiquidGlassPreview() },
+        modifier = modifier,
+    ) {
+        Text(
+            text = stringResource(R.string.customise_liquid_glass_desc),
+            style = CaptionStyle,
+            color = Color.White.copy(alpha = 0.5f),
+        )
+    }
+}
+
 // a card with a switch in its corner, what it controls on the left and a live preview peeking up on the right
 @Composable
 private fun EffectCard(
     title: String,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit,
+    // null: a card that opens its own page, with the settings chevron in the corner instead of a switch
+    checked: Boolean?,
+    onCheckedChange: ((Boolean) -> Unit)?,
     modifier: Modifier = Modifier,
     value: String? = null,
     previewWidth: androidx.compose.ui.unit.Dp = PreviewWidth,
     floatingPreview: Boolean = false,
     canReset: Boolean = false,
     onReset: (() -> Unit)? = null,
+    // tapping the card's body opens its page
+    onClick: (() -> Unit)? = null,
     preview: @Composable BoxScope.() -> Unit,
     content: @Composable ColumnScope.() -> Unit,
 ) {
@@ -354,7 +464,8 @@ private fun EffectCard(
             .fillMaxWidth()
             .height(StyleCardHeight)
             .clip(CardShape)
-            .background(LabColors.Card),
+            .background(LabColors.Card)
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier),
     ) {
         PreviewFrame(
             modifier = Modifier.align(Alignment.BottomEnd),
@@ -364,11 +475,20 @@ private fun EffectCard(
             content = preview,
         )
         CardTitle(title = title, canReset = canReset, onReset = onReset)
-        AppSwitch(
-            checked = checked,
-            onCheckedChange = onCheckedChange,
-            modifier = Modifier.align(Alignment.TopEnd).padding(top = 16.dp, end = 18.dp),
-        )
+        if (checked != null && onCheckedChange != null) {
+            AppSwitch(
+                checked = checked,
+                onCheckedChange = onCheckedChange,
+                modifier = Modifier.align(Alignment.TopEnd).padding(top = 16.dp, end = 18.dp),
+            )
+        } else {
+            androidx.compose.material3.Icon(
+                painter = androidx.compose.ui.res.painterResource(R.drawable.ic_chevron_right),
+                contentDescription = null,
+                tint = Color.White.copy(alpha = 0.5f),
+                modifier = Modifier.align(Alignment.TopEnd).padding(top = 20.dp, end = 20.dp).size(22.dp),
+            )
+        }
         Column(
             modifier = Modifier.padding(
                 start = CardTextInset,

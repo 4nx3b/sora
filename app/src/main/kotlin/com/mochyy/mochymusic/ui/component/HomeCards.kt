@@ -337,7 +337,7 @@ fun HomeVideoCard(
     Box(
         modifier = modifier
             .width(width)
-            .height(width / HomeVideoCardAspect)
+            .height(if (videoThumbnailRatio() == 1f) width else width / HomeVideoCardAspect)
             .clip(shape)
             .background(BoneColor),
     ) {
