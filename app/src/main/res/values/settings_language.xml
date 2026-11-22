@@ -119,6 +119,12 @@
     <string name="settings_section_canvas">Canvas</string>
     <string name="settings_playback_link_desc">Background play, Bluetooth, shuffle and skipping</string>
     <string name="settings_now_playing_link_desc">Lyrics, videos, canvas and the format badge</string>
+    <string name="settings_modules_link_desc">Sources and looks the app gains from modules</string>
+    <string name="settings_player_pages">The player and its modules</string>
+    <string name="settings_listen_together_desc">Listen in sync with friends, with chat</string>
+    <string name="settings_devices_link_desc">TV, car and the other screens around the phone</string>
+    <string name="settings_internet_link_desc">Region, DNS, audio quality ceilings and the proxy</string>
+
     <string name="settings_transition_link_desc">Crossfade and mixing between songs, in Audio Lab</string>
     <string name="settings_lyrics_animation_link_desc">How the lyrics move, in Customize</string>
     <string name="settings_hide_descriptions">Disable description on settings</string>

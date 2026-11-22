@@ -208,6 +208,13 @@ private fun networkItems(navController: NavController): List<SettingsItem> {
             subOptionOf = dataSaver,
         ),
         linkItem(
+            key = "Internet",
+            title = stringResource(R.string.internet),
+            description = stringResource(R.string.settings_internet_link_desc),
+            icon = painterResource(R.drawable.language),
+            onClick = { navController.navigate(com.mochyy.mochymusic.ui.screens.settings.InternetSettingsRoute) },
+        ),
+        linkItem(
             key = "Proxy",
             title = stringResource(R.string.proxy),
             description = if (proxyOn && AppProxy.parseAddress(proxyAddress) != null) {

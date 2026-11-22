@@ -46,6 +46,7 @@ import com.mochyy.mochymusic.playback.StoredKind
 import com.mochyy.mochymusic.ui.component.LocalMenuState
 import com.mochyy.mochymusic.ui.component.SubSettingsScaffold
 import com.mochyy.mochymusic.ui.screens.library.showConfirm
+import com.mochyy.mochymusic.ui.screens.settings.integrations.backup.BackupRoute
 import com.mochyy.mochymusic.utils.rememberPreference
 import com.mochyy.mochymusic.viewmodels.DriveUsage
 import com.mochyy.mochymusic.viewmodels.StorageUsage
@@ -92,6 +93,15 @@ fun StorageScreen(navController: NavController, viewModel: StorageViewModel = hi
         )
         Spacer(Modifier.height(10.dp))
         ClearButtons(viewModel, downloadCount = downloads?.size ?: 0, usage = usage)
+
+        Spacer(Modifier.height(26.dp))
+        SectionText(stringResource(R.string.storage_backup_title))
+        Spacer(Modifier.height(10.dp))
+        StorageActionButton(
+            label = stringResource(R.string.integration_backup_name),
+            detail = stringResource(R.string.integration_backup_desc),
+            onClick = { navController.navigate(BackupRoute) },
+        )
 
         Spacer(Modifier.height(26.dp))
         SectionText(stringResource(R.string.storage_or))

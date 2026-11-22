@@ -43,6 +43,7 @@
 
     <!-- where things are saved, and exporting songs -->
     <string name="storage_or">Or</string>
+    <string name="storage_backup_title">Backups</string>
     <string name="storage_downloads_place">Choose where downloads are saved</string>
     <string name="storage_cache_place">Choose where the cache is saved</string>
     <string name="storage_export_downloads">Export downloaded songs as a folder</string>
