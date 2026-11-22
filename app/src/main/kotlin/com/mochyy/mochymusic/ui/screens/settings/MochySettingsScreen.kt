@@ -170,6 +170,7 @@ private val SettingsIndex = listOf(
     SettingsEntry("SF Pro fonts", "Customisation", FontCatalogRoute, "sf pro apple font catalog download kouzu", R.string.sf_pro_fonts),
     SettingsEntry("Glass glow", "Customisation", NavigationBarSettingsRoute, "glass glow rim light sheen intensity navigation bar", R.string.navigation_bar_glass_glow),
     SettingsEntry("Show labels", "Customisation", NavigationBarSettingsRoute, "labels tab names under icons navigation bar", R.string.navigation_bar_labels),
+    SettingsEntry("Navigation bar dimensions", "Customisation", NavigationBarSettingsRoute, "width height opacity transparency label spacing corner radius reset navigation bar", R.string.navigation_bar_dimensions),
     SettingsEntry("Blur", "Customisation", "customisation_settings", "blur glass frosted performance lag"),
     SettingsEntry("Progressive blur", "Customisation", "customisation_settings", "gradient fade top bar hairline flat"),
     SettingsEntry("Blur quality", "Customisation", "customisation_settings", "low high glass performance"),
@@ -271,10 +272,13 @@ private val SettingsIndex = listOf(
     SettingsEntry("Modules", "Modules", "modules", "apple music source module plugin extension stream subscription"),
     SettingsEntry("Apple Music", "Modules", "module/applemusic", "apple music itunes subscription stream aac"),
     SettingsEntry("Monochrome", "Modules", "module/monochrome", "monochrome lossless flac hi-res tidal"),
+    SettingsEntry("Qobuz", "Modules", "module/qobuz", "qobuz lossless hi-res flac 192 account instance"),
+    SettingsEntry("Qobuz backup", "Modules", "module/qobuzbackup", "qobuz backup community mirror lossless kouzu endpoint"),
+    SettingsEntry("Deezer", "Modules", "module/deezer", "deezer flac cd 16 bit arl account"),
+    SettingsEntry("SoundCloud", "Modules", "module/soundcloud", "soundcloud aac 160 uploads remixes sets client id"),
     SettingsEntry("Provider order", "Integrations", com.mochyy.mochymusic.ui.screens.settings.integrations.SourcesRoute, "source order apple music monochrome youtube priority", R.string.sources_tab_sources),
     SettingsEntry("YouTube Music", "Integrations", com.mochyy.mochymusic.ui.screens.settings.integrations.SourcesRoute, "youtube turn off disable provider only monochrome apple music"),
     SettingsEntry("Sources", "Integrations", com.mochyy.mochymusic.ui.screens.settings.integrations.SourcesRoute, "sources addons plugins webdav smb remote library stream", R.string.sources),
-    SettingsEntry("Add plugin", "Integrations", com.mochyy.mochymusic.ui.screens.settings.integrations.SourcesRoute, "add plugin addon source server http manifest", R.string.sources_add_plugin),
 
     // Integrations
     SettingsEntry("Discord", "Integrations", DiscordRoute, "discord rich presence rpc status activity listening playing profile behaviour pause clear"),

@@ -470,8 +470,11 @@ dependencies {
     implementation(project(":modules:applemusic"))
     implementation(project(":modules:monochrome"))
     implementation(project(":modules:jiosaavn"))
+    implementation(project(":modules:qobuz"))
+    implementation(project(":modules:qobuzbackup"))
+    implementation(project(":modules:deezer"))
+    implementation(project(":modules:soundcloud"))
     implementation(project(":modules:bridge"))
-    implementation(project(":modules:archivetune"))
 
 
     implementation(libs.ktor.client.core)

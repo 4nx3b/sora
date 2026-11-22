@@ -3911,11 +3911,14 @@ class MusicService :
                     .Factory()
                     .setCache(playerCache)
                     .setUpstreamDataSourceFactory(
-                        DefaultDataSource.Factory(
+                        // a deezer:// stream (the Deezer module's encrypted cdn file) reads
+                        // through the ported decrypting reader; everything else as before
+                        DeezerSchemeRouting(DefaultDataSource.Factory(
                             this,
                             OkHttpDataSource.Factory(
                                 OkHttpClient
                                     .Builder()
+                                    .addInterceptor(SoundCloudPlaybackHeaders.interceptor)
                                     .dns(object : Dns {
                                         override fun lookup(hostname: String): List<InetAddress> {
                                             val addresses = Dns.SYSTEM.lookup(hostname)
@@ -3929,7 +3932,7 @@ class MusicService :
                                     .followAppProxy()
                                     .build(),
                             ),
-                        ),
+                        )),
                     ),
             ).setCacheWriteDataSinkFactory(null)
             .setFlags(FLAG_IGNORE_CACHE_ON_ERROR)
@@ -5382,7 +5385,6 @@ class MusicService :
         // design (Neiro's MuzoSource: the opt-in is the credential itself), a miss lets
         // the walk step on, and a capped request never pays lossless bytes for it.
         muzoRoute(mediaId)?.let { return it }
-        addonRoute(mediaId)?.let { return it }
         forcedRoutes[mediaId]?.let { forced ->
             if (forced.providerId == com.mochyy.mochymusic.modules.SourceModules.YouTubeId) return youTubeRoute(mediaId)
             forcedModuleStream(mediaId, forced)?.let { return it }
@@ -5478,40 +5480,6 @@ class MusicService :
         )
     }
 
-    /**
-     * The first addon that has the song, or null to step on — Neiro's walk: the
-     * sources the user added on purpose come before the installed modules. The
-     * match is by name (the addon protocol has no video ids), the stream is the
-     * addon's own URL, and a miss on every addon hands the walk on untouched.
-     */
-    private suspend fun addonRoute(mediaId: String): com.mochyy.mochymusic.playback.custom.CustomStreamResult? {
-        if (com.mochyy.mochymusic.utils.DataSaver.isActive(this)) return null
-        val bases = com.mochyy.mochymusic.muzo.AddonSources.urls(this)
-        if (bases.isEmpty()) return null
-        val track = trackQueryOf(mediaId) ?: return null
-        val title = track.title ?: return null
-        val artist = track.artists.joinToString(", ")
-        for (base in bases) {
-            val found = com.mochyy.mochymusic.muzo.AddonSources.findTrack(base, title, artist) ?: continue
-            val stream = com.mochyy.mochymusic.muzo.AddonSources.stream(base, found.id).getOrNull() ?: continue
-            val url = stream.url.takeIf(String::isNotBlank) ?: continue
-            resolvedSourceIds[mediaId] = "addon"
-            scope.launch(Dispatchers.IO) { recoverSong(mediaId) }
-            val cacheKey = "$ModuleCacheKeyPrefix addon|${found.id}|$mediaId".replace(" ", "")
-            val name = com.mochyy.mochymusic.muzo.AddonSources.manifest(base).getOrNull()?.name?.takeIf(String::isNotBlank) ?: base
-            notePlayingFrom(mediaId, PlayingFrom("addon", name, stream.qualityLabel, found.id))
-            streamFacts.update { it + (mediaId to StreamFacts(codec = stream.codec, fromModule = true)) }
-            Timber.tag("StreamFetch").i("$mediaId plays from addon $name: ${found.title} · ${stream.qualityLabel}")
-            return com.mochyy.mochymusic.playback.custom.CustomStreamResult(
-                streamUrl = url,
-                isHls = stream.isHls,
-                isDash = stream.isDash,
-                source = "$name · ${stream.qualityLabel}",
-                cacheKey = cacheKey,
-            )
-        }
-        return null
-    }
 
     /**
      * Muzo Data's answer for this song, or null to step on: the 24-bit FLAC stream for

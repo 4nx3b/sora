@@ -744,8 +744,11 @@ class MainActivity : ComponentActivity() {
                 } else null
                 val miniPill = wideBar?.miniFrame ?: com.mochyy.mochymusic.ui.component.PhoneMiniPill
 
-                // the row the tabs take along the bottom: the wide bar's shrinks with a short screen
-                val navRowHeight = wideBar?.rowHeight ?: NavigationBarHeight
+                // the row the tabs take along the bottom: the wide bar's shrinks with a short screen;
+                // the Height dial makes the standard bar taller, so the mini player and the pages leave it room
+                val navBarStyle = com.mochyy.mochymusic.ui.component.rememberNavBarStyle()
+                val navRowHeight = wideBar?.rowHeight
+                    ?: (NavigationBarHeight + if (com.mochyy.mochymusic.modules.skin.ActiveSkin.bar == null) navBarStyle.extraHeight else 0.dp)
                 val navPadding = if (slimNav && wideBar == null) SlimNavBarHeight else navRowHeight
 
                 val playerBottomSheetState = rememberBottomSheetState(

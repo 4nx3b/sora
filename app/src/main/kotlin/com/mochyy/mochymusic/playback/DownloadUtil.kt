@@ -126,8 +126,12 @@ constructor(
     // stream was two files glued together: the song played for a few seconds, then went silent.
     private val dataSourceFactory =
         ResolvingDataSource.Factory(
+            // a deezer:// download (the Deezer module's encrypted cdn file) reads through the
+            // same ported decrypting reader the player plays it with
+            DeezerSchemeRouting(
             OkHttpDataSource.Factory(
                 OkHttpClient.Builder()
+                    .addInterceptor(SoundCloudPlaybackHeaders.interceptor)
                     .dns(object : Dns {
                         override fun lookup(hostname: String): List<InetAddress> {
                             val addresses = Dns.SYSTEM.lookup(hostname)
@@ -140,6 +144,7 @@ constructor(
                     })
                     .followAppProxy()
                     .build(),
+            ),
             ),
         ) { dataSpec ->
             val mediaId = dataSpec.key ?: error("No media id")

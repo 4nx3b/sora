@@ -259,9 +259,12 @@ fun AppNavigationBar(
 
     val liquid = com.mochyy.mochymusic.ui.component.liquid.LocalLiquidGlass.current
     val liquidBar = liquid.surface(liquid.navBar)
-    val style = rememberNavBarStyle(glassBar = liquidBar)
-    // without Neiro's dimension dials the bar keeps sora's own shape and size
-    val barShape = NavBarShape
+    val style = rememberNavBarStyle()
+    // the dimension dials shape whichever bar is drawing: the corner never runs past the
+    // bar's own height, whatever the height dial stands at
+    val barHeight = NavBarHeight * style.heightScale
+    val cornerDp = style.cornerRadius.coerceAtMost(barHeight / 2f)
+    val barShape = RoundedCornerShape(cornerDp)
 
     Box(modifier = modifier) {
         Box(
@@ -271,27 +274,36 @@ fun AppNavigationBar(
                 .padding(horizontal = 24.dp, vertical = 8.dp)
                 .align(Alignment.TopCenter)
                 .wrapContentWidth(Alignment.CenterHorizontally)
-                .fillMaxWidth()
-                .height(NavBarHeight)
+                .fillMaxWidth(style.widthFraction)
+                .height(barHeight)
                 .press3D(maxTilt = 4f, pressedScale = 0.985f)
                 .then(if (moduleGlass?.shadow == false) Modifier else Modifier.dropShadow(barShape, ChromeShadow))
                 .clip(barShape)
                 .drawWithContent {
                     drawContent()
                     if (moduleGlass?.outline != false) {
-                        drawChromeOutline(Offset.Zero, size, cornerRadius = size.height / 2f)
+                        drawChromeOutline(Offset.Zero, size, cornerRadius = minOf(cornerDp.toPx(), size.height / 2f))
                     }
                 }
                 .then(if (style.glow > 0f) Modifier.glassGlowOverlay(style.glow, barShape) else Modifier)
         ) {
             if (liquidBar) {
-                Box(Modifier.fillMaxSize().liquidGlassSurface(NavBarShape))
+                // the glass layer takes the dials too: the shape from the corner dial, the
+                // opacity and transparency dials as how much of the glass shows at all
+                Box(
+                    Modifier
+                        .fillMaxSize()
+                        .then(if (style.surfaceAlpha < 1f) Modifier.graphicsLayer { alpha = style.surfaceAlpha } else Modifier)
+                        .liquidGlassSurface(barShape),
+                )
             } else {
                 FrostedChromeGlass(
                     state = glassState,
                     pureBlack = pureBlack,
                     accentWash = accentWash,
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .then(if (style.surfaceAlpha < 1f) Modifier.graphicsLayer { alpha = style.surfaceAlpha } else Modifier),
                     pill = glassPill,
                 )
             }

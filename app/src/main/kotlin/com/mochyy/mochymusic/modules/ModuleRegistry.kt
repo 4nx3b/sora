@@ -572,7 +572,16 @@ class ModuleRegistry @Inject constructor(
     // ---- loading --------------------------------------------------------------------------------
 
     private fun load(): List<Pair<MochyModule, ModuleOrigin>> {
-        val builtIn = listOf<MochyModule>(AppleMusicModule(), MonochromeModule(), JioSaavnModule()).map { it to ModuleOrigin.BuiltIn }
+        val builtIn = listOf<MochyModule>(
+            AppleMusicModule(),
+            MonochromeModule(),
+            JioSaavnModule(),
+            // the sources ported from the ArchiveTune fork
+            com.mochyy.mochymusic.module.qobuz.QobuzModule(),
+            com.mochyy.mochymusic.module.qobuzbackup.QobuzBackupModule(),
+            com.mochyy.mochymusic.module.deezer.DeezerModule(),
+            com.mochyy.mochymusic.module.soundcloud.SoundCloudModule(),
+        ).map { it to ModuleOrigin.BuiltIn }
         val apps = discover()
         val savedCode = savedCodeModules()
         CodeModules.tidy(context, savedCode.map { it.optString("folder") }.toSet())
