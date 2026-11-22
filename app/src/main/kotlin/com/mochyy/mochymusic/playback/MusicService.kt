@@ -5384,13 +5384,14 @@ class MusicService :
         // 24-bit FLAC for exactly that recording. Without a key the source is inert by
         // design (Neiro's MuzoSource: the opt-in is the credential itself), a miss lets
         // the walk step on, and a capped request never pays lossless bytes for it.
-        muzoRoute(mediaId)?.let { return it }
+        // a provider picked by hand wins over everything else, Muzo included
         forcedRoutes[mediaId]?.let { forced ->
             if (forced.providerId == com.mochyy.mochymusic.modules.SourceModules.YouTubeId) return youTubeRoute(mediaId)
             forcedModuleStream(mediaId, forced)?.let { return it }
             // the picked provider doesn't have it any more: the usual order takes over
             forcedRoutes.remove(mediaId)
         }
+        muzoRoute(mediaId)?.let { return it }
         val skip = recentFailures(mediaId)
         // a fresh lookup: a notice from one that never got to play no longer holds
         if (skip.isEmpty()) decoderNotices.remove(mediaId)
@@ -5577,13 +5578,23 @@ class MusicService :
             forcedRoutes[mediaId] = route
             failedSources.remove(mediaId)
             failedSourcesAt.remove(mediaId)
+            // the old provider's address was kept for reuse: without dropping it the reload played the same stream again
+            resolvedStreamSources.remove(mediaId)
+            songUrlCache.remove(mediaId)
             val index = player.currentMediaItemIndex
             val position = player.currentPosition
-            // stopping releases the song's source; preparing again fetches it, now from the picked provider
+            // stopping releases the song's source and the cached spans it held; the old provider's bytes
+            // are dropped too, or the reload replays them, then preparing fetches from the picked provider
             player.stop()
-            player.prepare()
-            player.seekTo(index, position)
-            player.playWhenReady = play
+            scope.launch {
+                withContext(Dispatchers.IO) {
+                    runCatching { playerCache.removeResource(mediaId) }
+                        .onFailure { Timber.tag("MusicService").e(it, "Failed to clear cache for $mediaId") }
+                }
+                player.prepare()
+                player.seekTo(index, position)
+                player.playWhenReady = play
+            }
         }
     }
 

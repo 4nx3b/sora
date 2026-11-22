@@ -35,6 +35,19 @@ object LyricsProviderRegistry {
 
     val providerNames: List<String> get() = moduleProviders.keys.toList() + providerMap.keys
 
+    // every installed module that adds lyrics, on or off, by provider name to the name it shows; an off one keeps its place in the order
+    private var knownModules: Map<String, String> = emptyMap()
+
+    fun setKnownModules(modules: Map<String, String>) {
+        knownModules = modules
+    }
+
+    /** the names the order is kept over: every lyrics source in the app, the switched-off modules included */
+    val orderNames: List<String> get() = (moduleProviders.keys + knownModules.keys).distinct() + providerMap.keys
+
+    /** a module that adds lyrics but is switched off in Modules */
+    fun isModuleOff(name: String): Boolean = name in knownModules && name !in moduleProviders
+
     fun getProviderByName(name: String): LyricsProvider? = providerMap[name] ?: moduleProviders[name]
 
     /** the switch a source reads to say whether it's in the chain; null for a module's own sources */
@@ -60,19 +73,19 @@ object LyricsProviderRegistry {
     /** A saved order, with any source added since it was saved at the end, in default order. */
     fun deserializeProviderOrder(orderString: String): List<String> {
         if (orderString.isBlank()) return getDefaultProviderOrder()
-        val saved = orderString.split(",").map { it.trim() }.filter { it in providerNames }.distinct()
+        val saved = orderString.split(",").map { it.trim() }.filter { it in orderNames }.distinct()
         // a lyrics module someone just turned on goes first, they added it to be asked
-        val newModules = moduleProviders.keys.filter { it !in saved }
+        val newModules = (moduleProviders.keys + knownModules.keys).distinct().filter { it !in saved }
         return newModules + saved + getDefaultProviderOrder().filter { it !in saved && it !in newModules }
     }
 
     fun serializeProviderOrder(providers: List<String>): String =
-        providers.filter { it in providerNames }.joinToString(",")
+        providers.filter { it in orderNames }.joinToString(",")
 
     // NetEase, QQ Music and KuGou near the end: they are Chinese services, and LyricsHelper only
     // believes them first-hand for Chinese songs. NetEase leads them because it often has word
     // timing. YouTube's auto captions last of all - they are speech recognition.
-    fun getDefaultProviderOrder(): List<String> = moduleProviders.keys.toList() + listOf(
+    fun getDefaultProviderOrder(): List<String> = (moduleProviders.keys + knownModules.keys).distinct() + listOf(
         "BetterLyrics",
         "Unison",
         "YouLyPlus",
@@ -118,7 +131,7 @@ object LyricsProviderRegistry {
         "YouTubeSubtitle" -> "YouTube Subtitle"
         "YouTubeMusic"    -> "YouTube Music"
         "YouTubeCaptions" -> "YouTube Auto Captions"
-        else              -> moduleProviders[name]?.displayName ?: name
+        else              -> moduleProviders[name]?.displayName ?: knownModules[name] ?: name
     }
 
     /**
