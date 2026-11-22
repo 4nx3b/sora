@@ -159,13 +159,11 @@ private val SettingsIndex = listOf(
     SettingsEntry("Player styles", "Customisation", "customisation_settings", "flagship turntable ipod poster timeline lyrics studio customize player cover"),
     SettingsEntry("Home styles", "Customisation", "customisation_settings", "mochyy listen now hop in hero layout grid"),
     SettingsEntry("Navigation bar", "Customisation", NavigationBarSettingsRoute, "navigation bar nav tabs bottom bar size shape", R.string.navigation_bar_settings_title),
-    SettingsEntry("Mini player and bar behavior", "Customisation", NavigationBarSettingsRoute, "mini player bar behavior compact adaptive always expanded fold collapse", R.string.navigation_bar_compact_behavior),
     SettingsEntry("AOD custom", "Customisation", AodSettingsRoute, "aod always on display screen saver dream bedside clock battery brightness dimming pixel shift touch lock", R.string.aod_title),
     SettingsEntry("Font", "Customisation", FontSettingsRoute, "font typeface type text sf pro inter system custom ttf otf", R.string.font),
     SettingsEntry("SF Pro fonts", "Customisation", FontCatalogRoute, "sf pro apple font catalog download kouzu", R.string.sf_pro_fonts),
     SettingsEntry("Glass glow", "Customisation", NavigationBarSettingsRoute, "glass glow rim light sheen intensity navigation bar", R.string.navigation_bar_glass_glow),
     SettingsEntry("Show labels", "Customisation", NavigationBarSettingsRoute, "labels tab names under icons navigation bar", R.string.navigation_bar_labels),
-    SettingsEntry("Navigation bar dimensions", "Customisation", NavigationBarSettingsRoute, "width height opacity transparency label spacing corner radius reset navigation bar", R.string.navigation_bar_dimensions),
     SettingsEntry("Blur", "Customisation", "customisation_settings", "blur glass frosted performance lag"),
     SettingsEntry("Progressive blur", "Customisation", "customisation_settings", "gradient fade top bar hairline flat"),
     SettingsEntry("Blur quality", "Customisation", "customisation_settings", "low high glass performance"),
@@ -190,8 +188,8 @@ private val SettingsIndex = listOf(
     SettingsEntry("Offline mode", "App behaviour", "general_settings", "play downloaded cache offline"),
     SettingsEntry("Data saver", "App behaviour", "general_settings", "data saver mobile metered cellular bandwidth lower quality canvas video"),
     SettingsEntry("Internet", "App behaviour", com.mochyy.mochymusic.ui.screens.settings.InternetSettingsRoute, "internet region country dns doh proxy wifi cellular quality blocked spoof"),
-    SettingsEntry("Listen Together", "App behaviour", "listen_together", "listen together party room host guest chat sync queue friends group", R.string.ported_listen_together),
-    SettingsEntry("Listen Together settings", "App behaviour", "listen_together_settings", "listen together username server avatar blocked users settings", R.string.ported_listen_together),
+    SettingsEntry("Listen Together", "Integrations", "listen_together", "listen together party room host guest chat sync queue friends group", R.string.ported_listen_together),
+    SettingsEntry("Listen Together settings", "Integrations", "listen_together_settings", "listen together username server avatar blocked users settings", R.string.ported_listen_together),
     SettingsEntry("YouTube Music region", "App behaviour", com.mochyy.mochymusic.ui.screens.settings.InternetSettingsRoute, "region country geo block spoof youtube music"),
     SettingsEntry("DNS over HTTPS", "App behaviour", com.mochyy.mochymusic.ui.screens.settings.InternetSettingsRoute, "dns doh https cloudflare google adguard quad9 resolver"),
     SettingsEntry("Audio quality on Wi-Fi", "App behaviour", com.mochyy.mochymusic.ui.screens.settings.InternetSettingsRoute, "quality wifi ceiling stream mobile data cellular"),
@@ -282,7 +280,7 @@ private val SettingsIndex = listOf(
     SettingsEntry("Remove all downloads", "Storage", "storage_settings", "delete clear downloads offline space"),
 
     // Experimental
-    SettingsEntry("Device integration", "Import & sync", com.mochyy.mochymusic.ui.screens.devices.DeviceIntegrationRoute, "tv television android tv google tv phone tablet car head unit pair link sync stream downloads big screen remote control devices"),
+    SettingsEntry("Device integration", "Integrations", com.mochyy.mochymusic.ui.screens.devices.DeviceIntegrationRoute, "tv television android tv google tv phone tablet car head unit pair link sync stream downloads big screen remote control devices"),
     SettingsEntry("Import & sync", "Experimental", "experimental_settings", "import spotify apple music deezer tidal tunemymusic csv youtube sync export backup transfer"),
     SettingsEntry("Big disc cover styles", "Experimental", "experimental_settings", "disc vinyl cover"),
     SettingsEntry("Music haptics", "Experimental", "experimental_settings", "vibration haptic"),
@@ -505,13 +503,6 @@ fun MochySettingsScreen(navController: NavController, pane: SettingsPane? = null
                         )
 
                         CategoryBubble(
-                            title = stringResource(R.string.settings_now_playing),
-                            iconRes = R.drawable.lyrics,
-                            selected = selected == NowPlayingSettingsRoute,
-                            onClick = { open(NowPlayingSettingsRoute) }
-                        )
-
-                        CategoryBubble(
                             title = stringResource(R.string.settings_app_behaviour),
                             iconRes = R.drawable.settings,
                             selected = selected == "general_settings",
@@ -533,42 +524,13 @@ fun MochySettingsScreen(navController: NavController, pane: SettingsPane? = null
                         )
 
                         CategoryBubble(
-                            title = stringResource(R.string.internet),
-                            iconRes = R.drawable.language,
-                            selected = selected == com.mochyy.mochymusic.ui.screens.settings.InternetSettingsRoute,
-                            onClick = { open(com.mochyy.mochymusic.ui.screens.settings.InternetSettingsRoute) }
-                        )
-
-                        CategoryBubble(
                             title = stringResource(R.string.integrations),
                             iconRes = R.drawable.integration,
                             selected = selected == IntegrationsRoute,
                             onClick = { open(IntegrationsRoute) }
                         )
 
-                        // the listen together rooms, ported from Neiro: the page is its own, entered like every other category
-                        CategoryBubble(
-                            title = stringResource(R.string.ported_listen_together),
-                            iconRes = R.drawable.group,
-                            selected = selected == "listen_together",
-                            onClick = { open("listen_together") }
-                        )
-
-                        CategoryBubble(
-                            title = stringResource(R.string.devices_title),
-                            iconRes = R.drawable.cast_connected,
-                            selected = false,
-                            onClick = { open(com.mochyy.mochymusic.ui.screens.devices.DeviceIntegrationRoute) }
-                        )
-
-                        CategoryBubble(
-                            title = stringResource(R.string.settings_modules_category),
-                            iconRes = R.drawable.library_add,
-                            selected = selected == "modules",
-                            onClick = { open("modules") }
-                        )
-
-                        // pages the modules that are on bring to settings, right under modules
+                        // pages the modules that are on bring to settings, right under the categories
                         com.mochyy.mochymusic.ui.screens.settings.modules.ModuleSettingsPages(open = open, selected = selected)
                     }
                 }

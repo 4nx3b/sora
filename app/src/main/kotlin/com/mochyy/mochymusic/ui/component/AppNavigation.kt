@@ -260,7 +260,8 @@ fun AppNavigationBar(
     val liquid = com.mochyy.mochymusic.ui.component.liquid.LocalLiquidGlass.current
     val liquidBar = liquid.surface(liquid.navBar)
     val style = rememberNavBarStyle(glassBar = liquidBar)
-    val barShape = if (liquidBar) NavBarShape else remember(style.cornerRadius) { RoundedCornerShape(style.cornerRadius) }
+    // without Neiro's dimension dials the bar keeps sora's own shape and size
+    val barShape = NavBarShape
 
     Box(modifier = modifier) {
         Box(
@@ -270,15 +271,15 @@ fun AppNavigationBar(
                 .padding(horizontal = 24.dp, vertical = 8.dp)
                 .align(Alignment.TopCenter)
                 .wrapContentWidth(Alignment.CenterHorizontally)
-                .fillMaxWidth(style.widthFraction)
-                .height(NavBarHeight * style.heightScale)
+                .fillMaxWidth()
+                .height(NavBarHeight)
                 .press3D(maxTilt = 4f, pressedScale = 0.985f)
                 .then(if (moduleGlass?.shadow == false) Modifier else Modifier.dropShadow(barShape, ChromeShadow))
                 .clip(barShape)
                 .drawWithContent {
                     drawContent()
                     if (moduleGlass?.outline != false) {
-                        drawChromeOutline(Offset.Zero, size, cornerRadius = minOf(style.cornerRadius.toPx(), size.height / 2f))
+                        drawChromeOutline(Offset.Zero, size, cornerRadius = size.height / 2f)
                     }
                 }
                 .then(if (style.glow > 0f) Modifier.glassGlowOverlay(style.glow, barShape) else Modifier)
@@ -290,9 +291,7 @@ fun AppNavigationBar(
                     state = glassState,
                     pureBlack = pureBlack,
                     accentWash = accentWash,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .then(if (style.surfaceAlpha < 1f) Modifier.graphicsLayer { alpha = style.surfaceAlpha } else Modifier),
+                    modifier = Modifier.fillMaxSize(),
                     pill = glassPill,
                 )
             }

@@ -1,6 +1,7 @@
 // NavigationBarSettingsScreen.kt
-// Neiro's Navigation bar page (SettingsSheet's NavigationBarSettingsPage): the glass glow and its strength, labels
-// under the tabs, and the standard bar's six dimension dials with a reset. AppNavigationBar draws them.
+// Neiro's Navigation bar page (SettingsSheet's NavigationBarSettingsPage), without the removed
+// mini player bar behaviour segment and the six dimension dials: what's left is the glass glow
+// and its strength, and the labels under the tabs. AppNavigationBar draws them.
 
 package com.mochyy.mochymusic.ui.screens.settings
 
@@ -16,25 +17,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.datastore.preferences.core.Preferences
 import androidx.navigation.NavController
 import com.mochyy.mochymusic.R
-import com.mochyy.mochymusic.constants.NavBarCornerRadiusDefault
-import com.mochyy.mochymusic.constants.NavBarCornerRadiusKey
 import com.mochyy.mochymusic.constants.NavBarGlassGlowIntensityKey
 import com.mochyy.mochymusic.constants.NavBarGlassGlowKey
 import com.mochyy.mochymusic.constants.NavBarGlowIntensityDefault
-import com.mochyy.mochymusic.constants.NavBarHeightDefault
-import com.mochyy.mochymusic.constants.NavBarHeightKey
-import com.mochyy.mochymusic.constants.NavBarLabelSpacingDefault
-import com.mochyy.mochymusic.constants.NavBarLabelSpacingKey
-import com.mochyy.mochymusic.constants.NavBarOpacityDefault
-import com.mochyy.mochymusic.constants.NavBarOpacityKey
 import com.mochyy.mochymusic.constants.NavBarShowLabelsKey
-import com.mochyy.mochymusic.constants.NavBarTransparencyDefault
-import com.mochyy.mochymusic.constants.NavBarTransparencyKey
-import com.mochyy.mochymusic.constants.NavBarWidthDefault
-import com.mochyy.mochymusic.constants.NavBarWidthKey
 import com.mochyy.mochymusic.ui.component.DefaultPlayerSeekBarSlider
 import com.mochyy.mochymusic.ui.component.SettingsItem
 import com.mochyy.mochymusic.ui.component.SubSettingsScaffold
@@ -53,35 +41,6 @@ fun NavigationBarSettingsScreen(navController: NavController) {
         onBack = { navController.navigateUp() },
         backLabel = stringResource(R.string.settings_customisation_category),
     ) {
-        val (behavior, onBehavior) = com.mochyy.mochymusic.utils.rememberEnumPreference(
-            com.mochyy.mochymusic.constants.MiniPlayerBarBehaviorKey,
-            com.mochyy.mochymusic.constants.MiniPlayerBarBehavior.ADAPTIVE,
-        )
-        SettingsSection(
-            stringResource(R.string.navigation_bar_compact_behavior),
-            listOf(
-                SettingsItem(
-                    title = { Text(stringResource(R.string.navigation_bar_compact_behavior)) },
-                    description = {
-                        androidx.compose.foundation.layout.Column {
-                            Text(stringResource(R.string.navigation_bar_compact_behavior_desc))
-                            com.mochyy.mochymusic.ui.screens.audiolab.LabSegmented(
-                                options = listOf(
-                                    stringResource(R.string.navigation_bar_compact_adaptive),
-                                    stringResource(R.string.navigation_bar_compact_always_expanded),
-                                    stringResource(R.string.navigation_bar_compact_always_compact),
-                                ),
-                                selectedIndex = behavior.ordinal,
-                                onSelect = { onBehavior(com.mochyy.mochymusic.constants.MiniPlayerBarBehavior.entries[it]) },
-                                modifier = Modifier.padding(top = 10.dp),
-                            )
-                        }
-                    },
-                    highlightKey = "Mini player and bar behavior",
-                    searchText = "mini player bar behavior compact adaptive always expanded collapse fold",
-                ),
-            ),
-        )
         SettingsSection(
             stringResource(R.string.navigation_bar_general),
             listOf(
@@ -117,48 +76,6 @@ fun NavigationBarSettingsScreen(navController: NavController) {
                 ),
             )
         }
-
-        val atDefaults = near(rememberPreference(NavBarWidthKey, NavBarWidthDefault).value, NavBarWidthDefault) &&
-            near(rememberPreference(NavBarHeightKey, NavBarHeightDefault).value, NavBarHeightDefault) &&
-            near(rememberPreference(NavBarOpacityKey, NavBarOpacityDefault).value, NavBarOpacityDefault) &&
-            near(rememberPreference(NavBarTransparencyKey, NavBarTransparencyDefault).value, NavBarTransparencyDefault) &&
-            near(rememberPreference(NavBarLabelSpacingKey, NavBarLabelSpacingDefault).value, NavBarLabelSpacingDefault) &&
-            near(rememberPreference(NavBarCornerRadiusKey, NavBarCornerRadiusDefault).value, NavBarCornerRadiusDefault)
-        val resetters = listOf(
-            rememberPreference(NavBarWidthKey, NavBarWidthDefault),
-            rememberPreference(NavBarHeightKey, NavBarHeightDefault),
-            rememberPreference(NavBarOpacityKey, NavBarOpacityDefault),
-            rememberPreference(NavBarTransparencyKey, NavBarTransparencyDefault),
-            rememberPreference(NavBarLabelSpacingKey, NavBarLabelSpacingDefault),
-            rememberPreference(NavBarCornerRadiusKey, NavBarCornerRadiusDefault),
-        )
-        val defaults = listOf(
-            NavBarWidthDefault, NavBarHeightDefault, NavBarOpacityDefault,
-            NavBarTransparencyDefault, NavBarLabelSpacingDefault, NavBarCornerRadiusDefault,
-        )
-        val percent: @Composable (Float) -> String = { "${(it * 100).roundToInt()}%" }
-        val dp: @Composable (Float) -> String = { stringResource(R.string.navigation_bar_dp_value, it.roundToInt()) }
-
-        SettingsSection(
-            stringResource(R.string.navigation_bar_dimensions),
-            listOf(
-                dialItem(stringResource(R.string.navigation_bar_width), NavBarWidthKey, NavBarWidthDefault, 0.5f..1f, steps = 9, format = percent),
-                dialItem(stringResource(R.string.navigation_bar_height), NavBarHeightKey, NavBarHeightDefault, 0.8f..1.4f, steps = 11, format = percent),
-                dialItem(stringResource(R.string.navigation_bar_opacity), NavBarOpacityKey, NavBarOpacityDefault, 0.2f..1f, steps = 15, format = percent),
-                dialItem(stringResource(R.string.navigation_bar_transparency), NavBarTransparencyKey, NavBarTransparencyDefault, 0f..0.95f, steps = 18, format = percent),
-                dialItem(stringResource(R.string.navigation_bar_label_spacing), NavBarLabelSpacingKey, NavBarLabelSpacingDefault, 0f..16f, steps = 15, format = dp),
-                dialItem(stringResource(R.string.navigation_bar_corner_radius), NavBarCornerRadiusKey, NavBarCornerRadiusDefault, 0f..48f, steps = 47, format = dp),
-                SettingsItem(
-                    title = { Text(stringResource(R.string.navigation_bar_reset_dimensions)) },
-                    icon = painterResource(R.drawable.restore),
-                    iconShape = CircleShape,
-                    onClick = { if (!atDefaults) resetters.forEachIndexed { i, pref -> pref.value = defaults[i] } },
-                    enabled = !atDefaults,
-                    searchText = "Reset dimensions",
-                ),
-            ),
-        )
-        NavBarFooter(stringResource(R.string.navigation_bar_dimensions_footer))
         Spacer(Modifier.height(40.dp))
     }
 }
@@ -177,7 +94,7 @@ private fun NavBarFooter(text: String) {
 @Composable
 private fun dialItem(
     title: String,
-    key: Preferences.Key<Float>,
+    key: androidx.datastore.preferences.core.Preferences.Key<Float>,
     default: Float,
     range: ClosedFloatingPointRange<Float>,
     steps: Int,
@@ -205,5 +122,3 @@ private fun dialItem(
         searchText = title,
     )
 }
-
-private fun near(a: Float, b: Float) = kotlin.math.abs(a - b) < 0.001f

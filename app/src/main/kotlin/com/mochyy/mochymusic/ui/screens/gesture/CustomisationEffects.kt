@@ -334,18 +334,13 @@ internal fun BottomBarSection(modifier: Modifier = Modifier) {
     }
 }
 
-// the navigation bar's page: its look drawn live, and the mini player and bar behaviour as the card's value
+// the navigation bar's page: its look drawn live
 @Composable
 internal fun NavigationBarSection(onOpen: () -> Unit, modifier: Modifier = Modifier) {
-    val (behavior) = rememberEnumPreference(
-        com.mochyy.mochymusic.constants.MiniPlayerBarBehaviorKey,
-        com.mochyy.mochymusic.constants.MiniPlayerBarBehavior.ADAPTIVE,
-    )
     EffectCard(
         title = stringResource(R.string.navigation_bar_settings_title),
         checked = null,
         onCheckedChange = null,
-        value = stringResource(behaviorLabel(behavior)),
         onClick = onOpen,
         preview = { NavBarStylePreview() },
         modifier = modifier,
@@ -356,12 +351,6 @@ internal fun NavigationBarSection(onOpen: () -> Unit, modifier: Modifier = Modif
             color = Color.White.copy(alpha = 0.5f),
         )
     }
-}
-
-internal fun behaviorLabel(behavior: com.mochyy.mochymusic.constants.MiniPlayerBarBehavior): Int = when (behavior) {
-    com.mochyy.mochymusic.constants.MiniPlayerBarBehavior.ADAPTIVE -> R.string.navigation_bar_compact_adaptive
-    com.mochyy.mochymusic.constants.MiniPlayerBarBehavior.ALWAYS_EXPANDED -> R.string.navigation_bar_compact_always_expanded
-    com.mochyy.mochymusic.constants.MiniPlayerBarBehavior.ALWAYS_COMPACT -> R.string.navigation_bar_compact_always_compact
 }
 
 // the font the app is set in, picked on its page
