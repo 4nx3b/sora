@@ -3,7 +3,8 @@
 // per-installation encrypted storage and the catalog reader. Self-contained on purpose — no
 // dependency on the app — so it stays a faithful copy of upstream.
 plugins {
-    alias(libs.plugins.android.library)
+    // the same id-without-version shape the providers use; the buildscript classpath carries the version
+    id("com.android.library")
 }
 
 android {
