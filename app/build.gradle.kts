@@ -471,7 +471,6 @@ dependencies {
     implementation(project(":modules:monochrome"))
     implementation(project(":modules:jiosaavn"))
     implementation(project(":modules:bridge"))
-    implementation(project(":modules:archivetune"))
 
 
     implementation(libs.ktor.client.core)
