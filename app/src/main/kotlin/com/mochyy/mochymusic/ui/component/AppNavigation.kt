@@ -283,16 +283,15 @@ fun AppNavigationBar(
                 }
                 .then(if (style.glow > 0f) Modifier.glassGlowOverlay(style.glow, barShape) else Modifier)
         ) {
-            if (liquidBar) {
+            val liquid = com.mochyy.mochymusic.ui.component.liquid.LocalLiquidGlass.current
+            if (liquid.surface(liquid.navBar)) {
                 Box(Modifier.fillMaxSize().liquidGlassSurface(NavBarShape))
             } else {
                 FrostedChromeGlass(
                     state = glassState,
                     pureBlack = pureBlack,
                     accentWash = accentWash,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .then(if (style.surfaceAlpha < 1f) Modifier.graphicsLayer { alpha = style.surfaceAlpha } else Modifier),
+                    modifier = Modifier.fillMaxSize(),
                     pill = glassPill,
                 )
             }
