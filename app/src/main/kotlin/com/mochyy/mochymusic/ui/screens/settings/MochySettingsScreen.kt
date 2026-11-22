@@ -524,10 +524,12 @@ fun MochySettingsScreen(navController: NavController, pane: SettingsPane? = null
                             category = stringResource(R.string.preview_cat_listening),
                             title = stringResource(R.string.settings_playback_category),
                             selected = selected == PlaybackSettingsRoute,
-                            onClick = { open(PlaybackSettingsRoute) }
-                        )
+                            onClick = { open(PlaybackSettingsRoute) },
+                            height = SettingsCategoryCardHeight,
+                        ) { PlaybackCategoryPreview() }
 
-                        CategoryBubble(
+                        com.mochyy.mochymusic.ui.screens.gesture.PreviewCard(
+                            category = stringResource(R.string.preview_cat_behaviour),
                             title = stringResource(R.string.settings_app_behaviour),
                             selected = selected == "general_settings",
                             onClick = { open("general_settings") },
@@ -550,11 +552,13 @@ fun MochySettingsScreen(navController: NavController, pane: SettingsPane? = null
                             height = SettingsCategoryCardHeight,
                         ) { StorageCategoryPreview() }
 
-                        CategoryBubble(
+                        com.mochyy.mochymusic.ui.screens.gesture.PreviewCard(
+                            category = stringResource(R.string.preview_cat_connected),
                             title = stringResource(R.string.integrations),
                             selected = selected == IntegrationsRoute,
-                            onClick = { open(IntegrationsRoute) }
-                        )
+                            onClick = { open(IntegrationsRoute) },
+                            height = SettingsCategoryCardHeight,
+                        ) { IntegrationsCategoryPreview() }
 
                         // pages the modules that are on bring to settings, right under the categories
                         com.mochyy.mochymusic.ui.screens.settings.modules.ModuleSettingsPages(open = open, selected = selected)
