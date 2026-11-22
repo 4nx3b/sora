@@ -138,9 +138,9 @@ class SoundCloudModule : SourceModule, ModuleFields {
         }
 
         val found = matches[key] ?: run {
-            val candidates = searchTracks("${TrackMatcher.core(track.title)} ${track.artists.firstOrNull().orEmpty()}".trim(), clientId!!)
-            TrackMatcher.ranked(track, candidates).firstOrNull()
-                ?.let { scored -> candidates.first { it.id == scored.track.id } }
+            val tracks = searchTracks("${TrackMatcher.core(track.title)} ${track.artists.firstOrNull().orEmpty()}".trim(), clientId!!)
+            TrackMatcher.ranked(track, tracks.map { it.catalog }).firstOrNull()
+                ?.let { scored -> tracks.first { it.id == scored.track.id } }
         }
         if (found == null) {
             misses[key] = System.currentTimeMillis()

@@ -101,7 +101,7 @@ class QobuzModule : SourceModule, ModuleFields {
     }
 
     override fun onFields(values: Map<String, String>) {
-        val parsed = parseQobuzTokens(values[FieldTokens].orEmpty())
+        val parsed = SourceInputParsing.parseQobuzTokens(values[FieldTokens].orEmpty())
         if (parsed.isNotEmpty() || values[FieldTokens].orEmpty().isBlank()) {
             tokens = parsed
             host.storage.set("tokens", QobuzToken.listToJson(parsed))

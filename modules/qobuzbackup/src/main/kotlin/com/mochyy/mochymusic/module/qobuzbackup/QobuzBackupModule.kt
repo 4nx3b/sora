@@ -306,6 +306,17 @@ class QobuzBackupModule : SourceModule, ModuleFields {
 
     internal fun endpointChain(): List<String> = (customEndpoints + DefaultEndpoint).distinct()
 
+    /** the fork's rule: https only, and the legacy mirror host rewritten to the current one */
+    private fun normalizeEndpoint(raw: String): String? {
+        val trimmed = raw.trim().trimEnd('/')
+        if (trimmed.isEmpty()) return null
+        val https = if (trimmed.startsWith("http://")) "https://" + trimmed.removePrefix("http://") else trimmed
+        if (!https.startsWith("https://")) return null
+        val host = https.removePrefix("https://").substringBefore("/")
+        if (!host.contains('.')) return null
+        return https.replace("mlc-ytify.kouzu.in", "mls.kouzu.in")
+    }
+
     private fun activeEndpoints(): List<String> {
         val now = System.currentTimeMillis()
         return endpointChain().filter { (cooldownUntil[it] ?: 0L) < now }
