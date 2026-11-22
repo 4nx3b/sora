@@ -37,6 +37,26 @@ object LyricsProviderRegistry {
 
     fun getProviderByName(name: String): LyricsProvider? = providerMap[name] ?: moduleProviders[name]
 
+    /** the switch a source reads to say whether it's in the chain; null for a module's own sources */
+    fun enableKey(name: String): androidx.datastore.preferences.core.Preferences.Key<Boolean>? = when (name) {
+        "Kugou"           -> com.mochyy.mochymusic.constants.EnableKugouKey
+        "LrcLib"          -> com.mochyy.mochymusic.constants.EnableLrcLibKey
+        "BetterLyrics"    -> com.mochyy.mochymusic.constants.EnableBetterLyricsKey
+        "SimpMusic"       -> com.mochyy.mochymusic.constants.EnableSimpMusicKey
+        "YouLyPlus"       -> com.mochyy.mochymusic.constants.EnableYouLyPlusKey
+        "Paxsenix"        -> com.mochyy.mochymusic.constants.EnablePaxsenixKey
+        "NetEase"         -> com.mochyy.mochymusic.constants.EnableNetEaseKey
+        "QQMusic"         -> com.mochyy.mochymusic.constants.EnableQQMusicKey
+        "Deezer"          -> com.mochyy.mochymusic.constants.EnableDeezerKey
+        "LrcRed"          -> com.mochyy.mochymusic.constants.EnableLrcRedKey
+        "Unison"          -> com.mochyy.mochymusic.constants.EnableUnisonKey
+        "Muzo"            -> com.mochyy.mochymusic.constants.EnableMuzoLyricsKey
+        "YouTubeMusic"    -> com.mochyy.mochymusic.constants.EnableYouTubeMusicLyricsKey
+        "YouTubeSubtitle" -> com.mochyy.mochymusic.constants.EnableYouTubeSubtitleLyricsKey
+        "YouTubeCaptions" -> com.mochyy.mochymusic.constants.EnableYouTubeCaptionsKey
+        else              -> null
+    }
+
     /** A saved order, with any source added since it was saved at the end, in default order. */
     fun deserializeProviderOrder(orderString: String): List<String> {
         if (orderString.isBlank()) return getDefaultProviderOrder()

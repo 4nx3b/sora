@@ -1,7 +1,10 @@
 // NavBarStyle.kt
-// The standard bar's own look from Neiro's navigation bar page (FloatingNavigationToolbar's dials): width, height,
-// opacity, transparency, corner radius, labels and the glass glow. The liquid glass bar keeps its own shape, so
-// the dimension dials stand down while it is on.
+// The standard bar's own look from Neiro's navigation bar page: the labels under the tabs, the
+// glass glow, and the six dimension dials — width, height, opacity, transparency, label spacing
+// and corner radius. Every dial applies to whichever bar is drawing: the frosted standard bar
+// takes them as its fill and geometry, the Liquid Glass bar takes them as its shape and the
+// alpha of its glass layer. (The dials used to stand down while the glass bar was on, which
+// read on a glass-bar phone as "the dials change nothing" — that's the bug this fixes.)
 
 package com.mochyy.mochymusic.ui.component
 
@@ -47,9 +50,8 @@ data class NavBarStyle(
     val extraHeight: Dp get() = NavBarHeight * (heightScale - 1f)
 }
 
-/** [glassBar]: the liquid glass bar is drawing, so the dimension dials stand down (Neiro's footer) */
 @Composable
-fun rememberNavBarStyle(glassBar: Boolean): NavBarStyle {
+fun rememberNavBarStyle(): NavBarStyle {
     val width by rememberPreference(NavBarWidthKey, NavBarWidthDefault)
     val height by rememberPreference(NavBarHeightKey, NavBarHeightDefault)
     val opacity by rememberPreference(NavBarOpacityKey, NavBarOpacityDefault)
@@ -60,18 +62,14 @@ fun rememberNavBarStyle(glassBar: Boolean): NavBarStyle {
     val glowOn by rememberPreference(NavBarGlassGlowKey, false)
     val glowIntensity by rememberPreference(NavBarGlassGlowIntensityKey, NavBarGlowIntensityDefault)
     val glow = if (glowOn) glowIntensity.coerceIn(0.2f, 2f) else 0f
-    return if (glassBar) {
-        NavBarStyle(showLabels = labels, labelSpacing = spacing.coerceIn(0f, 16f).dp, glow = glow)
-    } else {
-        NavBarStyle(
-            widthFraction = width.coerceIn(0.5f, 1f),
-            heightScale = height.coerceIn(0.8f, 1.4f),
-            opacity = opacity.coerceIn(0.2f, 1f),
-            transparency = transparency.coerceIn(0f, 0.95f),
-            labelSpacing = spacing.coerceIn(0f, 16f).dp,
-            cornerRadius = corner.coerceIn(0f, 48f).dp,
-            showLabels = labels,
-            glow = glow,
-        )
-    }
+    return NavBarStyle(
+        widthFraction = width.coerceIn(0.5f, 1f),
+        heightScale = height.coerceIn(0.8f, 1.4f),
+        opacity = opacity.coerceIn(0.2f, 1f),
+        transparency = transparency.coerceIn(0f, 0.95f),
+        labelSpacing = spacing.coerceIn(0f, 16f).dp,
+        cornerRadius = corner.coerceIn(0f, 48f).dp,
+        showLabels = labels,
+        glow = glow,
+    )
 }

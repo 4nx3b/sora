@@ -62,6 +62,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -124,8 +126,12 @@ constructor(
     // stream was two files glued together: the song played for a few seconds, then went silent.
     private val dataSourceFactory =
         ResolvingDataSource.Factory(
+            // a deezer:// download (the Deezer module's encrypted cdn file) reads through the
+            // same ported decrypting reader the player plays it with
+            DeezerSchemeRouting(
             OkHttpDataSource.Factory(
                 OkHttpClient.Builder()
+                    .addInterceptor(SoundCloudPlaybackHeaders.interceptor)
                     .dns(object : Dns {
                         override fun lookup(hostname: String): List<InetAddress> {
                             val addresses = Dns.SYSTEM.lookup(hostname)
@@ -138,6 +144,7 @@ constructor(
                     })
                     .followAppProxy()
                     .build(),
+            ),
             ),
         ) { dataSpec ->
             val mediaId = dataSpec.key ?: error("No media id")
@@ -306,6 +313,47 @@ constructor(
 
         scope.launch { followBatches() }
         scope.launch { followAutoDownloads(context) }
+
+        // Neiro's "download only on Wi-Fi" (the BLOCKING badge): on a metered network the queue
+        // pauses and waits, the same hold offline mode puts it under, and carries on from wherever
+        // it was once the phone is back on Wi-Fi.
+        scope.launch {
+            var heldForWifi = false
+            val manager = context.getSystemService(android.net.ConnectivityManager::class.java)
+            val meteredFlow = kotlinx.coroutines.flow.callbackFlow {
+                val callback = object : android.net.ConnectivityManager.NetworkCallback() {
+                    override fun onCapabilitiesChanged(network: android.net.Network, caps: android.net.NetworkCapabilities) {
+                        trySend(manager?.isActiveNetworkMetered == true)
+                    }
+                    override fun onLost(network: android.net.Network) {
+                        trySend(manager?.isActiveNetworkMetered == true)
+                    }
+                }
+                trySend(manager?.isActiveNetworkMetered == true)
+                if (manager != null) {
+                    runCatching { manager.registerDefaultNetworkCallback(callback) }
+                }
+                awaitClose { if (manager != null) runCatching { manager.unregisterNetworkCallback(callback) } }
+            }
+            kotlinx.coroutines.flow.combine(
+                context.dataStore.data
+                    .map { it[com.mochyy.mochymusic.constants.DownloadWifiOnlyKey] ?: false }
+                    .distinctUntilChanged(),
+                meteredFlow,
+            ) { wifiOnly, isMetered -> wifiOnly && isMetered }
+                .distinctUntilChanged()
+                .collect { hold ->
+                    kotlinx.coroutines.withContext(Dispatchers.Main) {
+                        if (hold) {
+                            downloadManager.pauseDownloads()
+                            heldForWifi = true
+                        } else if (heldForWifi) {
+                            downloadManager.resumeDownloads()
+                            heldForWifi = false
+                        }
+                    }
+                }
+        }
 
         // Offline mode holds downloads where they are rather than failing them: they carry on
         // when it's turned off. Only then - resuming whenever offline mode reads off, at every

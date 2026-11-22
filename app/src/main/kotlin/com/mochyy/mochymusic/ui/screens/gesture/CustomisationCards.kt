@@ -67,6 +67,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import com.mochyy.mochymusic.ui.component.pressBounce
 import com.mochyy.mochymusic.ui.screens.audiolab.LabColors
+import com.mochyy.mochymusic.ui.component.sliderDragScrollLock
 import com.mochyy.mochymusic.ui.theme.InterFontFamily
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
@@ -291,6 +292,19 @@ private fun RoundingSwatch(radiusPx: Float, modifier: Modifier) {
 // a bare line like the mock: the bright part is how far along it is, tap or drag anywhere on it
 @Composable
 private fun BareSlider(fraction: Float, onFractionChange: (Float) -> Unit, enabled: Boolean) {
+    // the liquid glass sliders switch, when it is on, is the look of every slider in the app
+    val glass = com.mochyy.mochymusic.ui.component.liquid.LocalLiquidGlass.current
+    if (glass.surface(glass.sliders)) {
+        com.mochyy.mochymusic.ui.component.liquid.LiquidGlassSlider(
+            value = fraction.coerceIn(0f, 1f),
+            onValueChange = onFractionChange,
+            enabled = enabled,
+            modifier = Modifier
+                .fillMaxWidth()
+                .sliderDragScrollLock(),
+        )
+        return
+    }
     var widthPx by remember { mutableFloatStateOf(1f) }
     val shown = fraction.coerceIn(0f, 1f)
     val currentShown by androidx.compose.runtime.rememberUpdatedState(shown)
@@ -312,6 +326,7 @@ private fun BareSlider(fraction: Float, onFractionChange: (Float) -> Unit, enabl
             .fillMaxWidth()
             .height(20.dp)
             .onSizeChanged { widthPx = it.width.toFloat().coerceAtLeast(1f) }
+            .sliderDragScrollLock()
             .pointerInput(enabled) { if (enabled) detectTapGestures { offset -> updateFromX(offset.x) } }
             .draggable(
                 state = dragState,

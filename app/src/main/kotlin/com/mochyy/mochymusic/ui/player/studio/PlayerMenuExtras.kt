@@ -30,7 +30,9 @@ import com.mochyy.mochymusic.playback.ExoDownloadService
 import com.mochyy.mochymusic.playback.PlayerConnection
 import com.mochyy.mochymusic.ui.menu.AddToPlaylistDialog
 import com.mochyy.mochymusic.utils.rememberPreference
+import com.mochyy.mochymusic.utils.dataStore
 import kotlinx.coroutines.flow.flowOf
+import com.mochyy.mochymusic.utils.get
 
 /** What the extra chevron actions do, and whether each one is on right now. */
 class PlayerMenuExtras internal constructor(
@@ -86,6 +88,18 @@ class PlayerMenuExtras internal constructor(
         if (song.id.startsWith("LOCAL_")) {
             toast(context.getString(R.string.local_already_on_phone))
             return
+        }
+        // Neiro's external downloader: with one named and on, the song's address goes to that app
+        if ((context.dataStore[com.mochyy.mochymusic.constants.ExternalDownloaderEnabledKey] ?: false)) {
+            val packageName = context.dataStore[com.mochyy.mochymusic.constants.ExternalDownloaderPackageKey].orEmpty()
+            if (packageName.isNotBlank() &&
+                com.mochyy.mochymusic.playback.handToExternalDownloader(
+                    context, packageName, com.mochyy.mochymusic.playback.externalDownloadUrl(song.id),
+                )
+            ) {
+                toast(context.getString(R.string.external_downloader_handed_off))
+                return
+            }
         }
         // the song has to be in the database for its download to be listed and played from there
         database.transaction { insert(song) }

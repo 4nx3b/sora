@@ -40,6 +40,30 @@ internal fun ProviderLogo(providerId: String, name: String, size: Dp) {
             contentScale = ContentScale.Crop,
             modifier = Modifier.size(size).clip(SquircleShape),
         )
+        "qobuz" -> Image(
+            painter = painterResource(R.drawable.provider_qobuz),
+            contentDescription = name,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.size(size).clip(SquircleShape),
+        )
+        "qobuzbackup" -> Image(
+            painter = painterResource(R.drawable.provider_qobuzbackup),
+            contentDescription = name,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.size(size).clip(SquircleShape),
+        )
+        "deezer" -> Image(
+            painter = painterResource(R.drawable.provider_deezer),
+            contentDescription = name,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.size(size).clip(SquircleShape),
+        )
+        "soundcloud" -> Image(
+            painter = painterResource(R.drawable.provider_soundcloud),
+            contentDescription = name,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.size(size).clip(SquircleShape),
+        )
         PlayingFrom.Device, PlayingFrom.Downloads -> Box(
             contentAlignment = Alignment.Center,
             modifier = Modifier.size(size).clip(SquircleShape).background(Color.White.copy(alpha = 0.9f)),

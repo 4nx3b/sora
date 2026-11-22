@@ -6,8 +6,12 @@ import androidx.compose.ui.res.stringResource
 import com.mochyy.mochymusic.R
 import com.mochyy.mochymusic.module.ModuleChoice
 import com.mochyy.mochymusic.module.applemusic.AppleMusicModule
+import com.mochyy.mochymusic.module.deezer.DeezerModule
 import com.mochyy.mochymusic.module.jiosaavn.JioSaavnModule
 import com.mochyy.mochymusic.module.monochrome.MonochromeModule
+import com.mochyy.mochymusic.module.qobuz.QobuzModule
+import com.mochyy.mochymusic.module.qobuzbackup.QobuzBackupModule
+import com.mochyy.mochymusic.module.soundcloud.SoundCloudModule
 import com.mochyy.mochymusic.modules.ModuleEntry
 import com.mochyy.mochymusic.modules.ModuleOrigin
 import java.util.Locale
@@ -20,6 +24,10 @@ internal fun builtInModuleDescription(entry: ModuleEntry): String {
         is AppleMusicModule -> R.string.builtin_module_apple_description
         is MonochromeModule -> R.string.builtin_module_monochrome_description
         is JioSaavnModule -> R.string.builtin_module_jiosaavn_description
+        is QobuzModule -> R.string.builtin_module_qobuz_description
+        is QobuzBackupModule -> R.string.builtin_module_qobuzbackup_description
+        is DeezerModule -> R.string.builtin_module_deezer_description
+        is SoundCloudModule -> R.string.builtin_module_soundcloud_description
         else -> return entry.module.info.description
     }
     return stringResource(resource)

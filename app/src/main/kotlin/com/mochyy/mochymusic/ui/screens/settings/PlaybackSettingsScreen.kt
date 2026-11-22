@@ -37,6 +37,7 @@ import com.mochyy.mochymusic.ui.component.DefaultPlayerSeekBarSlider
 import com.mochyy.mochymusic.ui.component.SettingsItem
 import com.mochyy.mochymusic.ui.component.SubSettingsScaffold
 import com.mochyy.mochymusic.ui.component.SubSettingsSearchBar
+import com.mochyy.mochymusic.ui.screens.settings.modules.ModulesRoute
 import com.mochyy.mochymusic.utils.rememberPreference
 
 const val PlaybackSettingsRoute = "playback_settings"
@@ -51,6 +52,8 @@ fun PlaybackSettingsScreen(navController: NavController) {
         onBack = { navController.navigateUp() },
         searchBar = { SubSettingsSearchBar(query = query, onQueryChange = { query = it }) },
     ) {
+        // the player's own page and the modules that add sources and looks, entered from here
+        SettingsSection(stringResource(R.string.settings_player_pages), playerPageItems(navController).matching(query))
         SettingsSection(stringResource(R.string.settings_section_listening), listeningItems().matching(query))
         SettingsSection(stringResource(R.string.settings_section_failures), failureItems().matching(query))
         SettingsSection(stringResource(R.string.settings_section_content_preferences), contentItems().matching(query))
@@ -59,6 +62,25 @@ fun PlaybackSettingsScreen(navController: NavController) {
         Spacer(Modifier.height(140.dp))
     }
 }
+
+// the pages that live under playback: what the open player shows, and the modules that add to the app
+@Composable
+private fun playerPageItems(navController: NavController): List<SettingsItem> = listOf(
+    linkItem(
+        key = "Now playing",
+        title = stringResource(R.string.settings_now_playing),
+        description = stringResource(R.string.settings_now_playing_link_desc),
+        icon = painterResource(R.drawable.lyrics),
+        onClick = { navController.navigate(NowPlayingSettingsRoute) },
+    ),
+    linkItem(
+        key = "Modules",
+        title = stringResource(R.string.settings_modules_category),
+        description = stringResource(R.string.settings_modules_link_desc),
+        icon = painterResource(R.drawable.library_add),
+        onClick = { navController.navigate(ModulesRoute) },
+    ),
+)
 
 @Composable
 private fun listeningItems(): List<SettingsItem> {

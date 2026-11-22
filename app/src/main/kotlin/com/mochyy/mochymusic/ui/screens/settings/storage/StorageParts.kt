@@ -59,6 +59,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mochyy.mochymusic.ui.component.pressBounce
+import com.mochyy.mochymusic.ui.component.sliderDragScrollLock
 import com.mochyy.mochymusic.ui.theme.InterFontFamily
 import kotlin.math.roundToInt
 import com.mochyy.mochymusic.ui.component.RemoteFocus
@@ -193,6 +194,25 @@ internal fun StepSlider(
     val haptic = LocalHapticFeedback.current
     val index = steps.indexOf(value).takeIf { it >= 0 } ?: steps.indices.minBy { kotlin.math.abs(steps[it] - value) }
     val last = (steps.size - 1).toFloat()
+
+    // the liquid glass sliders switch, when it is on, is the look of every slider in the app;
+    // the step snapping rides on top of the glass capsule as it does on the pill below
+    val glass = com.mochyy.mochymusic.ui.component.liquid.LocalLiquidGlass.current
+    if (glass.surface(glass.sliders)) {
+        com.mochyy.mochymusic.ui.component.liquid.LiquidGlassSlider(
+            value = index / last,
+            onValueChange = { fraction ->
+                val i = (fraction * last).roundToInt()
+                if (i != index) {
+                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    onValueChange(steps[i])
+                }
+            },
+            modifier = modifier.sliderDragScrollLock(),
+        )
+        return
+    }
+
     // follows the finger exactly while dragging, then springs onto the step it lands on
     var dragFraction by remember { mutableFloatStateOf(-1f) }
     val settled by animateFloatAsState(index / last, spring(dampingRatio = 0.8f, stiffness = 420f), label = "sliderFill")
@@ -216,6 +236,7 @@ internal fun StepSlider(
 
     Box(
         modifier
+            .sliderDragScrollLock()
             .fillMaxWidth()
             .height(SliderHeight + 8.dp)
             .pointerInput(steps) {

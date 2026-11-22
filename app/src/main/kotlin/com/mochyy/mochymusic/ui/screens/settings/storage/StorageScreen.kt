@@ -39,17 +39,28 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.mochyy.mochymusic.R
+import com.mochyy.mochymusic.constants.CanvasVideoCacheLimitKey
+import com.mochyy.mochymusic.constants.DownloadWifiOnlyKey
+import com.mochyy.mochymusic.constants.ExternalDownloaderEnabledKey
+import com.mochyy.mochymusic.constants.ExternalDownloaderPackageKey
 import com.mochyy.mochymusic.constants.MaxSongCacheSizeKey
 import com.mochyy.mochymusic.playback.ExportStep
 import com.mochyy.mochymusic.playback.MoveStep
 import com.mochyy.mochymusic.playback.StoredKind
+import com.mochyy.mochymusic.module.AccountState
+import com.mochyy.mochymusic.module.ModuleFeature
 import com.mochyy.mochymusic.ui.component.LocalMenuState
 import com.mochyy.mochymusic.ui.component.SubSettingsScaffold
+import com.mochyy.mochymusic.ui.screens.audiolab.ProviderOrder
+import com.mochyy.mochymusic.ui.screens.audiolab.providerLogo
 import com.mochyy.mochymusic.ui.screens.library.showConfirm
+import com.mochyy.mochymusic.ui.screens.settings.integrations.backup.BackupRoute
 import com.mochyy.mochymusic.utils.rememberPreference
 import com.mochyy.mochymusic.viewmodels.DriveUsage
+import com.mochyy.mochymusic.viewmodels.ModulesViewModel
 import com.mochyy.mochymusic.viewmodels.StorageUsage
 import com.mochyy.mochymusic.viewmodels.StorageViewModel
+import androidx.compose.runtime.setValue
 
 const val StorageRoute = "storage_settings"
 
@@ -57,7 +68,11 @@ const val StorageRoute = "storage_settings"
 private val CacheLimitSteps = listOf(0, 256, 512, 1024, 2048, 4096, 8192, -1)
 
 @Composable
-fun StorageScreen(navController: NavController, viewModel: StorageViewModel = hiltViewModel()) {
+fun StorageScreen(
+    navController: NavController,
+    viewModel: StorageViewModel = hiltViewModel(),
+    modules: ModulesViewModel = hiltViewModel(),
+) {
     val usage by viewModel.usage.collectAsState()
     val downloads by viewModel.downloads.collectAsState()
     val (cacheLimit, setCacheLimit) = rememberPreference(MaxSongCacheSizeKey, 1024)
@@ -94,6 +109,30 @@ fun StorageScreen(navController: NavController, viewModel: StorageViewModel = hi
         ClearButtons(viewModel, downloadCount = downloads?.size ?: 0, usage = usage)
 
         Spacer(Modifier.height(26.dp))
+        CanvasCacheCard()
+
+        Spacer(Modifier.height(26.dp))
+        SectionText(stringResource(R.string.storage_backup_title))
+        Spacer(Modifier.height(10.dp))
+        StorageActionButton(
+            label = stringResource(R.string.integration_backup_name),
+            detail = stringResource(R.string.integration_backup_desc),
+            onClick = { navController.navigate(BackupRoute) },
+        )
+
+        // Neiro's downloads rules: hold the queue to Wi-Fi, or hand tracks to another app
+        Spacer(Modifier.height(26.dp))
+        SectionText(stringResource(R.string.storage_downloads_rules_title))
+        Spacer(Modifier.height(10.dp))
+        DownloadsRulesCard()
+
+        // where each download comes from, moved in from the audio quality page (Neiro keeps it on storage)
+        Spacer(Modifier.height(26.dp))
+        SectionText(stringResource(R.string.quality_download_order))
+        Spacer(Modifier.height(10.dp))
+        DownloadOrderCard(modules, navController)
+
+        Spacer(Modifier.height(26.dp))
         SectionText(stringResource(R.string.storage_or))
         Spacer(Modifier.height(14.dp))
         PlaceButtons(viewModel, downloadCount = downloads?.size ?: 0)
@@ -106,6 +145,60 @@ fun StorageScreen(navController: NavController, viewModel: StorageViewModel = hi
 @Composable
 private fun SectionText(text: String) {
     Text(text, style = storageText(17f, FontWeight.SemiBold), modifier = Modifier.padding(horizontal = 2.dp))
+}
+
+// the download order card, as it stood on the audio quality page: youtube always there for downloads
+@Composable
+private fun DownloadOrderCard(modules: ModulesViewModel, navController: NavController) {
+    val entries by modules.entries.collectAsState()
+    val downloadOrder by modules.downloadOrder.collectAsState()
+    val youTubeOn by modules.youTubeEnabled.collectAsState()
+
+    val statusSignIn = stringResource(R.string.aq_status_sign_in)
+    val statusSignInAgain = stringResource(R.string.aq_status_sign_in_again)
+    val statusOn = stringResource(R.string.aq_status_on)
+    val youTubeForDownloads = stringResource(R.string.quality_download_order_youtube)
+    val usable = { id: String ->
+        id == com.mochyy.mochymusic.modules.SourceModules.YouTubeId ||
+            entries.any { it.id == id && it.enabled && it.account is AccountState.SignedIn }
+    }
+    val sourceModules = entries.filter { it.adds(ModuleFeature.AudioSource) }
+    val shown = downloadOrder.filter { id -> id == com.mochyy.mochymusic.modules.SourceModules.YouTubeId || sourceModules.any { it.id == id } }
+
+    Column {
+        ProviderOrder(
+            order = shown,
+            name = modules::nameOf,
+            logo = ::providerLogo,
+            usable = usable,
+            status = { id ->
+                if (id == com.mochyy.mochymusic.modules.SourceModules.YouTubeId) {
+                    youTubeForDownloads
+                } else {
+                    entries.firstOrNull { it.id == id }?.let { entry ->
+                        when {
+                            entry.account is AccountState.SignedOut -> statusSignIn
+                            entry.account is AccountState.Expired -> statusSignInAgain
+                            entry.enabled -> statusOn
+                            else -> null
+                        }
+                    }
+                }
+            },
+            // youtube is always there for downloads, so only a module's row has somewhere to go
+            onTap = { id ->
+                if (id != com.mochyy.mochymusic.modules.SourceModules.YouTubeId) {
+                    navController.navigate(com.mochyy.mochymusic.ui.screens.settings.modules.moduleRoute(id))
+                }
+            },
+            onReorder = modules::setVisibleDownloadOrder,
+        )
+        Text(
+            text = stringResource(R.string.quality_download_order_footnote),
+            style = storageText(12f, FontWeight.Medium, StorageMuted, -0.1f),
+            modifier = Modifier.padding(top = 8.dp, start = 2.dp, end = 2.dp),
+        )
+    }
 }
 
 @Composable
@@ -311,6 +404,107 @@ private fun ClearButtons(viewModel: StorageViewModel, downloadCount: Int, usage:
             label = stringResource(R.string.storage_manage_downloads),
             enabled = downloadCount > 0,
             onClick = { menuState.showManageDownloadsSheet(viewModel) },
+        )
+        StorageActionButton(
+            label = stringResource(R.string.storage_clear_lyrics_cache),
+            danger = true,
+            enabled = !busy,
+            onClick = { viewModel.clearLyricsCache() },
+        )
+    }
+}
+
+// Neiro's "download only on Wi-Fi" (BLOCKING) and the external downloader hand-off
+@Composable
+private fun DownloadsRulesCard() {
+    val (wifiOnly, onWifiOnly) = rememberPreference(DownloadWifiOnlyKey, false)
+    val (externalOn, onExternalOn) = rememberPreference(ExternalDownloaderEnabledKey, false)
+    val (externalPackage, onExternalPackage) = rememberPreference(ExternalDownloaderPackageKey, "")
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val metered = remember {
+        (context.getSystemService(android.content.Context.CONNECTIVITY_SERVICE) as? android.net.ConnectivityManager)
+            ?.isActiveNetworkMetered == true
+    }
+    var editPackage by remember { androidx.compose.runtime.mutableStateOf(false) }
+    com.mochyy.mochymusic.ui.component.SettingsGroup(
+        style = com.mochyy.mochymusic.ui.component.SettingsGroupStyle.Grouped,
+        items = listOf(
+            com.mochyy.mochymusic.ui.screens.settings.wifiOnlyItem(
+                checked = wifiOnly,
+                onCheckedChange = onWifiOnly,
+                blocking = wifiOnly && metered,
+            ),
+            com.mochyy.mochymusic.ui.screens.settings.externalDownloaderItem(
+                checked = externalOn,
+                onCheckedChange = onExternalOn,
+                packageName = externalPackage,
+                onEdit = { editPackage = true },
+            ),
+        ),
+    )
+    if (editPackage) {
+        com.mochyy.mochymusic.ui.component.TextFieldDialog(
+            title = { Text(stringResource(R.string.storage_external_downloader_package)) },
+            placeholder = { Text("com.example.downloader") },
+            initialTextFieldValue = androidx.compose.ui.text.input.TextFieldValue(externalPackage),
+            isInputValid = { it.isNotBlank() },
+            onDone = { value ->
+                onExternalPackage(value.trim())
+                editPackage = false
+            },
+            onDismiss = { editPackage = false },
+        )
+    }
+}
+
+// the canvas loops: how much room they take, the ceiling the player keeps them under, and emptying them
+@Composable
+private fun CanvasCacheCard() {
+    val (limit, onLimit) = rememberPreference(CanvasVideoCacheLimitKey, 300)
+    val startingLimit = remember { limit }
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    val refresh = remember { androidx.compose.runtime.mutableIntStateOf(0) }
+    val bytes by androidx.compose.runtime.produceState(0L, refresh.intValue) {
+        value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            com.mochyy.mochymusic.ui.player.canvasVideoCacheBytes(context)
+        }
+    }
+    StorageCardColumn {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier
+                    .size(26.dp)
+                    .clip(CircleShape)
+                    .background(Color(0xFFDADADA)),
+            ) {
+                Icon(painterResource(R.drawable.sparks), contentDescription = null, tint = StorageCard, modifier = Modifier.size(16.dp))
+            }
+            Spacer(Modifier.width(12.dp))
+            Text(stringResource(R.string.storage_canvas_cache), style = storageText(15f, FontWeight.SemiBold), modifier = Modifier.weight(1f))
+            Text(formatSize(bytes), style = storageText(15f, FontWeight.Bold))
+        }
+        Spacer(Modifier.height(12.dp))
+        StepSlider(steps = listOf(128, 256, 300, 512, 1024, 2048), value = limit, onValueChange = onLimit)
+        if (limit != startingLimit) {
+            Text(
+                stringResource(R.string.storage_cache_applies_later),
+                style = storageText(12f, FontWeight.Medium, StorageMuted, -0.1f),
+                modifier = Modifier.padding(top = 6.dp),
+            )
+        }
+        Spacer(Modifier.height(10.dp))
+        StorageActionButton(
+            label = stringResource(R.string.storage_clear_canvas_cache),
+            danger = true,
+            enabled = bytes > 0L,
+            onClick = {
+                scope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                    com.mochyy.mochymusic.ui.player.clearCanvasVideoCache(context)
+                    refresh.intValue++
+                }
+            },
         )
     }
 }

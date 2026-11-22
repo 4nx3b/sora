@@ -1,6 +1,7 @@
 // NavigationBarSettingsScreen.kt
-// Neiro's Navigation bar page (SettingsSheet's NavigationBarSettingsPage): the glass glow and its strength, labels
-// under the tabs, and the standard bar's six dimension dials with a reset. AppNavigationBar draws them.
+// Neiro's Navigation bar page (SettingsSheet's NavigationBarSettingsPage): the glass glow and
+// its strength, the labels under the tabs, and the six dimension dials — which now shape both
+// the standard bar and the Liquid Glass bar, so every dial moves something on screen.
 
 package com.mochyy.mochymusic.ui.screens.settings
 
@@ -16,7 +17,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.datastore.preferences.core.Preferences
 import androidx.navigation.NavController
 import com.mochyy.mochymusic.R
 import com.mochyy.mochymusic.constants.NavBarCornerRadiusDefault
@@ -53,35 +53,6 @@ fun NavigationBarSettingsScreen(navController: NavController) {
         onBack = { navController.navigateUp() },
         backLabel = stringResource(R.string.settings_customisation_category),
     ) {
-        val (behavior, onBehavior) = com.mochyy.mochymusic.utils.rememberEnumPreference(
-            com.mochyy.mochymusic.constants.MiniPlayerBarBehaviorKey,
-            com.mochyy.mochymusic.constants.MiniPlayerBarBehavior.ADAPTIVE,
-        )
-        SettingsSection(
-            stringResource(R.string.navigation_bar_compact_behavior),
-            listOf(
-                SettingsItem(
-                    title = { Text(stringResource(R.string.navigation_bar_compact_behavior)) },
-                    description = {
-                        androidx.compose.foundation.layout.Column {
-                            Text(stringResource(R.string.navigation_bar_compact_behavior_desc))
-                            com.mochyy.mochymusic.ui.screens.audiolab.LabSegmented(
-                                options = listOf(
-                                    stringResource(R.string.navigation_bar_compact_adaptive),
-                                    stringResource(R.string.navigation_bar_compact_always_expanded),
-                                    stringResource(R.string.navigation_bar_compact_always_compact),
-                                ),
-                                selectedIndex = behavior.ordinal,
-                                onSelect = { onBehavior(com.mochyy.mochymusic.constants.MiniPlayerBarBehavior.entries[it]) },
-                                modifier = Modifier.padding(top = 10.dp),
-                            )
-                        }
-                    },
-                    highlightKey = "Mini player and bar behavior",
-                    searchText = "mini player bar behavior compact adaptive always expanded collapse fold",
-                ),
-            ),
-        )
         SettingsSection(
             stringResource(R.string.navigation_bar_general),
             listOf(
@@ -163,6 +134,8 @@ fun NavigationBarSettingsScreen(navController: NavController) {
     }
 }
 
+private fun near(a: Float, b: Float) = kotlin.math.abs(a - b) < 0.001f
+
 @Composable
 private fun NavBarFooter(text: String) {
     Text(
@@ -177,7 +150,7 @@ private fun NavBarFooter(text: String) {
 @Composable
 private fun dialItem(
     title: String,
-    key: Preferences.Key<Float>,
+    key: androidx.datastore.preferences.core.Preferences.Key<Float>,
     default: Float,
     range: ClosedFloatingPointRange<Float>,
     steps: Int,
@@ -205,5 +178,3 @@ private fun dialItem(
         searchText = title,
     )
 }
-
-private fun near(a: Float, b: Float) = kotlin.math.abs(a - b) < 0.001f

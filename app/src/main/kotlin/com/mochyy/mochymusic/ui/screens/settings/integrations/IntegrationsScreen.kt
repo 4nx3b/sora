@@ -18,21 +18,24 @@ import com.mochyy.mochymusic.R
 import com.mochyy.mochymusic.constants.WorkOutGenresKey
 import com.mochyy.mochymusic.utils.rememberPreference
 import com.mochyy.mochymusic.scrobble.ScrobbleSite
+import com.mochyy.mochymusic.ui.component.LocalZoomOutOverlayState
 import com.mochyy.mochymusic.ui.component.SubSettingsScaffold
+import com.mochyy.mochymusic.ui.screens.devices.rememberDevicesLink
 import com.mochyy.mochymusic.ui.screens.settings.importsync.YouTubeSyncRoute
-import com.mochyy.mochymusic.ui.screens.settings.integrations.backup.BackupRoute
 import com.mochyy.mochymusic.ui.screens.settings.integrations.discord.DiscordRoute
+import com.mochyy.mochymusic.ui.screens.devices.showDeviceIntegration
 
 const val IntegrationsRoute = "integrations_settings"
 
 // the youtube music logo is a red disc, this fills its corners so it sits as a tile like the others
 private val YouTubeMusicRed = Color(0xFFFF0000)
 
-// backup has no brand of its own, so its white cloud sits on a plain blue tile
-private val BackupBlue = Color(0xFF2F7CF6)
-
 @Composable
 fun IntegrationsScreen(navController: NavController) {
+    // device integration is a sheet over whatever page asked for it
+    val sheets = LocalZoomOutOverlayState.current
+    val devices = rememberDevicesLink()
+
     SubSettingsScaffold(
         title = stringResource(R.string.integrations),
         onBack = { navController.navigateUp() },
@@ -81,19 +84,25 @@ fun IntegrationsScreen(navController: NavController) {
                 iconBackground = YouTubeMusicRed,
                 onClick = { navController.navigate(YouTubeSyncRoute) },
             )
+            // the listen together rooms, ported from Neiro, live here with the other things that reach out
             IntegrationRow(
-                name = stringResource(R.string.sources),
-                description = stringResource(R.string.addon_sources_desc),
-                icon = R.drawable.extension,
-                onClick = { navController.navigate(SourcesRoute) },
+                name = stringResource(R.string.ported_listen_together),
+                description = stringResource(R.string.settings_listen_together_desc),
+                icon = R.drawable.group,
+                onClick = { navController.navigate("listen_together") },
+            )
+            // device integration opens as a sheet rather than its own page
+            IntegrationRow(
+                name = stringResource(R.string.devices_title),
+                description = stringResource(R.string.settings_devices_link_desc),
+                icon = R.drawable.cast_connected,
+                onClick = { sheets.showDeviceIntegration(devices) },
             )
             IntegrationRow(
-                name = stringResource(R.string.integration_backup_name),
-                description = stringResource(R.string.integration_backup_desc),
-                icon = R.drawable.backup,
-                iconBackground = BackupBlue,
-                iconPadding = 7.dp,
-                onClick = { navController.navigate(BackupRoute) },
+                name = stringResource(R.string.sources),
+                description = stringResource(R.string.sources_row_desc),
+                icon = R.drawable.extension,
+                onClick = { navController.navigate(SourcesRoute) },
             )
         }
 

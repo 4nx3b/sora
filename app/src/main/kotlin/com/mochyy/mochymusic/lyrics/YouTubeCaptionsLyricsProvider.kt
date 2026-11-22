@@ -4,6 +4,8 @@ package com.mochyy.mochymusic.lyrics
 
 import android.content.Context
 import com.music.innertube.YouTube
+import com.mochyy.mochymusic.utils.dataStore
+import com.mochyy.mochymusic.utils.get
 
 /**
  * The video's captions: YouTube's auto-generated ones, or a track uploaded in the same language.
@@ -14,7 +16,7 @@ object YouTubeCaptionsLyricsProvider : LyricsProvider {
     // the registry key, like the other YouTube sources: this is what gets stored with the lyrics
     override val name = "YouTubeCaptions"
 
-    override fun isEnabled(context: Context) = true
+    override fun isEnabled(context: Context) = context.dataStore[com.mochyy.mochymusic.constants.EnableYouTubeCaptionsKey] ?: true
 
     override suspend fun getLyrics(
         id: String,

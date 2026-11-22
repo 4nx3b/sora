@@ -469,9 +469,11 @@
     <string name="check">Check</string>
     <string name="remove">Remove</string>
     <string name="sources">Sources</string>
-    <string name="addon_sources">Addon sources</string>
-    <string name="add_addon_source">Add addon source</string>
-    <string name="addon_sources_desc">An addon is an ordinary HTTP server that answers /manifest.json, /search and /stream with JSON — no code ever runs on this side.</string>
+    <string name="sources_tab_libraries">Remote libraries</string>
+    <string name="sources_row_desc">The order songs play from, and the WebDAV and SMB libraries</string>
+    <string name="sources_tab_sources">Sources</string>
+    <string name="sources_footer">Each song plays from the first source here that has it. Drag a row to change the order; a source switched off keeps its place but is skipped.</string>
+
     <string name="remote_libraries">Remote libraries</string>
     <string name="add_remote_library">Add remote library</string>
     <string name="remote_libraries_desc">A WebDAV URL or an SMB share whose audio files play straight from the server.</string>

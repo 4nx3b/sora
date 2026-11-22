@@ -53,6 +53,7 @@ val SettingsPaneRoutes = setOf(
     "gesture_settings",
     StorageRoute,
     IntegrationsRoute,
+    com.mochyy.mochymusic.ui.screens.settings.integrations.SourcesRoute,
     DiscordRoute,
     ScrobbleServiceRoute,
     com.mochyy.mochymusic.ui.screens.settings.integrations.ListenBrainzRoute,

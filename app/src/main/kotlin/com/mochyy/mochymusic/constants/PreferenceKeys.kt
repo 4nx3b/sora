@@ -70,9 +70,9 @@ val CustomFontNameKey = stringPreferencesKey("customFontName")
 // an absolute path under filesDir/fonts, the picked or downloaded file copied in so its grant never runs out
 val CustomFontPathKey = stringPreferencesKey("customFontPath")
 
-// Neiro's "Mini player and bar behavior": when the mini player and the tabs fold into the compact row
-enum class MiniPlayerBarBehavior { ADAPTIVE, ALWAYS_EXPANDED, ALWAYS_COMPACT }
-val MiniPlayerBarBehaviorKey = stringPreferencesKey("miniPlayerBarBehavior")
+// the navigation bar's own look: the glass glow (and its strength), the labels under the tabs,
+// and the six dimension dials. The dials shape both bars — the standard bar and the Liquid Glass
+// bar alike — so moving one always changes something on screen.
 val NavBarGlassGlowKey = booleanPreferencesKey("navBarGlassGlow")
 val NavBarGlassGlowIntensityKey = floatPreferencesKey("navBarGlassGlowIntensity")
 val NavBarShowLabelsKey = booleanPreferencesKey("navBarShowLabels")
@@ -163,6 +163,11 @@ val EnableQQMusicKey = booleanPreferencesKey("enableQQMusic")
 val EnableDeezerKey = booleanPreferencesKey("enableDeezer")
 val EnableLrcRedKey = booleanPreferencesKey("enableLrcRed")
 val EnableUnisonKey = booleanPreferencesKey("enableUnison")
+// the sources the lyrics page lists but had no switch of their own (Neiro's lyrics sources sheet)
+val EnableMuzoLyricsKey = booleanPreferencesKey("enableMuzoLyrics")
+val EnableYouTubeMusicLyricsKey = booleanPreferencesKey("enableYouTubeMusicLyrics")
+val EnableYouTubeSubtitleLyricsKey = booleanPreferencesKey("enableYouTubeSubtitle")
+val EnableYouTubeCaptionsKey = booleanPreferencesKey("enableYouTubeCaptions")
 val HideExplicitKey = booleanPreferencesKey("hideExplicit")
 val HideVideoSongsKey = booleanPreferencesKey("hideVideoSongs")
 // Neiro's "Square video thumbnails": music videos drawn as square, centre-cropped covers everywhere, the player included
@@ -526,6 +531,14 @@ val PlaylistEditLockKey = booleanPreferencesKey("playlistEditLock")
 val QuickPicksKey = stringPreferencesKey("discover")
 val PreferredLyricsProviderKey = stringPreferencesKey("lyricsProvider")
 val LyricsProviderOrderKey = stringPreferencesKey("lyricsProviderOrder")
+// Neiro's "prefer syllabic lyrics": on, word-synced results beat line-synced ones from a higher source; off, the source order decides
+val LyricsPreferSyllabicKey = booleanPreferencesKey("lyricsPreferSyllabic")
+
+// Neiro's storage page: downloads held to Wi-Fi, YouTube tracks handed to another app, and the canvas video cache
+val DownloadWifiOnlyKey = booleanPreferencesKey("downloadWifiOnly")
+val ExternalDownloaderEnabledKey = booleanPreferencesKey("externalDownloaderEnabled")
+val ExternalDownloaderPackageKey = stringPreferencesKey("externalDownloaderPackage")
+val CanvasVideoCacheLimitKey = intPreferencesKey("canvasVideoCacheLimitMb")
 val QueueEditLockKey = booleanPreferencesKey("queueEditLock")
 val ShowWrappedCardKey = booleanPreferencesKey("show_wrapped_card")
 val WrappedSeenKey = booleanPreferencesKey("wrapped_seen")

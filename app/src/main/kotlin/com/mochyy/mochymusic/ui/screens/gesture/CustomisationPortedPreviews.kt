@@ -65,7 +65,6 @@ import com.mochyy.mochymusic.constants.AodShowControlsKey
 import com.mochyy.mochymusic.constants.AodShowProgressKey
 import com.mochyy.mochymusic.constants.AodShowThumbnailKey
 import com.mochyy.mochymusic.constants.AodShowTimeLabelsKey
-import com.mochyy.mochymusic.constants.MiniPlayerBarBehavior
 import com.mochyy.mochymusic.ui.component.damageBoundary
 import com.mochyy.mochymusic.ui.component.liquid.LocalAppBackdrop
 import com.mochyy.mochymusic.ui.component.liquid.LocalLiquidGlass
@@ -109,11 +108,11 @@ private fun DrawScope.playerBehind() {
     pill(Ink, side, 80.5.dp.toPx(), 30.dp.toPx(), 4.5.dp.toPx())
 }
 
-// the navigation bar as its page sets it: width, height, corner, fill and labels, a lit tab sliding along it and,
-// with the glass glow on, a sheen running across after each slide
+// the navigation bar as its page sets it: width, height, corner, fill and labels, a lit tab sliding
+// along it and, with the glass glow on, a sheen running across after each slide
 @Composable
 internal fun NavBarStylePreview() {
-    val style = rememberNavBarStyle(glassBar = false)
+    val style = rememberNavBarStyle()
     val labels = animateFloatAsState(if (style.showLabels) 1f else 0f, ChangeSpec, label = "navPreviewLabels")
     val glow = animateFloatAsState(style.glow, ChangeSpec, label = "navPreviewGlow")
     val onScreen = rememberOnScreen()
@@ -195,87 +194,6 @@ internal fun NavBarStylePreview() {
                             Offset(x, top),
                             Size(band, height),
                         )
-                    }
-                }
-            },
-    )
-}
-
-// the mini player and the tabs as they fold: a list scrolls, and with Adaptive the bar falls away and the mini
-// player thins between the Home and Search circles, coming back when the list scrolls back; the other two hold one shape
-@Composable
-internal fun MiniBarBehaviorPreview(behavior: MiniPlayerBarBehavior) {
-    val onScreen = rememberOnScreen()
-    val held = rememberPicturesHeld(onScreen)
-    val scroll = remember { Animatable(0f) }
-    val adaptiveFold = remember { Animatable(0f) }
-    val adaptiveBy = animateFloatAsState(if (behavior == MiniPlayerBarBehavior.ADAPTIVE) 1f else 0f, ChangeSpec, label = "foldMode")
-    val pinned = animateFloatAsState(if (behavior == MiniPlayerBarBehavior.ALWAYS_COMPACT) 1f else 0f, ChangeSpec, label = "foldPinned")
-    val motion = AppMotion.enabled
-    LaunchedEffect(held, motion) {
-        if (!motion) {
-            adaptiveFold.snapTo(0f)
-            return@LaunchedEffect
-        }
-        while (true) {
-            awaitShown(held)
-            coroutineScope {
-                launch { adaptiveFold.animateTo(1f, StepSpec) }
-                scroll.animateTo(1f, StepSpec)
-            }
-            delay(HoldMs)
-            coroutineScope {
-                launch { adaptiveFold.animateTo(0f, StepSpec) }
-                scroll.animateTo(0f, StepSpec)
-            }
-            delay(RestMs)
-        }
-    }
-    Box(
-        Modifier
-            .fillMaxSize()
-            .trackOnScreen(onScreen)
-            .damageBoundary()
-            .drawBehind {
-                val fold = adaptiveBy.value * adaptiveFold.value + (1f - adaptiveBy.value) * pinned.value
-                val side = 10.dp.toPx()
-                // the list, scrolling up by a row's worth
-                translate(top = -scroll.value * 22.dp.toPx()) {
-                    var y = 12.dp.toPx()
-                    repeat(5) {
-                        drawRoundRect(Bone, Offset(side, y), Size(16.dp.toPx(), 16.dp.toPx()), CornerRadius(3.dp.toPx()))
-                        pill(Ink, side + 22.dp.toPx(), y + 3.dp.toPx(), 48.dp.toPx(), 4.dp.toPx())
-                        pill(BoneDim, side + 22.dp.toPx(), y + 10.dp.toPx(), 30.dp.toPx(), 3.dp.toPx())
-                        y += 22.dp.toPx()
-                    }
-                }
-                val barHeight = 18.dp.toPx()
-                val barTop = size.height - 10.dp.toPx() - barHeight
-                // the tabs fall away and fade as the stack folds
-                translate(top = fold * 14.dp.toPx()) {
-                    drawRoundRect(Bone, Offset(side, barTop), Size(size.width - side * 2, barHeight), CornerRadius(barHeight / 2f), alpha = 1f - fold)
-                    repeat(3) { i ->
-                        val cx = side + (size.width - side * 2) * (i + 0.5f) / 3f
-                        drawCircle(Ink, 2.5.dp.toPx(), Offset(cx, barTop + barHeight / 2f), alpha = 1f - fold)
-                    }
-                }
-                // the mini player drops to the bar's place and leaves room for the two circles
-                val miniHeight = 20.dp.toPx()
-                val circle = miniHeight
-                val expandedTop = barTop - 6.dp.toPx() - miniHeight
-                val miniTop = expandedTop + (barTop + (barHeight - miniHeight) / 2f - expandedTop) * fold
-                val inset = (circle + 4.dp.toPx()) * fold
-                val miniLeft = side + inset
-                val miniWidth = size.width - side * 2 - inset * 2
-                drawRoundRect(Bone, Offset(miniLeft, miniTop), Size(miniWidth, miniHeight), CornerRadius(miniHeight / 2f))
-                drawRoundRect(ArtFill, Offset(miniLeft + 3.dp.toPx(), miniTop + 3.dp.toPx()), Size(miniHeight - 6.dp.toPx(), miniHeight - 6.dp.toPx()), CornerRadius(3.dp.toPx()))
-                pill(Ink, miniLeft + miniHeight + 2.dp.toPx(), miniTop + 6.dp.toPx(), (miniWidth * 0.35f).coerceAtLeast(10.dp.toPx()), 3.5.dp.toPx())
-                drawCircle(Color.White, 3.dp.toPx(), Offset(miniLeft + miniWidth - miniHeight / 2f, miniTop + miniHeight / 2f))
-                if (fold > 0.01f) {
-                    listOf(side + circle / 2f, size.width - side - circle / 2f).forEach { cx ->
-                        val center = Offset(cx, miniTop + miniHeight / 2f)
-                        drawCircle(Bone, circle / 2f * fold, center, alpha = fold)
-                        drawCircle(Ink, 2.5.dp.toPx(), center, alpha = fold)
                     }
                 }
             },
