@@ -176,3 +176,13 @@
 -keepclasseswithmembers class com.music.shazamkit.models.** {
     kotlinx.serialization.KSerializer serializer(...);
 }
+
+# SMB remote libraries (smbj, the client Neiro speaks with): its SPNEGO/Kerberos
+# authenticator reaches for org.ietf.jgss (a JDK class Android never ships) and
+# its bundled mbassy bus reaches for javax.el — both optional paths this port
+# never takes (guest/NTLM/basic auth only), so R8 is told to let them go.
+-dontwarn org.ietf.jgss.**
+-dontwarn javax.el.**
+-dontwarn net.engio.mbassy.**
+# smbj itself is reached only from SmbLibrary/SmbDataSource, R8 shrinks the rest
+-keep class com.hierynomus.smbj.** { *; }

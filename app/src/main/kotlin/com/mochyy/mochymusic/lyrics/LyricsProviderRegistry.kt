@@ -13,6 +13,7 @@ object LyricsProviderRegistry {
         "BetterLyrics"    to BetterLyricsProvider,
         "Unison"          to UnisonLyricsProvider,
         "SimpMusic"       to SimpMusicLyricsProvider,
+        "Muzo"            to MuzoLyricsProvider,
         "LrcLib"          to LrcLibLyricsProvider,
         "Kugou"           to KuGouLyricsProvider,
         "NetEase"         to NetEaseLyricsProvider,
@@ -58,6 +59,7 @@ object LyricsProviderRegistry {
         "Paxsenix",
         "LrcRed",
         "SimpMusic",
+        "Muzo",
         "LrcLib",
         "Deezer",
         "YouTubeSubtitle",
@@ -86,6 +88,7 @@ object LyricsProviderRegistry {
         "BetterLyrics"    -> "Apple Music"
         "Unison"          -> "Unison"
         "SimpMusic"       -> "SimpMusic"
+        "Muzo"            -> "Muzo Data"
         "LrcLib"          -> "LrcLib"
         "Kugou"           -> "KuGou"
         "NetEase"         -> "NetEase"

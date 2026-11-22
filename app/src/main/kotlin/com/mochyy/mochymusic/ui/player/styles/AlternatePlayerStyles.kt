@@ -86,8 +86,8 @@ fun AlternatePlayerStyle(
         PlayerStyle.BEDSIDE -> com.mochyy.mochymusic.ui.player.bedside.BedsidePlayerStyle(actions, modifier, preview)
         PlayerStyle.BEDSIDE_TILES -> com.mochyy.mochymusic.ui.player.bedside.BedsideTilesStyle(actions, modifier, preview)
         PlayerStyle.NAMIDA -> com.mochyy.mochymusic.ui.player.namida.NamidaPlayerStyle(actions, modifier, preview)
-        PlayerStyle.APPLE_MUSIC -> com.mochyy.mochymusic.ui.player.applemusic.AppleMusicPlayerStyle(actions, modifier, preview)
-        PlayerStyle.TIKTOK -> com.mochyy.mochymusic.ui.player.tiktok.TikTokPlayerStyle(actions, modifier, preview)
+        PlayerStyle.APPLE_MUSIC -> com.mochyy.mochymusic.ported.PortedPlayerHost(style, actions, modifier, preview)
+        PlayerStyle.TIKTOK -> com.mochyy.mochymusic.ported.PortedPlayerHost(style, actions, modifier, preview)
         PlayerStyle.MODULE -> ModulePlayerStyle(actions, modifier, preview)
         PlayerStyle.FLAGSHIP, PlayerStyle.CLASSIC, PlayerStyle.TURNTABLE -> Unit
     }
@@ -228,7 +228,17 @@ internal class StyleInsets(val start: Dp, val top: Dp, val end: Dp, val bottom: 
 internal fun styleInsets(landscape: Boolean): StyleInsets {
     val direction = androidx.compose.ui.platform.LocalLayoutDirection.current
     val sides = WindowInsets.navigationBars.union(WindowInsets.displayCutout).asPaddingValues()
-    val status = if (landscape) 0.dp else WindowInsets.stableStatusBars.asPaddingValues().calculateTopPadding()
+    // namida reads viewPadding.top, which keeps the notch height even while the status bar is
+    // hidden; the cutout inset is what still says where the camera strip is then, so both are
+    // unioned and the style never lays its top row inside the notch
+    val status = if (landscape) {
+        0.dp
+    } else {
+        maxOf(
+            WindowInsets.stableStatusBars.asPaddingValues().calculateTopPadding(),
+            WindowInsets.displayCutout.asPaddingValues().calculateTopPadding(),
+        )
+    }
     return StyleInsets(
         start = sides.calculateStartPadding(direction),
         top = status,
@@ -734,6 +744,7 @@ private fun TimelinePlayerStyle(actions: StyleActions, modifier: Modifier, previ
                     fallbackUrl = track.artwork,
                     modifier = Modifier
                         .size(if (landscape) icon * 0.86f else icon)
+                        
                         .clip(RoundedCornerShape(icon * 0.26f))
                         .background(Color.White.copy(alpha = 0.08f)),
                 ) { url, pictureModifier ->

@@ -253,6 +253,7 @@ extensions.configure<ApplicationExtension> {
         jvmToolchain(21)
         compilerOptions {
             freeCompilerArgs.add("-Xannotation-default-target=param-property")
+            freeCompilerArgs.add("-Xcontext-parameters")
             jvmTarget.set(JvmTarget.JVM_21)
         }
     }
@@ -389,8 +390,12 @@ dependencies {
     // keep composition inspection tables reachable. Nothing in main/ imports it and there are
     // no @Preview functions, so debug-only costs us nothing.
     debugImplementation(libs.compose.ui.tooling)
+    // debug diagnostics, ported from Neiro: memory leaks in debug builds, its
+    // launcher icon kept off in app/src/debug/res/values/leakcanary.xml
+    debugImplementation("com.squareup.leakcanary:leakcanary-android:2.14")
     implementation(libs.compose.animation)
     implementation(libs.compose.reorderable)
+    implementation(libs.squigglyslider)
 
     implementation(libs.viewmodel)
     implementation(libs.viewmodel.compose)
@@ -489,6 +494,9 @@ dependencies {
     implementation(libs.androidx.core.splashscreen)
     implementation(libs.androidx.webkit)
 
+    implementation("io.github.kyant0:shapes:1.2.0")
+    // SMB remote libraries, the same client Neiro speaks with (data/smb)
+    implementation("com.hierynomus:smbj:0.15.0")
     testImplementation(libs.junit)
     androidTestImplementation(libs.junit)
     androidTestImplementation("androidx.test:runner:1.6.2")

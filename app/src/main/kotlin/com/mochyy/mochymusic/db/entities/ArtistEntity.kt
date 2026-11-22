@@ -20,6 +20,9 @@ data class ArtistEntity(
     val channelId: String? = null,
     val lastUpdateTime: LocalDateTime = LocalDateTime.now(),
     val bookmarkedAt: LocalDateTime? = null,
+    // Neiro/ArchiveTune port: when the listener blocked this artist; null while unblocked
+    @ColumnInfo(name = "blockedAt", defaultValue = "NULL")
+    val blockedAt: LocalDateTime? = null,
     @ColumnInfo(name = "isLocal", defaultValue = false.toString())
     val isLocal: Boolean = false
 ) {

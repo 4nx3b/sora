@@ -976,7 +976,7 @@ private fun HeroMedia(
         if (song.isBlank() || artist.isBlank()) return@LaunchedEffect
 
         val storefront = Locale.getDefault().country.takeIf { it.length == 2 }?.lowercase(Locale.ROOT) ?: "us"
-        val fetched = com.mochyy.mochymusic.ui.player.findCanvas(context, song, artist, item.albumTitle, storefront)
+        val fetched = com.mochyy.mochymusic.ui.player.findCanvas(context, song, artist, item.albumTitle, storefront, mediaId = id)
         if (fetched != null) {
             canvasArtwork = fetched
             CanvasArtworkPlaybackCache.put(id, fetched)

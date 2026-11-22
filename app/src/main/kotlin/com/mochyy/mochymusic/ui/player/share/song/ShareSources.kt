@@ -109,7 +109,7 @@ internal suspend fun loadAnimatedCover(context: android.content.Context, session
         return
     }
     val duration = song.duration.takeIf { it > 0 }
-    val found = runCatching { findCanvas(context, title, artist, durationSec = duration) }.getOrNull()
+    val found = runCatching { findCanvas(context, title, artist, durationSec = duration, mediaId = song.id) }.getOrNull()
     if (found != null) CanvasArtworkPlaybackCache.put(song.id, found)
     session.animatedCover = found?.preferredAnimationUrl?.let { Fetched.Found(it) } ?: Fetched.Missing
 }

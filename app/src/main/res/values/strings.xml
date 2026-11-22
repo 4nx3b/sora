@@ -456,6 +456,27 @@
 
     <!-- Internet settings page, ported from the screenshots' design -->
     <string name="internet">Internet</string>
+    <string name="muzo_data">Muzo Data</string>
+    <string name="muzo_data_desc">Lossless 24-bit FLAC for the exact recording, from data.kouzu.in</string>
+    <string name="muzo_api_key">Muzo Data API key</string>
+    <string name="muzo_api_key_subtitle">One key, one video id: the service answers with the lossless stream for exactly that recording. A key is only saved once it has answered.</string>
+    <string name="muzo_api_key_hint">Paste the API key</string>
+    <string name="muzo_api_ok">%1$d/%2$d requests today · streaming %3$s</string>
+    <string name="muzo_api_rejected">Key rejected: %1$s</string>
+    <string name="muzo_api_checking">Checking…</string>
+    <string name="source_unreachable">Unreachable: %1$s</string>
+    <string name="test">Test</string>
+    <string name="check">Check</string>
+    <string name="remove">Remove</string>
+    <string name="sources">Sources</string>
+    <string name="addon_sources">Addon sources</string>
+    <string name="add_addon_source">Add addon source</string>
+    <string name="addon_sources_desc">An addon is an ordinary HTTP server that answers /manifest.json, /search and /stream with JSON — no code ever runs on this side.</string>
+    <string name="remote_libraries">Remote libraries</string>
+    <string name="add_remote_library">Add remote library</string>
+    <string name="remote_libraries_desc">A WebDAV URL or an SMB share whose audio files play straight from the server.</string>
+    <string name="playback_keep_cpu_awake">Keep CPU awake during playback</string>
+    <string name="playback_keep_cpu_awake_desc">Holds a partial wake lock while music is playing, so playback never stutters when the screen is off</string>
     <string name="internet_warning_title">Security &amp; Usage Warning</string>
     <string name="internet_warning_doh">DNS over HTTPS only works if your country blocks YouTube. If YouTube actively blocks your region, consider using a Proxy or VPN.</string>
     <string name="internet_warning_proxy">Please only use Proxies that you are sure are safe. Free Proxies are convenient but not always safe, so be careful. You have been warned, and we are not responsible for your security.</string>
@@ -499,4 +520,9 @@
     <string name="work_out_genres">Work out genres</string>
     <string name="work_out_genres_on_desc">Asks Last.fm for an artist\'s genres. Only the artist name is sent.</string>
     <string name="work_out_genres_off_desc">The stats genre chart keeps to iTunes\' own answers while this is off</string>
+    <string name="debug_crash_now">Crash now</string>
+    <string name="debug_crash_now_desc">Debug builds only: throws on the main thread so a crash log is written, then saved to Download/Mochy on the next launch</string>
+    <string name="customise_liquid_glass">Liquid glass</string>
+    <string name="crash_log_saved_one">Crash log saved to %1$s</string>
+    <string name="crash_log_saved_many">%1$d crash logs saved to %2$s</string>
 </resources>

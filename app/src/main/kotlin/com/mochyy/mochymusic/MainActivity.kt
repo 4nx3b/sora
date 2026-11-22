@@ -2,6 +2,7 @@
 
 package com.mochyy.mochymusic
 
+import com.kyant.backdrop.backdrops.layerBackdrop
 import android.Manifest
 import android.annotation.SuppressLint
 import android.app.PendingIntent
@@ -627,6 +628,11 @@ class MainActivity : ComponentActivity() {
                     .background(if (pureBlack) Color.Black else MaterialTheme.colorScheme.surface)
             ) {
                 val glassState = remember { GlassState() }
+                val liquidGlass = com.mochyy.mochymusic.ui.component.liquid.rememberLiquidGlassConfig()
+                val recordsBackdrop = androidx.compose.runtime.rememberUpdatedState(liquidGlass.anySurface)
+                val appBackdrop = com.kyant.backdrop.backdrops.rememberLayerBackdrop(
+                    onDraw = remember { { if (recordsBackdrop.value) drawContent() } },
+                )
                 val hideAppChrome = remember { mutableStateOf(false) }
                 val detailAccentColor = remember { mutableStateOf<Color?>(null) }
                 val focusManager = LocalFocusManager.current
@@ -645,6 +651,8 @@ class MainActivity : ComponentActivity() {
                         Screens.MainScreens
                 }
                 val (slimNav) = rememberPreference(SlimNavBarKey, defaultValue = false)
+                // Neiro's font choice: keeps the app's type on the font picked in Customisation > Font
+                com.mochyy.mochymusic.ui.theme.ApplyAppFont()
                 // flipped in Experimental while the app is open: it starts (or stops) turning right away
                 val (landscapeUnlocked) = rememberPreference(com.mochyy.mochymusic.constants.LandscapeUnlockedKey, defaultValue = false)
                 LaunchedEffect(landscapeUnlocked) {
@@ -737,7 +745,10 @@ class MainActivity : ComponentActivity() {
                 val miniPill = wideBar?.miniFrame ?: com.mochyy.mochymusic.ui.component.PhoneMiniPill
 
                 // the row the tabs take along the bottom: the wide bar's shrinks with a short screen
-                val navRowHeight = wideBar?.rowHeight ?: NavigationBarHeight
+                // Neiro's Height dial makes the standard bar taller, so the mini player and the pages leave it room
+                val navBarStyle = com.mochyy.mochymusic.ui.component.rememberNavBarStyle(glassBar = liquidGlass.surface(liquidGlass.navBar))
+                val navRowHeight = wideBar?.rowHeight
+                    ?: (NavigationBarHeight + if (com.mochyy.mochymusic.modules.skin.ActiveSkin.bar == null) navBarStyle.extraHeight else 0.dp)
                 val navPadding = if (slimNav && wideBar == null) SlimNavBarHeight else navRowHeight
 
                 val playerBottomSheetState = rememberBottomSheetState(
@@ -752,6 +763,55 @@ class MainActivity : ComponentActivity() {
                 )
 
                 PlayerSystemBarsSync(playerBottomSheetState)
+
+                // Neiro's compact fold: scrolling down past a thumb's width thins the mini player and lets the
+                // tabs fall away, scrolling up brings them back; the two hold modes pin it. The wide bar and a
+                // module's own bar keep their layout, and with nothing playing there is no row to fold into.
+                val (barBehavior) = com.mochyy.mochymusic.utils.rememberEnumPreference(
+                    com.mochyy.mochymusic.constants.MiniPlayerBarBehaviorKey,
+                    com.mochyy.mochymusic.constants.MiniPlayerBarBehavior.ADAPTIVE,
+                )
+                val foldAllowed = wideBar == null && com.mochyy.mochymusic.modules.skin.ActiveSkin.bar == null
+                var scrolledCompact by remember { mutableStateOf(false) }
+                LaunchedEffect(barBehavior) { scrolledCompact = false }
+                val compactFold = animateFloatAsState(
+                    targetValue = if (
+                        foldAllowed && !playerBottomSheetState.isDismissed && when (barBehavior) {
+                            com.mochyy.mochymusic.constants.MiniPlayerBarBehavior.ADAPTIVE -> scrolledCompact
+                            com.mochyy.mochymusic.constants.MiniPlayerBarBehavior.ALWAYS_COMPACT -> true
+                            com.mochyy.mochymusic.constants.MiniPlayerBarBehavior.ALWAYS_EXPANDED -> false
+                        }
+                    ) 1f else 0f,
+                    animationSpec = if (com.mochyy.mochymusic.ui.utils.AppMotion.enabled) {
+                        spring(dampingRatio = androidx.compose.animation.core.Spring.DampingRatioNoBouncy, stiffness = 400f)
+                    } else androidx.compose.animation.core.snap(),
+                    label = "compactFold",
+                )
+                val compactFoldNow = remember(compactFold) { { compactFold.value } }
+                val compactThresholdPx = with(density) { 14.dp.toPx() }
+                val compactScrollConnection = remember(compactThresholdPx, barBehavior) {
+                    object : androidx.compose.ui.input.nestedscroll.NestedScrollConnection {
+                        private var accumulated = 0f
+                        override fun onPreScroll(
+                            available: androidx.compose.ui.geometry.Offset,
+                            source: androidx.compose.ui.input.nestedscroll.NestedScrollSource,
+                        ): androidx.compose.ui.geometry.Offset {
+                            if (barBehavior == com.mochyy.mochymusic.constants.MiniPlayerBarBehavior.ADAPTIVE) {
+                                val delta = available.y
+                                if ((accumulated > 0f && delta < 0f) || (accumulated < 0f && delta > 0f)) accumulated = 0f
+                                accumulated += delta
+                                if (accumulated <= -compactThresholdPx && !scrolledCompact) {
+                                    scrolledCompact = true
+                                    accumulated = 0f
+                                } else if (accumulated >= compactThresholdPx && scrolledCompact) {
+                                    scrolledCompact = false
+                                    accumulated = 0f
+                                }
+                            }
+                            return androidx.compose.ui.geometry.Offset.Zero
+                        }
+                    }
+                }
 
                 val sharedBarRow = wideBar != null
                 val playerAwareWindowInsets = remember(
@@ -910,6 +970,8 @@ class MainActivity : ComponentActivity() {
 
                     LocalPlayerConnection provides playerConnection,
                     LocalGlassState provides glassState,
+                    com.mochyy.mochymusic.ui.component.liquid.LocalLiquidGlass provides liquidGlass,
+                    com.mochyy.mochymusic.ui.component.liquid.LocalAppBackdrop provides appBackdrop,
                     LocalHideAppChrome provides hideAppChrome,
                     LocalDetailAccentColor provides detailAccentColor,
                     LocalArtworkColor provides themeColor,
@@ -1111,13 +1173,33 @@ class MainActivity : ComponentActivity() {
                                             )
                                         }
 
-                                        CompositionLocalProvider(com.mochyy.mochymusic.ui.component.LocalMiniPillFrame provides miniPill) {
+                                        com.mochyy.mochymusic.ui.component.FoldedMiniPill(miniPill, compactFoldNow) {
                                             BottomSheetPlayer(
                                                 state = playerBottomSheetState,
                                                 navController = navController,
                                                 pureBlack = pureBlack,
                                                 modifier = Modifier.launchRise(order = 3),
                                             )
+                                        }
+
+                                        if (wideBar == null) {
+                                            val circlesShown by remember { derivedStateOf { compactFold.value > 0.01f } }
+                                            if (circlesShown) {
+                                                com.mochyy.mochymusic.ui.component.CompactControlCircles(
+                                                    fraction = compactFoldNow,
+                                                    leftIsLibrary = selectedTabRoute == Screens.Library.route,
+                                                    pureBlack = pureBlack,
+                                                    onLeft = { val left = if (selectedTabRoute == Screens.Library.route) Screens.Library else Screens.Home; onNavItemClick(left, selectedTabRoute == left.route) },
+                                                    onSearch = { onNavItemClick(Screens.Search, selectedTabRoute == Screens.Search.route) },
+                                                    modifier = Modifier
+                                                        .align(Alignment.BottomCenter)
+                                                        .padding(bottom = bottomInset + navPadding + (MiniPlayerHeight - com.mochyy.mochymusic.ui.component.CompactCircleSize) / 2)
+                                                        .graphicsLayer {
+                                                            val progress = playerBottomSheetState.progress.coerceIn(0f, 1f)
+                                                            alpha = (1f - progress / 0.3f).coerceIn(0f, 1f)
+                                                        },
+                                                )
+                                            }
                                         }
 
                                         if (wideBar != null) {
@@ -1136,7 +1218,7 @@ class MainActivity : ComponentActivity() {
                                                 shown = !playerBottomSheetState.isDismissed,
                                                 modifier = barMotion.fillMaxWidth(),
                                             )
-                                        } else {
+                                        } else if (remember { derivedStateOf { compactFold.value < 0.99f } }.value) {
                                             AppNavigationBar(
                                                 navigationItems = navigationItems,
                                                 currentRoute = currentRoute,
@@ -1151,7 +1233,11 @@ class MainActivity : ComponentActivity() {
                                                     navController.navigateToTab(route)
                                                 },
                                                 obscured = { playerBottomSheetState.progress > 0.001f },
-                                                modifier = barMotion,
+                                                modifier = barMotion.graphicsLayer {
+                                                    val f = compactFold.value
+                                                    alpha = 1f - 0.9f * f
+                                                    translationY = 36.dp.toPx() * f
+                                                },
                                             )
                                         }
                                         }
@@ -1161,6 +1247,7 @@ class MainActivity : ComponentActivity() {
                             modifier = Modifier
                                 .fillMaxSize()
                                 .nestedScroll(topAppBarScrollBehavior.nestedScrollConnection)
+                                .nestedScroll(compactScrollConnection)
                         ) {
                             Row(Modifier.fillMaxSize()) {
                                 Box(
@@ -1217,6 +1304,7 @@ class MainActivity : ComponentActivity() {
                                             .fillMaxSize()
                                             .windowInsetsPadding(WindowInsets.stableSystemBars.only(WindowInsetsSides.Horizontal))
                                             .glassRoot(glassState, isActive = { true })
+                                            .layerBackdrop(appBackdrop)
                                     ) {
                                     if (settingsPane) {
                                         com.mochyy.mochymusic.ui.screens.settings.SettingsListPane(
@@ -1330,6 +1418,34 @@ class MainActivity : ComponentActivity() {
 
                     // action feedback ("Added to Queue", "Undo"...) drops in over the sheets too
                     com.mochyy.mochymusic.ui.component.TopToastHost()
+
+                    // the Listen Together port's invite door: an invite link reveals the
+                    // room page, which joins on its own once it is on screen
+                    val pendingListenInvite by com.mochyy.mochymusic.ported.together.ListenTogetherInvite.pending.collectAsState()
+                    LaunchedEffect(pendingListenInvite) {
+                        if (pendingListenInvite != null) {
+                            navController.navigate("listen_together") { launchSingleTop = true }
+                        }
+                    }
+                    // a chat notification's shade tap asked for the chat page by name:
+                    // open it over whatever the listener was on, once
+                    val pendingOpenChat by com.mochyy.mochymusic.ported.together.ListenTogetherInvite.openChat.collectAsState()
+                    LaunchedEffect(pendingOpenChat) {
+                        if (pendingOpenChat) {
+                            if (com.mochyy.mochymusic.ported.together.ListenTogether.manager?.isInRoom == true) {
+                                navController.navigate("listen_together_chat") { launchSingleTop = true }
+                            }
+                            com.mochyy.mochymusic.ported.together.ListenTogetherInvite.chatHandled()
+                        }
+                    }
+                    // the room's chat popup: the newest message over the app while the
+                    // chat page is closed
+                    Box(Modifier.fillMaxSize()) {
+                        com.mochyy.mochymusic.ported.together.ui.ListenTogetherChatPopup(
+                            onOpenChat = { navController.navigate("listen_together_chat") { launchSingleTop = true } },
+                            modifier = Modifier.align(Alignment.TopCenter),
+                        )
+                    }
 
                     // "share song" from any menu opens here, over the app and the player
                     com.mochyy.mochymusic.ui.player.share.song.SongShareHost()
@@ -1536,6 +1652,15 @@ class MainActivity : ComponentActivity() {
         if (intent.action == com.mochyy.mochymusic.link.phone.PhoneLinkService.ActionOpenTvLink) {
             intent.action = null
             openDevicesRequests++
+            return
+        }
+        // a Listen Together invite link: the ported object takes it (raising its
+        // pending flow, which the composable navigates on); anything else falls
+        // through to the music links below
+        com.mochyy.mochymusic.ported.together.ListenTogetherInvite.consume(intent)
+        if (com.mochyy.mochymusic.ported.together.ListenTogetherInvite.pending.value != null) {
+            intent.data = null
+            intent.removeExtra(Intent.EXTRA_TEXT)
             return
         }
         if (importSharedAudio(intent)) return

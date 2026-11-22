@@ -36,6 +36,8 @@ data class MediaMetadata(
     data class Artist(
         val id: String?,
         val name: String,
+        // Neiro/ArchiveTune port: the artist's avatar URL when the metadata carried one
+        val thumbnailUrl: String? = null,
     ) : Serializable
 
     data class Album(

@@ -89,7 +89,8 @@ object CanvasArtworkPlaybackCache {
     }
 }
 
-// asks the canvas sources in the order picked in app behaviour and keeps the first loop one of them has
+// asks the canvas sources in the order picked in app behaviour and keeps the first loop one of them has;
+// after them all, Muzo Data's keyless video-id loop is the last rung before giving up
 internal suspend fun findCanvas(
     context: Context,
     title: String,
@@ -97,6 +98,7 @@ internal suspend fun findCanvas(
     album: String? = null,
     storefront: String = "us",
     durationSec: Int? = null,
+    mediaId: String? = null,
 ): CanvasArtwork? {
     val order = context.dataStore[CanvasOrderKey].toEnum(CanvasOrder.APPLE_TIDAL_SPOTIFY)
     val spotify = context.dataStore.get(SpotifyCanvasKey, false)
@@ -107,6 +109,12 @@ internal suspend fun findCanvas(
                 CanvasSource.TIDAL -> MonochromeApiCanvas.getBySongArtist(title, artist, album, durationSec)
                 CanvasSource.SPOTIFY -> if (spotify) SpotifyCanvasProvider.getBySongArtist(context, title, artist, durationSec) else null
             }?.takeIf { !it.preferredAnimationUrl.isNullOrBlank() }
+        } ?: mediaId?.takeIf { it.isNotBlank() }?.let { id ->
+            // Neiro's last rung: keyed on the video id so it can never answer with another
+            // song's loop, and keyless, so it asks nothing of the listener. Tried only here,
+            // after the configured providers had their turn, not as a configurable preference.
+            com.mochyy.mochymusic.canvas.MuzoCanvasProvider.getByVideoId(id, title, artist)
+                ?.takeIf { !it.preferredAnimationUrl.isNullOrBlank() }
         }
     }
 }

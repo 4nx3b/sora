@@ -92,6 +92,7 @@ import com.mochyy.mochymusic.car.CarLyricsPlayer
 import com.mochyy.mochymusic.car.CarLyricsSource
 import com.mochyy.mochymusic.widget.WidgetLyricTracker
 import com.mochyy.mochymusic.constants.AudioNormalizationKey
+import com.mochyy.mochymusic.constants.LoudnessOffOnSpeakerKey
 import com.mochyy.mochymusic.constants.AudioOffload
 import com.mochyy.mochymusic.constants.AudioQualityKey
 import com.mochyy.mochymusic.constants.AutoDownloadOnLikeKey
@@ -111,6 +112,9 @@ import com.mochyy.mochymusic.constants.CrossfadeGaplessKey
 import com.mochyy.mochymusic.constants.SkipBlendKey
 import com.mochyy.mochymusic.constants.SkipBlendAheadKey
 import com.mochyy.mochymusic.constants.SkipBlendAheadMax
+import com.mochyy.mochymusic.constants.PreloadSongsCountKey
+import com.mochyy.mochymusic.constants.PreloadSongsDefault
+import com.mochyy.mochymusic.constants.PreloadSongsMax
 import com.mochyy.mochymusic.constants.StudioForVideosKey
 import com.mochyy.mochymusic.constants.CrossmixMode
 import com.mochyy.mochymusic.constants.HiFiResamplerKey
@@ -155,6 +159,7 @@ import com.mochyy.mochymusic.constants.PlayerVolumeKey
 import com.mochyy.mochymusic.constants.RememberShuffleAndRepeatKey
 import com.mochyy.mochymusic.constants.RepeatModeKey
 import com.mochyy.mochymusic.constants.ResumeOnBluetoothConnectKey
+import com.mochyy.mochymusic.constants.KeepCpuAwakeKey
 import com.mochyy.mochymusic.constants.ScrobbleDelayPercentKey
 import com.mochyy.mochymusic.constants.ScrobbleDelaySecondsKey
 import com.mochyy.mochymusic.constants.ScrobbleMinSongDurationKey
@@ -312,6 +317,12 @@ class MusicService :
     MediaLibraryService(),
     Player.Listener,
     PlaybackStatsListener.Callback {
+    override fun onIsPlayingChanged(isPlaying: Boolean) {
+        // the CPU wake lock follows playback; the setting is read inside so a
+        // change under it is picked up on the next transition (Neiro's shape)
+        updatePlaybackWakeLock()
+    }
+
     @Inject
     lateinit var database: MusicDatabase
 
@@ -565,6 +576,10 @@ class MusicService :
     private var lastAnnouncedSourceMediaId: String? = null
     lateinit var player: ExoPlayer
         private set
+    // the Listen Together port's service-side adapter: holds the engine's live
+    // player through the accessor, so a crossfade handoff that swaps the
+    // instance underneath is picked up on the next read
+    private var partySync: com.mochyy.mochymusic.ported.together.playback.PartySync? = null
     private var secondaryPlayer: ExoPlayer? = null
     private var fadingPlayer: ExoPlayer? = null
     private var isCrossfading = false
@@ -574,6 +589,9 @@ class MusicService :
     @Volatile private var skipBlend = false
     // how many songs coming up get their start fetched, so a few skips in a row still blend
     @Volatile private var blendAhead = 1
+
+    // "Preload songs" (Neiro): how many upcoming songs get their stream found and first seconds cached ahead
+    @Volatile private var preloadAhead = 0
     private var prefetchJob: Job? = null
 
     // "studio version for music videos": a music video plays its song's studio upload when there is one
@@ -768,9 +786,37 @@ class MusicService :
         }
     }
 
+    /**
+     * Keep CPU awake during playback, ported from Neiro (ArchiveTune's fork
+     * behaviour): a partial wake lock held only while [KeepCpuAwakeKey] is on
+     * and the player is actually playing, so a paused or torn-down service
+     * never keeps the device's CPU standing for it.
+     */
+    private var playbackWakeLock: android.os.PowerManager.WakeLock? = null
+
+    // loudness normalization, minus the phone's own speaker when "Disable on phone speaker" is on (Neiro's loudnessOffOnSpeaker)
+    private fun normalizationWanted() = combine(
+        dataStore.data.map { (it[AudioNormalizationKey] ?: true) to (it[LoudnessOffOnSpeakerKey] ?: false) },
+        audioOutputs.devices.map { devices -> devices.firstOrNull { it.isActive }?.kind == com.mochyy.mochymusic.playback.audio.AudioOutputs.Kind.PHONE },
+    ) { (normalize, offOnSpeaker), onSpeaker -> normalize && !(offOnSpeaker && onSpeaker) }.distinctUntilChanged()
+
+    private fun updatePlaybackWakeLock() {
+        val lock = playbackWakeLock ?: return
+        val shouldHold = dataStore.get(KeepCpuAwakeKey, false) && player.isPlaying
+        if (shouldHold && !lock.isHeld) {
+            lock.acquire()
+        } else if (!shouldHold && lock.isHeld) {
+            lock.release()
+        }
+    }
+
     override fun onCreate() {
         super.onCreate()
         isRunning = true
+
+        playbackWakeLock = getSystemService(android.os.PowerManager::class.java)
+            ?.newWakeLock(android.os.PowerManager.PARTIAL_WAKE_LOCK, "mochy:playback")
+            ?.apply { setReferenceCounted(false) }
 
         playerInitialized.value = false
 
@@ -830,6 +876,11 @@ class MusicService :
         dropLocalSongCopies()
         sleepTimer = SleepTimer(scope, player)
         player.addListener(sleepTimer)
+
+        // After the player exists, as in Neiro's PlaybackService: the ported
+        // engine attaches to the live player through the accessor and the room
+        // survives this service being backgrounded and recreated
+        partySync = com.mochyy.mochymusic.ported.together.playback.PartySync(scope) { player }.also { it.start() }
 
         scope.launch {
             dataStore.data.map { it[MusicHapticsEnabledKey] ?: false }
@@ -1147,9 +1198,7 @@ class MusicService :
 
         combine(
             currentFormat,
-            dataStore.data
-                .map { it[AudioNormalizationKey] ?: true }
-                .distinctUntilChanged(),
+            normalizationWanted(),
         ) { format, normalizeAudio ->
             format to normalizeAudio
         }.collectLatest(scope) { (format, normalizeAudio) ->
@@ -1241,13 +1290,15 @@ class MusicService :
             }
 
         dataStore.data
-            .map { Triple(it[SkipBlendKey] ?: false, it[StudioForVideosKey] ?: false, it[SkipBlendAheadKey] ?: 1) }
+            .map { Triple(it[SkipBlendKey] ?: false, it[StudioForVideosKey] ?: false, it[SkipBlendAheadKey] ?: 1) to (it[PreloadSongsCountKey] ?: PreloadSongsDefault) }
             .distinctUntilChanged()
-            .collect(scope) { (blend, studio, ahead) ->
+            .collect(scope) { (prefs, preload) ->
+                val (blend, studio, ahead) = prefs
                 skipBlend = blend
                 studioForVideos = studio
                 blendAhead = ahead.coerceIn(1, SkipBlendAheadMax)
-                if (blend) prefetchNeighbours() else prefetchJob?.cancel()
+                preloadAhead = preload.coerceIn(0, PreloadSongsMax)
+                if (blend || preloadAhead > 0) prefetchNeighbours() else prefetchJob?.cancel()
             }
 
         if (dataStore.get(PersistentQueueKey, true)) {
@@ -2099,8 +2150,10 @@ class MusicService :
         resetQueueRunway()
         val generation = queueGeneration
         initialQueueLoading = true
-        // on by default, like spotify: a new playlist keeps shuffling until shuffle is turned off
-        val persistShuffleAcrossQueues = dataStore.get(PersistentShuffleAcrossQueuesKey, true)
+        // off by default, as Neiro's permanent shuffle ships it: a queue started
+        // plain plays in order and shuffle turns off with it; on, shuffle
+        // carries into whatever queue starts next
+        val persistShuffleAcrossQueues = dataStore.get(PersistentShuffleAcrossQueuesKey, false)
         if (!persistShuffleAcrossQueues) {
             player.shuffleModeEnabled = false
         }
@@ -2356,6 +2409,14 @@ class MusicService :
     }
 
     /**
+     * The Listen Together port's locked-transport door, for the connection to
+     * ask on a play/pause press: true means a room locked to its host took the
+     * press — it moved this device alone and nothing downstream should run.
+     */
+    fun partyLockedTransport(playing: Boolean): Boolean =
+        partySync?.onLockedTransport(playing) == true
+
+    /**
      * Keeps a few songs queued ahead of the current one: first from the queue's own next pages, then, when
      * the queue has run dry and infinite queue is on, from a radio seeded by the songs at the end of the queue.
      * If playback already ended because nothing was left, it resumes on the newly added songs.
@@ -2365,6 +2426,14 @@ class MusicService :
         if (initialQueueLoading || runwayJob?.isActive == true) return
         if (player.mediaItemCount == 0) return
         if (dataStore.get(DisableLoadMoreWhenRepeatAllKey, false) && player.repeatMode == REPEAT_MODE_ALL) return
+        // a guest's queue is the room's — the ported engine owns it, so the
+        // runway stands down for everyone but the host (the host's own picks
+        // keep feeding the room)
+        runCatching {
+            com.mochyy.mochymusic.ported.together.ListenTogether.state.value
+        }.getOrNull()?.let { room ->
+            if (room.inParty && room.you?.isHost != true) return
+        }
         val lowOnSongs = upcomingItemCount(QUEUE_RUNWAY_SIZE + 1) <= QUEUE_RUNWAY_SIZE
         val previewOnly = !lowOnSongs && wantsAutoplayPreview()
         if (!lowOnSongs && !previewOnly) return
@@ -2899,9 +2968,7 @@ class MusicService :
                     player.currentMediaItem?.mediaId
                 }
 
-                val normalizeAudio = withContext(Dispatchers.IO) {
-                    dataStore.data.map { it[AudioNormalizationKey] ?: true }.first()
-                }
+                val normalizeAudio = withContext(Dispatchers.IO) { normalizationWanted().first() }
 
                 // YouTube's loudness numbers describe YouTube's stream: a song from a module plays
                 // another master, and evens out by its own ReplayGain in the sink instead
@@ -3053,6 +3120,12 @@ class MusicService :
         reason: Int,
     ) {
         clearStreamFailure()
+        // the queue moving on by itself is still this device deciding what the
+        // ported room plays next, and no other path reports it — as in Neiro's
+        // service. A skip is reported by the connection's own press
+        if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO) {
+            partySync?.onLocalIntent()
+        }
         if (!promotingCrossmix) crossmixDirector.onItemChanged()
 
         if (!promotingCrossmix && !isCrossfading) {
@@ -3172,6 +3245,10 @@ class MusicService :
     }
 
     override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
+
+        // The only place the *reason* can be read, so the ported room hears a
+        // pause the listener asked for differently from one another app imposed
+        partySync?.onPlayWhenReadyChanged(playWhenReady, reason)
 
         if (playWhenReady && castConnectionHandler?.isCasting?.value == true) {
             player.pause()
@@ -4048,7 +4125,11 @@ class MusicService :
 
     private fun createDataSourceFactory(): DataSource.Factory {
         // songs already on the phone are read straight from their file; only what comes over the network goes through the caches
-        val upstream = LocalBypassDataSource.Factory(DefaultDataSource.Factory(this), createCacheDataSource())
+        // smb:// (the remote:// spelling) reads straight off the share; everything else through the usual stack
+        val upstream = LocalBypassDataSource.Factory(
+            com.mochyy.mochymusic.remote.SmbDataSource.RoutingFactory(this, DefaultDataSource.Factory(this)),
+            createCacheDataSource(),
+        )
         return ResolvingDataSource.Factory(upstream) { dataSpec ->
             // a stream a source module or backend resolved to a real URL (an HLS playlist, given
             // as a data: URI when the module rewrote it, and its segments) carries no media id:
@@ -4566,6 +4647,8 @@ class MusicService :
     }
 
     override fun onDestroy() {
+        runCatching { playbackWakeLock?.let { if (it.isHeld) it.release() } }
+        playbackWakeLock = null
         isRunning = false
 
         audioManager.unregisterAudioDeviceCallback(audioDeviceCallback)
@@ -4580,6 +4663,10 @@ class MusicService :
         playReporter.onSongStop()
         // the same for ListenBrainz, on its own scope: this one is about to be cancelled
         com.mochyy.mochymusic.scrobble.ListenBrainz.onServiceDestroyed(this)
+        // the ported room's engine drops the player through its own door, keeping
+        // its heartbeat and queue observation in step
+        partySync?.stop()
+        partySync = null
         connectivityObserver.unregister()
         callWatcher.stop()
         abandonAudioFocus()
@@ -4884,12 +4971,15 @@ class MusicService :
     // with "blend skips" on, the songs either side get their first seconds fetched ahead, so a skip either way starts at once
     private fun prefetchNeighbours() {
         prefetchJob?.cancel()
-        if (!skipBlend || player.mediaItemCount == 0 || !canFetchAhead()) return
+        if ((!skipBlend && preloadAhead == 0) || player.mediaItemCount == 0 || !canFetchAhead()) return
         // data saver keeps it to the next one, the extra songs are only worth it on a connection that doesn't count
-        val ahead = if (com.mochyy.mochymusic.utils.DataSaver.isActive(this)) 1 else blendAhead
+        val wanted = maxOf(if (skipBlend) blendAhead else 0, preloadAhead)
+        val metered = runCatching { getSystemService(android.net.ConnectivityManager::class.java)?.isActiveNetworkMetered == true }.getOrDefault(true)
+        val ahead = if (com.mochyy.mochymusic.utils.DataSaver.isActive(this) || metered) minOf(wanted, 1) else wanted
         val upcoming = upcomingIndices(ahead)
-        // the next one first, then back, then the rest coming up
-        val ids = (upcoming.take(1) + player.previousMediaItemIndex + upcoming.drop(1))
+        // the next one first, then back (only for blend skips), then the rest coming up
+        val back = if (skipBlend) listOf(player.previousMediaItemIndex) else emptyList()
+        val ids = (upcoming.take(1) + back + upcoming.drop(1))
             .filter { it != C.INDEX_UNSET && it < player.mediaItemCount }
             .map { player.getMediaItemAt(it).mediaId }
             .distinct()
@@ -5284,6 +5374,15 @@ class MusicService :
         // offline: no provider is asked; the song plays if it's cached, and is skipped if not.
         // An imported file is never looked for online, even one whose file has gone missing.
         if (com.mochyy.mochymusic.utils.OfflineMode.isOn || mediaId.startsWith("LOCAL_")) return null
+        // a remote library's file (a WebDAV URL or an SMB share): it plays as the address
+        // it already is, never re-resolved — the credentials ride the stored server, not the id
+        remoteRoute(mediaId)?.let { return it }
+        // Muzo Data first, as Neiro's resolver walks it: one video id answered with the
+        // 24-bit FLAC for exactly that recording. Without a key the source is inert by
+        // design (Neiro's MuzoSource: the opt-in is the credential itself), a miss lets
+        // the walk step on, and a capped request never pays lossless bytes for it.
+        muzoRoute(mediaId)?.let { return it }
+        addonRoute(mediaId)?.let { return it }
         forcedRoutes[mediaId]?.let { forced ->
             if (forced.providerId == com.mochyy.mochymusic.modules.SourceModules.YouTubeId) return youTubeRoute(mediaId)
             forcedModuleStream(mediaId, forced)?.let { return it }
@@ -5345,6 +5444,101 @@ class MusicService :
             isDash = stream.format == com.mochyy.mochymusic.module.StreamFormat.Dash,
             source = "${module.info.name} · ${stream.qualityLabel}",
             widevineLicense = (stream.drm as? com.mochyy.mochymusic.module.StreamDrm.Widevine)?.license,
+            cacheKey = cacheKey,
+        )
+    }
+
+    /**
+     * A remote library's file, as its own stream: the WebDAV file's URL (with its
+     * basic-auth header registered for the fetch) or the SMB file's remote:// URI
+     * the SmbDataSource reads. The cache key is the media id, so bytes are shared
+     * between plays and the header injection branch catches it.
+     */
+    private suspend fun remoteRoute(mediaId: String): com.mochyy.mochymusic.playback.custom.CustomStreamResult? {
+        val (serverId, path) = com.mochyy.mochymusic.remote.RemoteLibraries.parseMediaId(mediaId) ?: return null
+        val server = com.mochyy.mochymusic.remote.RemoteLibraries.servers(this).firstOrNull { it.id == serverId }
+            ?: return null
+        val uri = com.mochyy.mochymusic.remote.RemoteLibraries.uriOf(server, path)
+        resolvedSourceIds[mediaId] = "remote"
+        val name = "Remote · ${server.id}"
+        notePlayingFrom(mediaId, PlayingFrom("remote", name, null, null))
+        val cacheKey = ModuleCacheKeyPrefix + mediaId
+        if (server.kind == com.mochyy.mochymusic.remote.RemoteServer.Kind.WEBDAV &&
+            (server.username.isNotBlank() || server.password.isNotBlank())
+        ) {
+            moduleStreamHeaders[cacheKey] = mapOf(
+                "Authorization" to okhttp3.Credentials.basic(server.username, server.password),
+            )
+        }
+        Timber.tag("StreamFetch").i("$mediaId plays from ${server.kind} ${server.id}: $path")
+        return com.mochyy.mochymusic.playback.custom.CustomStreamResult(
+            streamUrl = uri.toString(),
+            source = name,
+            cacheKey = cacheKey,
+        )
+    }
+
+    /**
+     * The first addon that has the song, or null to step on — Neiro's walk: the
+     * sources the user added on purpose come before the installed modules. The
+     * match is by name (the addon protocol has no video ids), the stream is the
+     * addon's own URL, and a miss on every addon hands the walk on untouched.
+     */
+    private suspend fun addonRoute(mediaId: String): com.mochyy.mochymusic.playback.custom.CustomStreamResult? {
+        if (com.mochyy.mochymusic.utils.DataSaver.isActive(this)) return null
+        val bases = com.mochyy.mochymusic.muzo.AddonSources.urls(this)
+        if (bases.isEmpty()) return null
+        val track = trackQueryOf(mediaId) ?: return null
+        val title = track.title ?: return null
+        val artist = track.artists.joinToString(", ")
+        for (base in bases) {
+            val found = com.mochyy.mochymusic.muzo.AddonSources.findTrack(base, title, artist) ?: continue
+            val stream = com.mochyy.mochymusic.muzo.AddonSources.stream(base, found.id).getOrNull() ?: continue
+            val url = stream.url.takeIf(String::isNotBlank) ?: continue
+            resolvedSourceIds[mediaId] = "addon"
+            scope.launch(Dispatchers.IO) { recoverSong(mediaId) }
+            val cacheKey = "$ModuleCacheKeyPrefix addon|${found.id}|$mediaId".replace(" ", "")
+            val name = com.mochyy.mochymusic.muzo.AddonSources.manifest(base).getOrNull()?.name?.takeIf(String::isNotBlank) ?: base
+            notePlayingFrom(mediaId, PlayingFrom("addon", name, stream.qualityLabel, found.id))
+            streamFacts.update { it + (mediaId to StreamFacts(codec = stream.codec, fromModule = true)) }
+            Timber.tag("StreamFetch").i("$mediaId plays from addon $name: ${found.title} · ${stream.qualityLabel}")
+            return com.mochyy.mochymusic.playback.custom.CustomStreamResult(
+                streamUrl = url,
+                isHls = stream.isHls,
+                isDash = stream.isDash,
+                source = "$name · ${stream.qualityLabel}",
+                cacheKey = cacheKey,
+            )
+        }
+        return null
+    }
+
+    /**
+     * Muzo Data's answer for this song, or null to step on: the 24-bit FLAC stream for
+     * the exact video id, keyed and announced like a module stream so the CDN's
+     * Authorization header rides the fetch and the stream info names the source. The
+     * credential is the opt-in (Neiro's shape): no key, no ask.
+     */
+    private suspend fun muzoRoute(mediaId: String): com.mochyy.mochymusic.playback.custom.CustomStreamResult? {
+        // a capped request is the one caller that cannot pay lossless bytes for
+        if (com.mochyy.mochymusic.utils.DataSaver.isActive(this)) return null
+        val key = com.mochyy.mochymusic.muzo.MuzoService.apiKey(this) ?: return null
+        val answer = com.mochyy.mochymusic.muzo.MuzoService.lossless(key, mediaId) ?: return null
+        val url = answer.url ?: return null
+        val codec = answer.format?.lowercase() ?: "flac"
+        resolvedSourceIds[mediaId] = MuzoSourceId
+        // the youtube path saves the song, a lossless source has to as well or its plays never reach history
+        scope.launch(Dispatchers.IO) { recoverSong(mediaId) }
+        val cacheKey = "$ModuleCacheKeyPrefix$MuzoSourceId|$mediaId"
+        // the CDN binds its file URLs to the key they were minted for; this header travels with the fetch
+        moduleStreamHeaders[cacheKey] = mapOf("Authorization" to "Bearer $key")
+        val quality = answer.quality?.takeIf { it.isNotBlank() } ?: "lossless"
+        streamFacts.update { it + (mediaId to StreamFacts(codec = codec, fromModule = true)) }
+        notePlayingFrom(mediaId, PlayingFrom(MuzoSourceId, "Muzo Data", quality, mediaId))
+        Timber.tag("StreamFetch").i("$mediaId plays from Muzo Data: $codec $quality")
+        return com.mochyy.mochymusic.playback.custom.CustomStreamResult(
+            streamUrl = url,
+            source = "Muzo Data · $quality",
             cacheKey = cacheKey,
         )
     }
@@ -5680,6 +5874,8 @@ class MusicService :
          * media id - see the data source factory.
          */
         const val ModuleCacheKeyPrefix = "module|"
+        /** Muzo Data, when its key is set: answers a video id with its 24-bit FLAC */
+        const val MuzoSourceId = "muzo"
 
         // a blended skip crosses the two songs over in the fade's Length; never shorter than this, or it's a click
         const val SkipBlendMinMs = 300L

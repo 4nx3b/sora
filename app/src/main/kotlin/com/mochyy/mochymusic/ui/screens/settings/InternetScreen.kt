@@ -64,11 +64,13 @@ import com.mochyy.mochymusic.ui.component.SubSettingsScaffold
 import com.mochyy.mochymusic.ui.component.TextFieldDialog
 import com.mochyy.mochymusic.utils.AppDns
 import com.mochyy.mochymusic.utils.NetMetered
+import com.mochyy.mochymusic.muzo.MuzoService
 import com.mochyy.mochymusic.utils.dataStore
 import com.mochyy.mochymusic.utils.rememberPreference
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.system.exitProcess
@@ -87,6 +89,46 @@ fun InternetSettingsScreen(navController: NavController) {
     val (dohCustomUrl, setDohCustomUrl) = rememberPreference(DnsOverHttpsCustomUrlKey, defaultValue = "https://")
     val (proxyEnabled, setProxyEnabled) = rememberPreference(com.mochyy.mochymusic.constants.ProxyEnabledKey, defaultValue = false)
     var dialog by remember { mutableStateOf<InternetDialog?>(null) }
+
+    // ── Muzo Data: the stored key's one-line state, and the usage check row ──
+    var muzoKeyStatus by remember { mutableStateOf<String?>(null) }
+    var muzoUsageCheck by remember { mutableStateOf<String?>(null) }
+    var muzoChecking by remember { mutableStateOf(false) }
+    val muzoScope = androidx.compose.runtime.rememberCoroutineScope()
+
+    /** One usage question against the key as it stands; keyless answers locally, without the network. */
+    val checkMuzoUsage: () -> Unit = {
+        if (!muzoChecking) {
+            muzoChecking = true
+            muzoScope.launch {
+                val key = com.mochyy.mochymusic.muzo.MuzoService.apiKey(context)
+                muzoUsageCheck = when {
+                    key == null -> MuzoService.NO_KEY_PROMPT
+                    else -> when (val check = com.mochyy.mochymusic.muzo.MuzoService.checkApi(key)) {
+                        is com.mochyy.mochymusic.muzo.MuzoApiCheck.Ok -> MuzoService.usageDetail(check)
+                        is com.mochyy.mochymusic.muzo.MuzoApiCheck.Rejected -> check.reason
+                        is com.mochyy.mochymusic.muzo.MuzoApiCheck.Unreachable -> check.reason
+                    }
+                }
+                muzoChecking = false
+            }
+        }
+    }
+    // one usage question per visit, and again whenever the key changes — the one
+    // edit that can turn a refusal into an answer (Neiro's Sources screen)
+    var muzoKeySeen by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(Unit) {
+        muzoKeySeen = com.mochyy.mochymusic.muzo.MuzoService.apiKey(context)
+        muzoKeyStatus = if (muzoKeySeen != null) "✓" else null
+        checkMuzoUsage()
+    }
+    LaunchedEffect(muzoKeyStatus) {
+        val keyNow = com.mochyy.mochymusic.muzo.MuzoService.apiKey(context)
+        if (keyNow != muzoKeySeen) {
+            muzoKeySeen = keyNow
+            checkMuzoUsage()
+        }
+    }
 
     // the single audio-quality choice feeds the per-connection ones the first time in, so an
     // update keeps what was picked and this page shows what plays
@@ -110,7 +152,6 @@ fun InternetSettingsScreen(navController: NavController) {
         onBack = { navController.navigateUp() },
     ) {
         Column(
-            modifier = Modifier.verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             InternetWarningCard()
@@ -232,6 +273,58 @@ fun InternetSettingsScreen(navController: NavController) {
                     ),
                 ),
             )
+
+            // ── Muzo Data, ported from Neiro: the key is the opt-in, its FLAC answers first ──
+            SettingsGroup(
+                title = stringResource(R.string.muzo_data),
+                style = SettingsGroupStyle.Grouped,
+                items = listOf(
+                    SettingsItem(
+                        title = { Text(stringResource(R.string.muzo_api_key)) },
+                        // the composable description: it shows even with the setting that hides
+                        // the one-line ones off, because the check's answer is the row's result,
+                        // not a static subtitle (Neiro's Sources screen shows it always too)
+                        description = {
+                            Text(
+                                text = when {
+                                    muzoChecking -> stringResource(R.string.muzo_api_checking)
+                                    muzoUsageCheck != null -> muzoUsageCheck!!
+                                    else -> stringResource(R.string.muzo_data_desc)
+                                },
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                            )
+                        },
+                        icon = painterResource(R.drawable.key),
+                        iconShape = CircleShape,
+                        onClick = { dialog = InternetDialog.MuzoKey },
+                        trailingContent = {
+                            Text(
+                                text = muzoKeyStatus ?: stringResource(R.string.muzo_api_key_hint),
+                                color = Color.White.copy(alpha = 0.6f),
+                                style = MaterialTheme.typography.bodyMedium,
+                            )
+                        },
+                    ),
+                    SettingsItem(
+                        title = { Text(if (muzoChecking) stringResource(R.string.muzo_api_checking) else stringResource(R.string.check)) },
+                        description = muzoUsageCheck?.let { result ->
+                            {
+                                Text(
+                                    text = result,
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1,
+                                )
+                            }
+                        },
+                        icon = painterResource(R.drawable.speed),
+                        iconShape = CircleShape,
+                        onClick = { checkMuzoUsage() },
+                    ),
+                ),
+            )
             Spacer(Modifier.height(40.dp))
         }
     }
@@ -278,6 +371,14 @@ fun InternetSettingsScreen(navController: NavController) {
                 }
             }
         }
+        InternetDialog.MuzoKey -> MuzoApiKeyDialog(
+            onSaved = {
+                dialog = null
+                muzoKeyStatus = "✓"
+                muzoUsageCheck = null
+            },
+            onDismiss = { dialog = null },
+        )
         InternetDialog.CustomDnsUrl -> TextFieldDialog(
             title = { Text(stringResource(R.string.dns_custom_url)) },
             initialTextFieldValue = androidx.compose.ui.text.input.TextFieldValue(dohCustomUrl),
@@ -345,8 +446,8 @@ private fun RegionDialog(selected: String, onSelect: (String) -> Unit, onDismiss
     ) {
         Column(
             modifier = Modifier
-                .verticalScroll(rememberScrollState())
-                .height(384.dp),
+                .height(384.dp)
+                .verticalScroll(rememberScrollState()),
         ) {
             (listOf(SYSTEM_DEFAULT) + CountryCodeToName.keys.sorted()).forEach { code ->
                 Row(
@@ -395,6 +496,7 @@ internal fun restartForRegionChange(context: Context) {
 /** which of the page's dialogs is open */
 private enum class InternetDialog {
     Region,
+    MuzoKey,
     WifiQuality,
     CellularQuality,
     DnsProvider,

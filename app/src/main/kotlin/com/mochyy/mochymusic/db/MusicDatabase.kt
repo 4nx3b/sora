@@ -107,7 +107,7 @@ class MusicDatabase(
 }
 
 // bump this with every schema change and add its migration to AllMigrations, the import checks old exports against it too
-const val MusicDatabaseVersion = 45
+const val MusicDatabaseVersion = 46
 
 @Database(
     entities = [
@@ -202,6 +202,7 @@ val AllMigrations: Array<Migration>
         MIGRATION_42_43,
         MIGRATION_43_44,
         MIGRATION_44_45,
+        MIGRATION_45_46,
     )
 
 val MIGRATION_1_2 =
@@ -901,5 +902,20 @@ val MIGRATION_44_45 =
             db.execSQL("ALTER TABLE `imported_playlist` ADD COLUMN `authorName` TEXT")
             db.execSQL("ALTER TABLE `imported_playlist` ADD COLUMN `authorAvatarUrl` TEXT")
             db.execSQL("ALTER TABLE `imported_playlist` ADD COLUMN `authorUrl` TEXT")
+        }
+    }
+
+val MIGRATION_45_46 =
+    object : Migration(45, 46) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            // Neiro/ArchiveTune port: when the listener blocked an artist, for the ported
+            // player styles' artist rows and menus.
+            // The column must be declared exactly like ArtistEntity does —
+            // @ColumnInfo(defaultValue = "NULL") — because Room checks the schema after
+            // every migration: PRAGMA table_info reports "NULL" only when the ALTER
+            // carries an explicit DEFAULT NULL, and a bare "blockedAt INTEGER" reads
+            // back as an undefined default, which fails validation with
+            // "Migration didn't properly handle: artist" and rolls the whole upgrade back.
+            db.execSQL("ALTER TABLE `artist` ADD COLUMN `blockedAt` INTEGER DEFAULT NULL")
         }
     }

@@ -205,6 +205,35 @@
                 <data android:mimeType="application/ogg" />
             </intent-filter>
 
+            <!-- Listen Together invite links, ported from Neiro: the share URL
+                 handed out by the room screen (https://<server host>/listen?code=…)
+                 and the direct custom scheme (bitchord://listen?code=…) — a tap
+                 on either opens straight onto the join flow with the code. The
+                 hosts mirror the ported ListenTogetherServers.inviteHosts: the
+                 JSON servers that serve a web client at /listen, so a link
+                 opened in a browser can still fall through to the app. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data android:scheme="https" />
+                <data android:host="devilmi-vivi-music-listen-together.hf.space" />
+                <data android:host="vivimusic-listen-together.onrender.com" />
+                <data android:pathPrefix="/listen" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data
+                    android:scheme="bitchord"
+                    android:host="listen" />
+            </intent-filter>
+
         </activity>
 
         <!-- the launcher icons: exactly one is enabled at a time (utils/AppIcons.kt), the default until another is picked -->
@@ -1257,6 +1286,26 @@
         <meta-data
             android:name="com.google.android.gms.cast.framework.OPTIONS_PROVIDER_CLASS_NAME"
             android:value="com.mochyy.mochymusic.cast.CastOptionsProvider" />
+
+        <!--
+          Receiver for the Listen Together port's notification actions (Approve /
+          Reject / chat quick reply), ported from Neiro — its PendingIntents are
+          this app's own, so it never needs to answer another app.
+        -->
+        <receiver
+            android:name="com.mochyy.mochymusic.ported.together.ListenTogetherActionReceiver"
+            android:exported="false" />
+        <!-- Neiro's always-on playing screen: shown by the system in place of its screen saver -->
+        <service
+            android:name="com.mochyy.mochymusic.aod.AodDreamService"
+            android:exported="true"
+            android:label="@string/aod_title"
+            android:permission="android.permission.BIND_DREAM_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.dreams.DreamService" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </service>
     </application>
 
 </manifest>

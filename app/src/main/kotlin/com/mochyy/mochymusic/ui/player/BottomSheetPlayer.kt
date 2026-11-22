@@ -986,48 +986,48 @@ private fun PlayerSheet(
             background = {},
             sharedContent = {
                 MorphingCover(
-                    progressProvider = progressProvider,
-                    horizontalOffsetProvider = horizontalOffsetProvider,
-                    trackInfo = trackInfo,
-                    isPlaying = transportState.isPlaying,
-                    playbackState = transportState.playbackState,
-                    maxWidth = screenWidth,
-                    maxHeight = screenHeight,
-                    collapsedBound = state.collapsedBound,
-                    pureBlack = pureBlack,
-                    glassState = morphingGlassState,
-                    lyricsProgressProvider = { lyricsProgress },
-                    forceVideoBackground = seeVideo,
-                    modifier = Modifier.fillMaxSize(),
-                    coverStyle = shownCoverStyle,
-                    backgroundStyle = backgroundStyle,
-                    editMode = studioEngaged,
-                    // the editor's top bar frosts what's under it, so the glass keeps capturing there
-                    glassActiveInEdit = { studio.stage >= StudioStage.EDIT && studio.selector.value < 0.01f },
-                    // another style draws the open player itself: none of the flagship runs behind it
-                    alternateStyle = !playerStyle.flagshipFamily || landscapeFlagship,
-                    miniVideo = playerStyle == PlayerStyle.VIDEO,
-                    coverOffsetProvider = layoutTweaks::controlsOffset,
-                    onLongPressCover = holdToStudio,
-                    studioArtModifier = if (playerStyle.flagshipFamily) {
-                        Modifier
-                            .then(Modifier.studioAnchor(studioAnchors) { it.cover })
-                            .then(Modifier.studioCoverLayer(studioParts))
-                    } else Modifier,
-                    onDoubleTapCover = { position ->
-                        if (!studioEngaged) {
-                            likeBurst.likeFromDoubleTap(position, trackInfo.liked, playerConnection::toggleLike)
-                        }
-                    },
-                    // tapping the art opens the song details like the title does, not on the turntable since its record has its own taps
-                    onTapCover = if (playerStyle.flagshipFamily && !isTurntable && !landscapeFlagship) {
-                        { if (!studioEngaged) showSongDetails = true }
-                    } else null,
-                    onArtBoundsChanged = { rects.cover = it },
-                    onVideoShowingChange = { videoShowing = it },
-                    ambient = if (isFlagship || backgroundStyle == PlayerBackgroundStyle.AMBIENT) ambient else null,
-                    frostedCover = isFlagship,
-                )
+                        progressProvider = progressProvider,
+                        horizontalOffsetProvider = horizontalOffsetProvider,
+                        trackInfo = trackInfo,
+                        isPlaying = transportState.isPlaying,
+                        playbackState = transportState.playbackState,
+                        maxWidth = screenWidth,
+                        maxHeight = screenHeight,
+                        collapsedBound = state.collapsedBound,
+                        pureBlack = pureBlack,
+                        glassState = morphingGlassState,
+                        lyricsProgressProvider = { lyricsProgress },
+                        forceVideoBackground = seeVideo,
+                        modifier = Modifier.fillMaxSize(),
+                        coverStyle = shownCoverStyle,
+                        backgroundStyle = backgroundStyle,
+                        editMode = studioEngaged,
+                        // the editor's top bar frosts what's under it, so the glass keeps capturing there
+                        glassActiveInEdit = { studio.stage >= StudioStage.EDIT && studio.selector.value < 0.01f },
+                        // another style draws the open player itself: none of the flagship runs behind it
+                        alternateStyle = !playerStyle.flagshipFamily || landscapeFlagship,
+                        miniVideo = playerStyle == PlayerStyle.VIDEO,
+                        coverOffsetProvider = layoutTweaks::controlsOffset,
+                        onLongPressCover = holdToStudio,
+                        studioArtModifier = if (playerStyle.flagshipFamily) {
+                            Modifier
+                                .then(Modifier.studioAnchor(studioAnchors) { it.cover })
+                                .then(Modifier.studioCoverLayer(studioParts))
+                        } else Modifier,
+                        onDoubleTapCover = { position ->
+                            if (!studioEngaged) {
+                                likeBurst.likeFromDoubleTap(position, trackInfo.liked, playerConnection::toggleLike)
+                            }
+                        },
+                        // tapping the art opens the song details like the title does, not on the turntable since its record has its own taps
+                        onTapCover = if (playerStyle.flagshipFamily && !isTurntable && !landscapeFlagship) {
+                            { if (!studioEngaged) showSongDetails = true }
+                        } else null,
+                        onArtBoundsChanged = { rects.cover = it },
+                        onVideoShowingChange = { videoShowing = it },
+                        ambient = if (isFlagship || backgroundStyle == PlayerBackgroundStyle.AMBIENT) ambient else null,
+                        frostedCover = isFlagship,
+                    )
             },
             onDismiss = {
                 playerConnection.service.clearAutomix()

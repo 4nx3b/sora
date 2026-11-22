@@ -1156,13 +1156,18 @@ fun HomeScreen(
         )
     }
 
+    // Neiro's content preferences: whole Home shelves the listener has switched off
+    val hideRecents by rememberPreference(com.mochyy.mochymusic.constants.HideRecentsKey, defaultValue = false)
+    val hideTopPicks by rememberPreference(com.mochyy.mochymusic.constants.HideTopPicksKey, defaultValue = false)
+    val hideHomeMoods by rememberPreference(com.mochyy.mochymusic.constants.HideHomeMoodsKey, defaultValue = false)
     val homeSections by remember {
         derivedStateOf {
             val list = mutableListOf<HomeSection>()
 
             // the recommendation rows are dealt out between Home's own rows, the way Apple Music
             // and Spotify mix "because you like" shelves in with your history
-            val categories = homeCategories.orEmpty()
+            // Neiro's "Top Picks for You" is its own picks shelf; sora's are the personal recommendation rows
+            val categories = if (hideTopPicks) emptyList() else homeCategories.orEmpty()
             var nextCategory = 0
             fun addCategories(count: Int = 1) = repeat(count) {
                 categories.getOrNull(nextCategory)?.let {
@@ -1171,7 +1176,7 @@ fun HomeScreen(
                 }
             }
 
-            if (recentlyPlayed?.isNotEmpty() == true) list.add(HomeSection.RecentlyPlayed)
+            if (!hideRecents && recentlyPlayed?.isNotEmpty() == true) list.add(HomeSection.RecentlyPlayed)
             if (pinnedItems.isNotEmpty()) list.add(HomeSection.Pinned)
             if (mostPlayedSongsForHome?.isNotEmpty() == true) list.add(HomeSection.MostPlayed)
             addCategories()
@@ -1195,7 +1200,8 @@ fun HomeScreen(
                 .mapIndexed { index, section -> index to section }
                 .filter { (index, section) ->
                     feedVideoKinds[index] != FeedVideoKind.Live && feedVideoKinds[index] != FeedVideoKind.MusicVideos &&
-                        !(section.isSpeedDial && homeStyle == HomeStyle.MOCHYY)
+                        !(section.isSpeedDial && homeStyle == HomeStyle.MOCHYY) &&
+                        !(hideHomeMoods && section.isMoodsShelf())
                 }
             homePageSections.firstOrNull()?.let { (index, section) -> list.add(HomeSection.HomePageSection(index, section.title)) }
             if (allTimeHits?.isNotEmpty() == true) list.add(HomeSection.AllTimeHits)
@@ -1924,3 +1930,8 @@ fun HomeScreen(
     }
     }
 }
+
+// YouTube's "Quick picks" shelf, which Neiro calls Top Picks for You
+// the moods and genres shelf ("Find your mood"), by where its "more" leads, so a localized title is still caught
+private fun com.music.innertube.pages.HomePage.Section.isMoodsShelf(): Boolean =
+    endpoint?.browseId == "FEmusic_moods_and_genres"

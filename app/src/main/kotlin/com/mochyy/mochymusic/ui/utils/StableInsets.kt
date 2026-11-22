@@ -2,6 +2,7 @@ package com.mochyy.mochymusic.ui.utils
 
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.statusBarsIgnoringVisibility
 import androidx.compose.foundation.layout.systemBarsIgnoringVisibility
 import androidx.compose.foundation.layout.windowInsetsPadding
@@ -33,3 +34,10 @@ val WindowInsets.Companion.stableStatusBars: WindowInsets
 // statusBarsPadding that stays put while the player hides the status bar
 @Composable
 fun Modifier.stableStatusBarsPadding(): Modifier = windowInsetsPadding(WindowInsets.stableStatusBars)
+
+// the status bar's shown height as a plain value; the player can hide the bar, and pages laid out
+// against the live one jumped as it went and came back
+@Composable
+@NonRestartableComposable
+fun stableStatusBarsAsTopPadding(): androidx.compose.ui.unit.Dp =
+    WindowInsets.stableStatusBars.asPaddingValues().calculateTopPadding()

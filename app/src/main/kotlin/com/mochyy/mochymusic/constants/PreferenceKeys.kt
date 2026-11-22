@@ -44,6 +44,52 @@ enum class DensityScale(val value: Float, val label: String) {
 
 val DefaultOpenTabKey = stringPreferencesKey("defaultOpenTab")
 val SlimNavBarKey = booleanPreferencesKey("slimNavBar")
+
+// Neiro's navigation bar page: the standard bar's look. Every default is sora's own bar as it was, so nothing moves until a dial does
+// Neiro's always-on playing screen (aod/AodDreamService), every part chosen on its settings page
+val AodEnabledKey = booleanPreferencesKey("aodEnabled")
+val AodShowThumbnailKey = booleanPreferencesKey("aodShowThumbnail")
+val AodShowArtistKey = booleanPreferencesKey("aodShowArtist")
+val AodShowAlbumKey = booleanPreferencesKey("aodShowAlbum")
+val AodShowProgressKey = booleanPreferencesKey("aodShowProgress")
+val AodShowTimeLabelsKey = booleanPreferencesKey("aodShowTimeLabels")
+val AodShowControlsKey = booleanPreferencesKey("aodShowControls")
+val AodShowClockKey = booleanPreferencesKey("aodShowClock")
+val AodShowBatteryKey = booleanPreferencesKey("aodShowBattery")
+val AodBrightnessKey = floatPreferencesKey("aodBrightness")
+const val AodBrightnessDefault = 0.15f
+val AodAutoDimmingKey = booleanPreferencesKey("aodAutoDimming")
+val AodAutoTimerSecondsKey = intPreferencesKey("aodAutoTimerSeconds")
+val AodTouchLockKey = booleanPreferencesKey("aodTouchLock")
+val AodPixelShiftKey = booleanPreferencesKey("aodPixelShift")
+
+// Neiro's font choice: sora's own Inter, SF Pro Display, the device's typeface, or a font file of the user's
+enum class AppFont { DEFAULT, SF_PRO, SYSTEM, CUSTOM }
+val AppFontKey = stringPreferencesKey("appFont")
+val CustomFontNameKey = stringPreferencesKey("customFontName")
+// an absolute path under filesDir/fonts, the picked or downloaded file copied in so its grant never runs out
+val CustomFontPathKey = stringPreferencesKey("customFontPath")
+
+// Neiro's "Mini player and bar behavior": when the mini player and the tabs fold into the compact row
+enum class MiniPlayerBarBehavior { ADAPTIVE, ALWAYS_EXPANDED, ALWAYS_COMPACT }
+val MiniPlayerBarBehaviorKey = stringPreferencesKey("miniPlayerBarBehavior")
+val NavBarGlassGlowKey = booleanPreferencesKey("navBarGlassGlow")
+val NavBarGlassGlowIntensityKey = floatPreferencesKey("navBarGlassGlowIntensity")
+val NavBarShowLabelsKey = booleanPreferencesKey("navBarShowLabels")
+val NavBarWidthKey = floatPreferencesKey("navBarWidth")
+val NavBarHeightKey = floatPreferencesKey("navBarHeight")
+val NavBarOpacityKey = floatPreferencesKey("navBarOpacity")
+val NavBarTransparencyKey = floatPreferencesKey("navBarTransparency")
+val NavBarLabelSpacingKey = floatPreferencesKey("navBarLabelSpacing")
+val NavBarCornerRadiusKey = floatPreferencesKey("navBarCornerRadius")
+const val NavBarGlowIntensityDefault = 1f
+const val NavBarWidthDefault = 1f
+const val NavBarHeightDefault = 1f
+const val NavBarOpacityDefault = 1f
+const val NavBarTransparencyDefault = 0f
+const val NavBarLabelSpacingDefault = 1f
+// sora's pill is fully round at its 64dp height; Neiro's 28dp would square it off for everyone
+const val NavBarCornerRadiusDefault = 32f
 val GridItemsSizeKey = stringPreferencesKey("gridItemSize")
 val SliderStyleKey = stringPreferencesKey("sliderStyle")
 val SquigglySliderKey = booleanPreferencesKey("squigglySlider")
@@ -82,6 +128,8 @@ val PauseOnMute = booleanPreferencesKey("pauseOnMute")
 // keep playing when another app makes sound, and don't pause that app either
 val MixWithOtherAppsKey = booleanPreferencesKey("mixWithOtherApps")
 val ResumeOnBluetoothConnectKey = booleanPreferencesKey("resumeOnBluetoothConnect")
+// keep the CPU awake while playing, ported from Neiro (ArchiveTune's keep awake)
+val KeepCpuAwakeKey = booleanPreferencesKey("keepCpuAwake")
 val StopPlaybackOnTaskRemovedKey = booleanPreferencesKey("stopPlaybackOnTaskRemoved")
 val KeepScreenOn = booleanPreferencesKey("keepScreenOn")
 // there's no limit to the larp
@@ -117,6 +165,13 @@ val EnableLrcRedKey = booleanPreferencesKey("enableLrcRed")
 val EnableUnisonKey = booleanPreferencesKey("enableUnison")
 val HideExplicitKey = booleanPreferencesKey("hideExplicit")
 val HideVideoSongsKey = booleanPreferencesKey("hideVideoSongs")
+// Neiro's "Square video thumbnails": music videos drawn as square, centre-cropped covers everywhere, the player included
+val SquareVideoThumbnailsKey = booleanPreferencesKey("squareVideoThumbnails")
+// Neiro's "Filter non-music audio": the phone-wide scan skips short clips, WAV files, voice notes, recordings and system sounds
+val FilterNonMusicAudioKey = booleanPreferencesKey("filterNonMusicAudio")
+val HideRecentsKey = booleanPreferencesKey("hideRecents")
+val HideTopPicksKey = booleanPreferencesKey("hideTopPicks")
+val HideHomeMoodsKey = booleanPreferencesKey("hideHomeMoods")
 // no switch for it in settings, so every reader defaults it to on and shorts stay out
 val HideYoutubeShortsKey = booleanPreferencesKey("hideYoutubeShorts")
 val ShowArtistDescriptionKey = booleanPreferencesKey("showArtistDescription")
@@ -264,6 +319,7 @@ val ShuffleModeKey = booleanPreferencesKey("shuffleMode")
 val SkipSilenceKey = booleanPreferencesKey("skipSilence")
 val SkipSilenceInstantKey = booleanPreferencesKey("skipSilenceInstant")
 val AudioNormalizationKey = booleanPreferencesKey("audioNormalization")
+val LoudnessOffOnSpeakerKey = booleanPreferencesKey("loudnessOffOnSpeaker")
 val AutoLoadMoreKey = booleanPreferencesKey("autoLoadMore")
 val DisableLoadMoreWhenRepeatAllKey = booleanPreferencesKey("disableLoadMoreWhenRepeatAll")
 val InfiniteQueueKey = booleanPreferencesKey("infiniteQueue")
@@ -340,6 +396,9 @@ val SkipBlendKey = booleanPreferencesKey("skipBlend")
 // how many songs coming up get their start fetched for blend skips, 1 to 4; data saver keeps it at 1
 val SkipBlendAheadKey = intPreferencesKey("skipBlendAhead")
 const val SkipBlendAheadMax = 4
+val PreloadSongsCountKey = intPreferencesKey("preloadSongsCount")
+const val PreloadSongsDefault = 0
+const val PreloadSongsMax = 10
 
 // a music video plays its song's studio upload when there is one, without the video's skits and sound effects
 val StudioForVideosKey = booleanPreferencesKey("studioForVideos")
@@ -1399,6 +1458,48 @@ val BlurStrengthPxKey = floatPreferencesKey("blurStrengthPx")
 val ElementBlurKey = booleanPreferencesKey("elementBlur")
 // how fast animations run on top of android's own animation speed, 1 means just follow android
 val AnimationSpeedKey = floatPreferencesKey("animationSpeed")
+
+// Neiro's liquid glass and acrylic, each one opt-in: the two materials exclude each other, every surface has its own switch,
+// and every tuning value only counts while its own switch is on (off, it's Neiro's default)
+val LiquidGlassEnabledKey = booleanPreferencesKey("liquidGlass")
+val AcrylicBlurKey = booleanPreferencesKey("acrylicBlur")
+val LiquidGlassNavBarKey = booleanPreferencesKey("liquidGlassNavBar")
+val LiquidGlassMiniPlayerKey = booleanPreferencesKey("liquidGlassMiniPlayer")
+val LiquidGlassSlidersKey = booleanPreferencesKey("liquidGlassSliders")
+val LiquidGlassTogglesKey = booleanPreferencesKey("liquidGlassToggles")
+val LiquidGlassPerformanceKey = booleanPreferencesKey("liquidGlassPerformance")
+val LiquidGlassDepth3DKey = booleanPreferencesKey("liquidGlassDepth3D")
+val LiquidGlassChromaticAberrationKey = booleanPreferencesKey("liquidGlassChromaticAberration")
+val LiquidGlassVibrancyKey = booleanPreferencesKey("liquidGlassVibrancy")
+val LiquidGlassAdaptiveLuminanceKey = booleanPreferencesKey("liquidGlassAdaptiveLuminance")
+val LiquidGlassIntensityKey = stringPreferencesKey("liquidGlassIntensity")
+val LiquidGlassIntensityEnabledKey = booleanPreferencesKey("liquidGlassIntensityEnabled")
+val LiquidGlassRefractionHeightKey = floatPreferencesKey("liquidGlassRefractionHeight")
+val LiquidGlassRefractionHeightEnabledKey = booleanPreferencesKey("liquidGlassRefractionHeightEnabled")
+val LiquidGlassRefractionAmountKey = floatPreferencesKey("liquidGlassRefractionAmount")
+val LiquidGlassRefractionAmountEnabledKey = booleanPreferencesKey("liquidGlassRefractionAmountEnabled")
+val LiquidGlassRefractionWidthKey = floatPreferencesKey("liquidGlassRefractionWidth")
+val LiquidGlassRefractionWidthEnabledKey = booleanPreferencesKey("liquidGlassRefractionWidthEnabled")
+val LiquidGlassBlurRadiusKey = floatPreferencesKey("liquidGlassBlurRadius")
+val LiquidGlassBlurRadiusEnabledKey = booleanPreferencesKey("liquidGlassBlurRadiusEnabled")
+val LiquidGlassTintOpacityKey = floatPreferencesKey("liquidGlassTintOpacity")
+val LiquidGlassTintOpacityEnabledKey = booleanPreferencesKey("liquidGlassTintOpacityEnabled")
+val LiquidGlassShadowDepthKey = floatPreferencesKey("liquidGlassShadowDepth")
+val LiquidGlassShadowDepthEnabledKey = booleanPreferencesKey("liquidGlassShadowDepthEnabled")
+val LiquidGlassCornerRadiusKey = floatPreferencesKey("liquidGlassCornerRadius")
+val LiquidGlassCornerRadiusEnabledKey = booleanPreferencesKey("liquidGlassCornerRadiusEnabled")
+val LiquidGlassChromaticAmountKey = floatPreferencesKey("liquidGlassChromaticAmount")
+val LiquidGlassChromaticAmountEnabledKey = booleanPreferencesKey("liquidGlassChromaticAmountEnabled")
+val LiquidGlassClarityKey = floatPreferencesKey("liquidGlassClarity")
+val LiquidGlassClarityEnabledKey = booleanPreferencesKey("liquidGlassClarityEnabled")
+val LiquidGlassSaturationKey = floatPreferencesKey("liquidGlassSaturation")
+val LiquidGlassSaturationEnabledKey = booleanPreferencesKey("liquidGlassSaturationEnabled")
+val LiquidGlassRainbowKey = floatPreferencesKey("liquidGlassRainbow")
+val LiquidGlassRainbowEnabledKey = booleanPreferencesKey("liquidGlassRainbowEnabled")
+val LiquidGlassRimKey = floatPreferencesKey("liquidGlassRim")
+val LiquidGlassRimEnabledKey = booleanPreferencesKey("liquidGlassRimEnabled")
+val LiquidGlassQualityKey = floatPreferencesKey("liquidGlassQuality")
+val LiquidGlassQualityEnabledKey = booleanPreferencesKey("liquidGlassQualityEnabled")
 // the phone's status bar over the open player, off hides it on every player style, the ipod too
 val PlayerStatusBarKey = booleanPreferencesKey("playerStatusBar")
 // out of the box the open player runs to the top of the screen with the status bar hidden

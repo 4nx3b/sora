@@ -2,6 +2,7 @@
 
 package com.mochyy.mochymusic.ui.player
 
+import com.mochyy.mochymusic.ui.component.liquid.liquidGlassSurface
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
@@ -25,6 +26,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.ui.graphics.asComposeRenderEffect
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.nativeCanvas
@@ -502,7 +504,8 @@ fun MorphingCover(
     val pillFrame = com.mochyy.mochymusic.ui.component.LocalMiniPillFrame.current
     // the wide bar's pill shrinks on a short screen, and the mini player's cover and buttons with it
     val miniScale = pillFrame.height / com.mochyy.mochymusic.constants.MiniPlayerHeight
-    val targetMiniArtWidth = if (isVideoActive) (48.dp * miniScale * 16f / 9f) else 48.dp * miniScale
+    val videoRatio = com.mochyy.mochymusic.ui.component.videoThumbnailRatio()
+    val targetMiniArtWidth = if (isVideoActive) (48.dp * miniScale * videoRatio) else 48.dp * miniScale
     val animatedMiniArtWidth by animateDpAsState(
         targetValue = targetMiniArtWidth,
         animationSpec = tween(durationMillis = 350, easing = FastOutSlowInEasing),
@@ -856,7 +859,9 @@ fun MorphingCover(
                     .then(studioArtModifier)
                     .graphicsLayer {
                         val p = progressProvider()
-                        if (alternateStyle) alpha = (1f - p / 0.4f).coerceIn(0f, 1f)
+                        if (alternateStyle) {
+                            alpha = (1f - p / 0.4f).coerceIn(0f, 1f)
+                        }
 
                         scaleX = animatedPauseScale
                         scaleY = animatedPauseScale
@@ -1896,15 +1901,32 @@ private fun SheetPillGlass(
                 else Modifier
             ),
     ) {
+        val liquid = com.mochyy.mochymusic.ui.component.liquid.LocalLiquidGlass.current
+        val liquidPill = liquid.surface(liquid.miniPlayer)
         FrostedChromeGlass(
             state = glassState,
             pureBlack = pureBlack,
             accentWash = accentWash,
-            modifier = Modifier.fillMaxSize(),
+            modifier = if (liquidPill) {
+                Modifier.fillMaxSize().graphicsLayer { alpha = (progressProvider() / MiniGlassOutBy).coerceIn(0f, 1f) }
+            } else {
+                Modifier.fillMaxSize()
+            },
             surface = com.mochyy.mochymusic.ui.component.ChromeSurface.MiniPlayer,
         )
+        if (liquidPill) {
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .graphicsLayer { alpha = 1f - (progressProvider() / MiniGlassOutBy).coerceIn(0f, 1f) }
+                    .liquidGlassSurface(androidx.compose.foundation.shape.RoundedCornerShape(50)),
+            )
+        }
     }
 }
+
+/** the liquid glass pill hands over to the frosted backdrop by this much open, so it never shows on the open player */
+private const val MiniGlassOutBy = 0.02f
 
 /**
  * The open player's backdrop, growing with the sheet. Solid by [BackdropSolidAt], over the pill's
@@ -2077,7 +2099,7 @@ private fun CoverCanvasLayer(
         val durationSec = playerConnection?.mediaMetadata?.value
             ?.takeIf { it.id == mediaId }?.duration?.takeIf { it > 0 }
 
-        val res = findCanvas(context, normTitle, normArtist, durationSec = durationSec)
+        val res = findCanvas(context, normTitle, normArtist, durationSec = durationSec, mediaId = mediaId)
         if (res != null) {
             CanvasArtworkPlaybackCache.put(mediaId, res)
             canvasArtwork = res

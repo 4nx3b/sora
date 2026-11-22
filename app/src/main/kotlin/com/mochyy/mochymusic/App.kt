@@ -27,7 +27,7 @@ import com.mochyy.mochymusic.constants.*
 import com.mochyy.mochymusic.di.ApplicationScope
 import com.mochyy.mochymusic.i18n.AppLanguage
 import com.mochyy.mochymusic.extensions.toEnum
-import com.mochyy.mochymusic.utils.CrashHandler
+import com.mochyy.mochymusic.utils.CrashReporter
 import com.mochyy.mochymusic.utils.PreferencesCache
 import com.mochyy.mochymusic.utils.cipher.CipherDeobfuscator
 import com.mochyy.mochymusic.utils.dataStore
@@ -69,6 +69,7 @@ class App : Application(), SingletonImageLoader.Factory {
     lateinit var phoneLink: dagger.Lazy<com.mochyy.mochymusic.link.phone.PhoneLinkHost>
 
     override fun onCreate() {
+        CrashReporter.install(this)
         // before super, because that's where hilt builds the database and the player caches
         com.mochyy.mochymusic.importer.transfer.TransferRestore.applyPending(this)
         // the folders a move to another drive left behind, cleared once nothing has them open
@@ -76,18 +77,34 @@ class App : Application(), SingletonImageLoader.Factory {
         super.onCreate()
 
         AppLanguage.initialize(this)
-        CrashHandler.install(this)
 
         CipherDeobfuscator.initialize(this)
 
         if (BuildConfig.DEBUG || BuildConfig.BUILD_TYPE == "fast") {
             Timber.plant(Timber.DebugTree())
         }
+        Timber.plant(com.mochyy.mochymusic.utils.CrashLogTree())
 
         PreferencesCache.start(this, applicationScope)
+        applicationScope.launch(Dispatchers.IO) { com.mochyy.mochymusic.utils.CrashReporter.exportPending(this@App) }
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            applicationScope.launch(Dispatchers.Default) {
+                val prefs = dataStore.data.first()
+                val glassSurface = listOf(LiquidGlassNavBarKey, LiquidGlassMiniPlayerKey, LiquidGlassSlidersKey, LiquidGlassTogglesKey)
+                    .any { prefs[it] == true }
+                if (prefs[LiquidGlassEnabledKey] == true && glassSurface) com.kyant.backdrop.prewarmBackdropShaders()
+            }
+        }
         // tokens saved before the vault existed are sealed on the first start after the update
         applicationScope.launch(kotlinx.coroutines.Dispatchers.IO) { (dataStore as? com.mochyy.mochymusic.utils.SecretPreferences)?.sealLeftovers() }
         com.mochyy.mochymusic.utils.NotRecommended.init(this)
+
+        // the Listen Together port's doors, in Neiro's order: the settings facade
+        // first (the engine reads it while it spins up), then the engine itself,
+        // then the personal-queue stash
+        com.mochyy.mochymusic.ported.together.settings.AppSettings.init(this)
+        com.mochyy.mochymusic.ported.together.ListenTogether.init(this)
+        com.mochyy.mochymusic.ported.together.playback.PartyPersonalQueueStash.init(this)
 
         applicationScope.launch(Dispatchers.IO) {
             try {
