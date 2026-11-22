@@ -1,5 +1,6 @@
 package com.mochyy.mochymusic.ui.screens.settings.importsync
 
+import com.mochyy.mochymusic.ui.screens.settings.previews.YouTubeSyncPreview
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
@@ -69,6 +70,8 @@ fun YouTubeSyncScreen(
         title = stringResource(R.string.import_sync_sync_title),
         onBack = { navController.navigateUp() },
     ) {
+        com.mochyy.mochymusic.ui.screens.gesture.PortedPreviewHeader { YouTubeSyncPreview() }
+        androidx.compose.foundation.layout.Spacer(androidx.compose.ui.Modifier.height(16.dp))
         SettingsGroup(
             title = stringResource(R.string.yt_sync_account_header),
             style = SettingsGroupStyle.Grouped,

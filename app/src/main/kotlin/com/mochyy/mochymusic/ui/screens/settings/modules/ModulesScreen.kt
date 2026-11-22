@@ -2,6 +2,7 @@
 
 package com.mochyy.mochymusic.ui.screens.settings.modules
 
+import com.mochyy.mochymusic.ui.screens.settings.previews.ModulesPreview
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -86,6 +87,8 @@ fun ModulesScreen(navController: NavController, viewModel: ModulesViewModel = hi
         onBack = { navController.navigateUp() },
         titleBadge = { BetaBadge() },
     ) {
+        com.mochyy.mochymusic.ui.screens.gesture.PortedPreviewHeader { ModulesPreview() }
+        androidx.compose.foundation.layout.Spacer(androidx.compose.ui.Modifier.height(16.dp))
         // back puts the lines away first, a second back leaves the page
         BackHandler(enabled = sortingLooks || sortingSources) {
             sortingLooks = false

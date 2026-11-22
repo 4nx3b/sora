@@ -119,6 +119,25 @@
     <string name="settings_section_canvas">Canvas</string>
     <string name="settings_playback_link_desc">Background play, Bluetooth, shuffle and skipping</string>
     <string name="settings_now_playing_link_desc">Lyrics, videos, canvas and the format badge</string>
+    <string name="settings_modules_link_desc">Sources and looks the app gains from modules</string>
+    <string name="lyrics_sources_title">Lyrics sources</string>
+    <string name="lyrics_sources_row_desc">Where lyrics come from, and in what order</string>
+    <string name="lyrics_sources_desc">Tried from the top down. Tap a row to switch a source on or off; drag its handle to move it.</string>
+    <string name="lyrics_sources_on">On</string>
+    <string name="lyrics_sources_off">Off</string>
+    <string name="prefer_syllabic">Prefer syllabic lyrics</string>
+    <string name="prefer_syllabic_desc">Word-synced lyrics win over line-synced ones from a higher source</string>
+    <string name="canvas_check">Canvas check</string>
+    <string name="canvas_check_desc">Asks every canvas provider whether it answers right now</string>
+    <string name="canvas_check_running">Checking…</string>
+    <string name="canvas_check_reachable">Reachable</string>
+    <string name="canvas_check_unreachable">Unreachable</string>
+    <string name="canvas_check_not_connected">Connect Spotify first</string>
+    <string name="settings_player_pages">The player and its modules</string>
+    <string name="settings_listen_together_desc">Listen in sync with friends, with chat</string>
+    <string name="settings_devices_link_desc">TV, car and the other screens around the phone</string>
+    <string name="settings_internet_link_desc">Region, DNS, audio quality ceilings and the proxy</string>
+
     <string name="settings_transition_link_desc">Crossfade and mixing between songs, in Audio Lab</string>
     <string name="settings_lyrics_animation_link_desc">How the lyrics move, in Customize</string>
     <string name="settings_hide_descriptions">Disable description on settings</string>

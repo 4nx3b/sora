@@ -651,6 +651,8 @@ class MainActivity : ComponentActivity() {
                         Screens.MainScreens
                 }
                 val (slimNav) = rememberPreference(SlimNavBarKey, defaultValue = false)
+                // Neiro's font choice: keeps the app's type on the font picked in Customisation > Font
+                com.mochyy.mochymusic.ui.theme.ApplyAppFont()
                 // flipped in Experimental while the app is open: it starts (or stops) turning right away
                 val (landscapeUnlocked) = rememberPreference(com.mochyy.mochymusic.constants.LandscapeUnlockedKey, defaultValue = false)
                 LaunchedEffect(landscapeUnlocked) {
@@ -742,8 +744,11 @@ class MainActivity : ComponentActivity() {
                 } else null
                 val miniPill = wideBar?.miniFrame ?: com.mochyy.mochymusic.ui.component.PhoneMiniPill
 
-                // the row the tabs take along the bottom: the wide bar's shrinks with a short screen
-                val navRowHeight = wideBar?.rowHeight ?: NavigationBarHeight
+                // the row the tabs take along the bottom: the wide bar's shrinks with a short screen;
+                // the Height dial makes the standard bar taller, so the mini player and the pages leave it room
+                val navBarStyle = com.mochyy.mochymusic.ui.component.rememberNavBarStyle()
+                val navRowHeight = wideBar?.rowHeight
+                    ?: (NavigationBarHeight + if (com.mochyy.mochymusic.modules.skin.ActiveSkin.bar == null) navBarStyle.extraHeight else 0.dp)
                 val navPadding = if (slimNav && wideBar == null) SlimNavBarHeight else navRowHeight
 
                 val playerBottomSheetState = rememberBottomSheetState(
@@ -1119,7 +1124,10 @@ class MainActivity : ComponentActivity() {
                                             )
                                         }
 
-                                        CompositionLocalProvider(com.mochyy.mochymusic.ui.component.LocalMiniPillFrame provides miniPill) {
+                                        // the wide bar's pill frame (or the phone default) is what the mini player reads
+                                        androidx.compose.runtime.CompositionLocalProvider(
+                                            com.mochyy.mochymusic.ui.component.LocalMiniPillFrame provides miniPill,
+                                        ) {
                                             BottomSheetPlayer(
                                                 state = playerBottomSheetState,
                                                 navController = navController,

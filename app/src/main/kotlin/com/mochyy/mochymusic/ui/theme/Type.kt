@@ -29,8 +29,22 @@ object LookFont {
     var family: FontFamily? by mutableStateOf(null)
 }
 
-// read through a state, so text set in it follows a look's font turning on or off
-val InterFontFamily: FontFamily get() = LookFont.family ?: Inter
+/** the font picked in Settings > Customisation > Font (Neiro's font choice); null keeps inter. A look's own font still wins */
+object UserFont {
+    var family: FontFamily? by mutableStateOf(null)
+}
+
+// read through a state, so text set in it follows a look's font, or the picked font, turning on or off
+val InterFontFamily: FontFamily get() = LookFont.family ?: UserFont.family ?: Inter
+
+// Neiro's own type: SF Pro Display, the five cuts bundled with the ported players
+val SfProFamily = FontFamily(
+    Font(R.font.sf_pro_display_regular, FontWeight.Normal),
+    Font(R.font.sf_pro_display_medium, FontWeight.Medium),
+    Font(R.font.sf_pro_display_semibold, FontWeight.SemiBold),
+    Font(R.font.sf_pro_display_bold, FontWeight.Bold),
+    Font(R.font.sf_pro_display_heavy, FontWeight.Black),
+)
 
 private val GlobalFontWeight = FontWeight.SemiBold
 private val GlobalLetterSpacing = (-0.05).em

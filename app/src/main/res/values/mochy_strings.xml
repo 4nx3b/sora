@@ -1295,4 +1295,5 @@
     <string name="menu_resync_paste">Paste its %1$s link</string>
     <string name="menu_choose_version">Choose different version</string>
     <string name="menu_choose_version_desc">Wrong recording? Pick the right one from a list</string>
+    <string name="external_downloader_handed_off">Handed to the downloader app</string>
 </resources>

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="preview_cat_sound">Sound</string>
+    <string name="preview_cat_listening">Listening</string>
+    <string name="preview_cat_behaviour">How it acts</string>
+    <string name="preview_cat_look">Look</string>
+    <string name="preview_cat_space">Space</string>
+    <string name="preview_cat_connected">Connected</string>
+    <string name="preview_cat_player">Player</string>
+    <string name="preview_cat_addons">Add-ons</string>
+    <string name="preview_cat_network">Network</string>
+    <string name="preview_cat_output">Output</string>
+    <string name="preview_cat_between_songs">Between songs</string>
+    <string name="preview_status_connected">Connected</string>
+    <string name="preview_status_not_connected">Not connected</string>
+    <string name="preview_status_sharing">Sharing what you play</string>
+    <string name="preview_status_off">Off</string>
+    <string name="preview_cat_sync">Sync</string>
+    <string name="preview_cat_together">Together</string>
+    <string name="preview_cat_devices">Devices</string>
+    <string name="preview_cat_sources">Sources</string>
+    <string name="lyrics_module_off">Off in Modules, switch it on there to use it</string>
+</resources>

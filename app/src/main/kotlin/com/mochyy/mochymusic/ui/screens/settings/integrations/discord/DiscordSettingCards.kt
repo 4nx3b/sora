@@ -76,6 +76,7 @@ import com.mochyy.mochymusic.discord.PresenceImage
 import com.mochyy.mochymusic.discord.PresenceSettings
 import com.mochyy.mochymusic.discord.SpinStyle
 import com.mochyy.mochymusic.ui.component.AppSwitch
+import com.mochyy.mochymusic.ui.component.sliderDragScrollLock
 import com.mochyy.mochymusic.ui.theme.InterFontFamily
 import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
@@ -585,6 +586,22 @@ internal fun DiscordStepSlider(
 ) {
     val latest by rememberUpdatedState(onValueChange)
     val density = LocalDensity.current
+
+    // the liquid glass sliders switch, when it is on, is the look of every slider in the app
+    val glass = com.mochyy.mochymusic.ui.component.liquid.LocalLiquidGlass.current
+    if (glass.surface(glass.sliders)) {
+        val lastIndex = values.lastIndex.coerceAtLeast(1)
+        com.mochyy.mochymusic.ui.component.liquid.LiquidGlassSlider(
+            value = values.indexOf(value).coerceAtLeast(0).toFloat() / lastIndex,
+            onValueChange = { fraction ->
+                latest(values[(fraction * lastIndex).roundToInt().coerceIn(0, values.lastIndex)])
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .sliderDragScrollLock(),
+        )
+        return
+    }
     BoxWithConstraints(
         modifier =
             Modifier
@@ -605,6 +622,7 @@ internal fun DiscordStepSlider(
             Modifier
                 .fillMaxWidth()
                 .height(40.dp)
+                .sliderDragScrollLock()
                 .pointerInput(widthPx, values) { detectTapGestures { latest(valueAt(it.x)) } }
                 .pointerInput(widthPx, values) { detectHorizontalDragGestures { change, _ -> latest(valueAt(change.position.x)) } }
                 .drawBehind {

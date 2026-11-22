@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- the Qobuz backup mirror: the same mark, halved and offset, the way a mirror doubles -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="48"
+    android:viewportHeight="48">
+    <path android:fillColor="#3E4C59" android:pathData="M5,6h17v36h-17z" />
+    <path android:fillColor="#7B8794" android:pathData="M26,6h17v36h-17z" />
+    <path android:fillColor="#0F1E2E" android:pathData="M18,14h-9v20h9z M39,14h-9v20h9z" />
+    <path android:fillColor="#FFFFFF" android:pathData="M15,17h-3v14h3z M36,17h-3v14h3z" />
+</vector>

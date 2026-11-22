@@ -1295,6 +1295,18 @@
         <receiver
             android:name="com.mochyy.mochymusic.ported.together.ListenTogetherActionReceiver"
             android:exported="false" />
+        <!-- Neiro's always-on playing screen: shown by the system in place of its screen saver -->
+        <service
+            android:name="com.mochyy.mochymusic.aod.AodDreamService"
+            android:exported="true"
+            android:label="@string/aod_title"
+            android:permission="android.permission.BIND_DREAM_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.dreams.DreamService" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </service>
+
     </application>
 
 </manifest>

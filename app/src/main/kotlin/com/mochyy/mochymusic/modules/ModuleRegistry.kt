@@ -264,6 +264,9 @@ class ModuleRegistry @Inject constructor(
         LyricsProviderRegistry.setModuleProviders(
             list.filter { it.active && it.adds(ModuleFeature.Lyrics) }.mapNotNull { (it.module as? LyricsModule)?.let(::ModuleLyricsProvider) },
         )
+        LyricsProviderRegistry.setKnownModules(
+            list.filter { it.adds(ModuleFeature.Lyrics) && it.module is LyricsModule }.associate { "module:${it.module.info.id}" to it.module.info.name },
+        )
         ModuleMetadata.sources = list.filter { it.active && it.adds(ModuleFeature.Metadata) }.mapNotNull { it.module as? MetadataModule }
         ModuleMenu.publish(list.filter { it.active }.mapNotNull { (it.module as? SkinSource)?.skin })
     }
@@ -572,7 +575,16 @@ class ModuleRegistry @Inject constructor(
     // ---- loading --------------------------------------------------------------------------------
 
     private fun load(): List<Pair<MochyModule, ModuleOrigin>> {
-        val builtIn = listOf<MochyModule>(AppleMusicModule(), MonochromeModule(), JioSaavnModule()).map { it to ModuleOrigin.BuiltIn }
+        val builtIn = listOf<MochyModule>(
+            AppleMusicModule(),
+            MonochromeModule(),
+            JioSaavnModule(),
+            // the sources ported from the ArchiveTune fork
+            com.mochyy.mochymusic.module.qobuz.QobuzModule(),
+            com.mochyy.mochymusic.module.qobuzbackup.QobuzBackupModule(),
+            com.mochyy.mochymusic.module.deezer.DeezerModule(),
+            com.mochyy.mochymusic.module.soundcloud.SoundCloudModule(),
+        ).map { it to ModuleOrigin.BuiltIn }
         val apps = discover()
         val savedCode = savedCodeModules()
         CodeModules.tidy(context, savedCode.map { it.optString("folder") }.toSet())

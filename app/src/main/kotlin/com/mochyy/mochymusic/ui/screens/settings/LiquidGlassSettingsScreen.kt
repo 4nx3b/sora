@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
@@ -20,6 +21,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.datastore.preferences.core.Preferences
 import androidx.navigation.NavController
+import com.mochyy.mochymusic.ui.component.sliderDragScrollLock
 import com.mochyy.mochymusic.constants.AcrylicBlurKey
 import com.mochyy.mochymusic.constants.LiquidGlassAdaptiveLuminanceKey
 import com.mochyy.mochymusic.constants.LiquidGlassChromaticAberrationKey
@@ -52,6 +54,8 @@ fun LiquidGlassSettingsScreen(navController: NavController) {
         onBack = { navController.navigateUp() },
         backLabel = "Customisation",
     ) {
+        com.mochyy.mochymusic.ui.screens.gesture.PortedPreviewHeader { com.mochyy.mochymusic.ui.screens.gesture.LiquidGlassPreview() }
+        androidx.compose.foundation.layout.Spacer(androidx.compose.ui.Modifier.height(16.dp))
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             if (!supported) Text("Liquid glass needs Android 12 or newer.", modifier = Modifier.padding(horizontal = 16.dp))
             SwitchPreference(
@@ -105,13 +109,22 @@ private fun BoolRow(title: String, key: Preferences.Key<Boolean>, default: Boole
 
 @Composable
 private fun ValueRow(title: String, value: LiquidGlassValue, enabled: Boolean) {
-    val (on, setOn) = rememberPreference(value.enabledKey, false)
     val (v, setV) = rememberPreference(value.key, value.default)
-    SwitchPreference(title = { Text(title) }, checked = on, onCheckedChange = setOn, isEnabled = enabled)
-    AnimatedVisibility(on && enabled) {
-        val live = com.mochyy.mochymusic.ui.component.liquid.LiquidGlassLiveValues.dragging
-        androidx.compose.runtime.DisposableEffect(value.key) { onDispose { live.remove(value.key) } }
-        val shown = (live[value.key] ?: v).coerceIn(value.range)
+    val live = com.mochyy.mochymusic.ui.component.liquid.LiquidGlassLiveValues.dragging
+    androidx.compose.runtime.DisposableEffect(value.key) { onDispose { live.remove(value.key) } }
+    val shown = (live[value.key] ?: v).coerceIn(value.range)
+    androidx.compose.foundation.layout.Row(
+        modifier = Modifier.fillMaxWidth().padding(start = 24.dp, end = 24.dp, top = 12.dp),
+        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+    ) {
+        Text(title, modifier = Modifier.weight(1f), color = androidx.compose.ui.graphics.Color.White.copy(alpha = if (enabled) 1f else 0.38f))
+        Text(
+            "%.2f".format(java.util.Locale.ROOT, shown),
+            color = androidx.compose.ui.graphics.Color.White.copy(alpha = if (enabled) 0.6f else 0.3f),
+            style = androidx.compose.ui.text.TextStyle(fontFeatureSettings = "tnum"),
+        )
+    }
+    run {
         val onChange: (Float) -> Unit = { live[value.key] = it }
         val onFinished = {
             live.remove(value.key)?.let(setV)
@@ -123,8 +136,11 @@ private fun ValueRow(title: String, value: LiquidGlassValue, enabled: Boolean) {
                 value = shown,
                 onValueChange = onChange,
                 valueRange = value.range,
+                enabled = enabled,
                 onValueChangeFinished = onFinished,
-                modifier = Modifier.padding(horizontal = 24.dp),
+                modifier = Modifier
+                    .padding(horizontal = 24.dp)
+                    .sliderDragScrollLock(),
             )
         } else {
             Slider(
@@ -132,7 +148,10 @@ private fun ValueRow(title: String, value: LiquidGlassValue, enabled: Boolean) {
                 onValueChange = onChange,
                 onValueChangeFinished = onFinished,
                 valueRange = value.range,
-                modifier = Modifier.padding(horizontal = 24.dp),
+                enabled = enabled,
+                modifier = Modifier
+                    .padding(horizontal = 24.dp)
+                    .sliderDragScrollLock(),
             )
         }
     }

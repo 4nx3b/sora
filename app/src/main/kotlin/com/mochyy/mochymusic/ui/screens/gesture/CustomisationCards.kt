@@ -58,6 +58,7 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
@@ -67,6 +68,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import com.mochyy.mochymusic.ui.component.pressBounce
 import com.mochyy.mochymusic.ui.screens.audiolab.LabColors
+import com.mochyy.mochymusic.ui.component.sliderDragScrollLock
 import com.mochyy.mochymusic.ui.theme.InterFontFamily
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
@@ -291,6 +293,19 @@ private fun RoundingSwatch(radiusPx: Float, modifier: Modifier) {
 // a bare line like the mock: the bright part is how far along it is, tap or drag anywhere on it
 @Composable
 private fun BareSlider(fraction: Float, onFractionChange: (Float) -> Unit, enabled: Boolean) {
+    // the liquid glass sliders switch, when it is on, is the look of every slider in the app
+    val glass = com.mochyy.mochymusic.ui.component.liquid.LocalLiquidGlass.current
+    if (glass.surface(glass.sliders)) {
+        com.mochyy.mochymusic.ui.component.liquid.LiquidGlassSlider(
+            value = fraction.coerceIn(0f, 1f),
+            onValueChange = onFractionChange,
+            enabled = enabled,
+            modifier = Modifier
+                .fillMaxWidth()
+                .sliderDragScrollLock(),
+        )
+        return
+    }
     var widthPx by remember { mutableFloatStateOf(1f) }
     val shown = fraction.coerceIn(0f, 1f)
     val currentShown by androidx.compose.runtime.rememberUpdatedState(shown)
@@ -312,6 +327,7 @@ private fun BareSlider(fraction: Float, onFractionChange: (Float) -> Unit, enabl
             .fillMaxWidth()
             .height(20.dp)
             .onSizeChanged { widthPx = it.width.toFloat().coerceAtLeast(1f) }
+            .sliderDragScrollLock()
             .pointerInput(enabled) { if (enabled) detectTapGestures { offset -> updateFromX(offset.x) } }
             .draggable(
                 state = dragState,
@@ -405,20 +421,34 @@ private fun StyleCard(
     highlighted: Boolean,
     onClick: () -> Unit,
     preview: @Composable BoxScope.() -> Unit,
+) = PreviewCard(category = category, title = title, onClick = onClick, ringed = highlighted, preview = preview)
+
+// a settings door with a little lit screen of what lies behind it: the Customisation style cards, the settings
+// list's categories and every page link that leads somewhere with something to show
+@Composable
+internal fun PreviewCard(
+    category: String,
+    title: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    selected: Boolean = false,
+    ringed: Boolean = false,
+    height: Dp = StyleCardHeight,
+    preview: @Composable BoxScope.() -> Unit,
 ) {
     val ring by animateColorAsState(
-        targetValue = if (highlighted) HighlightColor else Color.Transparent,
+        targetValue = if (ringed || selected) HighlightColor else Color.Transparent,
         animationSpec = tween(220),
         label = "styleHighlight",
     )
     val interaction = remember { MutableInteractionSource() }
     Box(
-        modifier = Modifier
+        modifier = modifier
             .pressBounce(interaction, pressedScale = 0.97f)
             .fillMaxWidth()
-            .height(StyleCardHeight)
+            .height(height)
             .clip(CardShape)
-            .background(LabColors.Card)
+            .background(if (selected) SelectedCardColor else LabColors.Card)
             .clickable(interactionSource = interaction, indication = RemoteFocus, onClick = onClick),
     ) {
         PreviewFrame(modifier = Modifier.align(Alignment.BottomEnd), content = preview)
@@ -426,14 +456,16 @@ private fun StyleCard(
             text = category,
             style = CardLabelStyle,
             color = Color.White.copy(alpha = 0.9f),
-            modifier = Modifier.padding(start = CardTextInset, top = CardTextInset),
+            maxLines = 2,
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+            modifier = Modifier.padding(start = CardTextInset, top = CardTextInset, end = PreviewWidth + 28.dp),
         )
         // a long name shrinks to fit beside the preview instead of breaking mid-word
         BasicText(
             text = title,
             style = CardValueStyle,
             maxLines = 1,
-            autoSize = TextAutoSize.StepBased(minFontSize = 20.sp, maxFontSize = 32.sp),
+            autoSize = TextAutoSize.StepBased(minFontSize = 17.sp, maxFontSize = 32.sp),
             modifier = Modifier
                 .align(Alignment.BottomStart)
                 .padding(start = CardTextInset, bottom = 24.dp, end = PreviewWidth + 28.dp),
@@ -442,3 +474,5 @@ private fun StyleCard(
         Box(modifier = Modifier.matchParentSize().border(2.dp, ring, CardShape))
     }
 }
+
+private val SelectedCardColor = Color(0xFF3A3A3E)
