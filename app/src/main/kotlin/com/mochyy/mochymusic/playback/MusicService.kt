@@ -3911,11 +3911,14 @@ class MusicService :
                     .Factory()
                     .setCache(playerCache)
                     .setUpstreamDataSourceFactory(
-                        DefaultDataSource.Factory(
+                        // a deezer:// stream (the Deezer module's encrypted cdn file) reads
+                        // through the ported decrypting reader; everything else as before
+                        DeezerSchemeRouting(DefaultDataSource.Factory(
                             this,
                             OkHttpDataSource.Factory(
                                 OkHttpClient
                                     .Builder()
+                                    .addInterceptor(SoundCloudPlaybackHeaders.interceptor)
                                     .dns(object : Dns {
                                         override fun lookup(hostname: String): List<InetAddress> {
                                             val addresses = Dns.SYSTEM.lookup(hostname)
@@ -3929,7 +3932,7 @@ class MusicService :
                                     .followAppProxy()
                                     .build(),
                             ),
-                        ),
+                        )),
                     ),
             ).setCacheWriteDataSinkFactory(null)
             .setFlags(FLAG_IGNORE_CACHE_ON_ERROR)

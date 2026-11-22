@@ -3,6 +3,10 @@
     <string name="builtin_module_apple_description">Plays your Apple Music subscription in Mochy, in AAC 256, with every Audio Lab effect</string>
     <string name="builtin_module_monochrome_description">Lossless FLAC for every song Monochrome has, no account needed, with every Audio Lab effect</string>
     <string name="builtin_module_jiosaavn_description">JioSaavn\'s catalog in AAC up to 320 kbps, no account needed. Strongest on Indian music</string>
+    <string name="builtin_module_qobuz_description">Qobuz\'s catalog in FLAC up to 24-bit/192 kHz, through an account or a community instance</string>
+    <string name="builtin_module_qobuzbackup_description">Lossless streams from a community mirror that answers a YouTube id. No account, asked on its own</string>
+    <string name="builtin_module_deezer_description">Deezer\'s catalog in FLAC (CD 16-bit) through an account\'s arl cookie</string>
+    <string name="builtin_module_soundcloud_description">User uploads in AAC up to 160 kbps, no account needed. Strongest on remixes, sets and self-released music</string>
     <string name="builtin_module_stream">Stream</string>
     <string name="builtin_module_apple_aac_description">Apple Music\'s standard stereo stream</string>
     <string name="builtin_module_apple_he_description">A quarter of the data, for slow or metered networks</string>

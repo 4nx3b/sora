@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Deezer's equalizer bars -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="48"
+    android:viewportHeight="48">
+    <path android:fillColor="#A238FF" android:pathData="M6,8h6v6h-6z" />
+    <path android:fillColor="#A238FF" android:pathData="M15,8h6v12h-6z" />
+    <path android:fillColor="#A238FF" android:pathData="M24,8h6v18h-6z" />
+    <path android:fillColor="#A238FF" android:pathData="M33,8h6v26h-6z" />
+    <path android:fillColor="#A238FF" android:pathData="M6,20h6v6h-6z" />
+    <path android:fillColor="#A238FF" android:pathData="M15,26h6v6h-6z" />
+    <path android:fillColor="#A238FF" android:pathData="M24,32h6v6h-6z" />
+    <path android:fillColor="#A238FF" android:pathData="M33,38h6v4h-6z" />
+    <path android:fillColor="#A238FF" android:pathData="M6,32h6v6h-6z" />
+    <path android:fillColor="#A238FF" android:pathData="M15,38h6v4h-6z" />
+</vector>
