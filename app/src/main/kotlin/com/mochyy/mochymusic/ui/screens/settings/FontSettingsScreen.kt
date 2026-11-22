@@ -62,8 +62,6 @@ fun FontSettingsScreen(navController: NavController) {
         onBack = { navController.navigateUp() },
         backLabel = stringResource(R.string.settings_customisation_category),
     ) {
-        com.mochyy.mochymusic.ui.screens.gesture.PortedPreviewHeader { com.mochyy.mochymusic.ui.screens.gesture.FontPreview(com.mochyy.mochymusic.ui.screens.gesture.rememberFontName()) }
-        androidx.compose.foundation.layout.Spacer(androidx.compose.ui.Modifier.height(16.dp))
         SettingsSection(
             stringResource(R.string.font),
             listOf(

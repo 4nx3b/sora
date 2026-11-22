@@ -53,8 +53,6 @@ fun NavigationBarSettingsScreen(navController: NavController) {
         onBack = { navController.navigateUp() },
         backLabel = stringResource(R.string.settings_customisation_category),
     ) {
-        com.mochyy.mochymusic.ui.screens.gesture.PortedPreviewHeader { com.mochyy.mochymusic.ui.screens.gesture.NavBarStylePreview() }
-        androidx.compose.foundation.layout.Spacer(androidx.compose.ui.Modifier.height(16.dp))
         SettingsSection(
             stringResource(R.string.navigation_bar_general),
             listOf(
