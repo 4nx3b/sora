@@ -76,7 +76,7 @@ private object CanvasVideoCache {
         }
 
     /** how much room the cached loops take right now, for the storage page's card */
-    fun sizeBytes(context: Context): Long = runCatching { get(context).cacheSize }.getOrDefault(0L)
+    fun sizeBytes(context: Context): Long = runCatching { get(context).cacheSpace }.getOrDefault(0L)
 
     /** empties the cached loops; the one playing carries on, it is already open */
     fun clear(context: Context) {
