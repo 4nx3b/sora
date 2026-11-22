@@ -237,6 +237,9 @@ private val SettingsIndex = listOf(
     SettingsEntry("Enable animated canvas", "Now playing", NowPlayingSettingsRoute, "canvas animation spotify looping visual"),
     SettingsEntry("Canvas order", "Now playing", NowPlayingSettingsRoute, "canvas order apple music tidal spotify source priority", R.string.canvas_order),
     SettingsEntry("Canvas on Wi-Fi only", "Now playing", NowPlayingSettingsRoute, "canvas wifi mobile data", R.string.appearance_canvas_wifi),
+    SettingsEntry("Lyrics sources", "Now playing", NowPlayingSettingsRoute, "lyrics sources order providers enable disable reorder switch", R.string.lyrics_sources_title),
+    SettingsEntry("Prefer syllabic lyrics", "Now playing", NowPlayingSettingsRoute, "syllabic word synced lyrics preference line", R.string.prefer_syllabic),
+    SettingsEntry("Canvas check", "Now playing", NowPlayingSettingsRoute, "canvas check providers reachable health probe tidal apple muzo spotify", R.string.canvas_check),
     SettingsEntry("Sharpest animated covers", "Now playing", NowPlayingSettingsRoute, "canvas animated cover motion apple music quality hd 4k sharp resolution", R.string.canvas_best_quality),
 
     // Audio Lab
@@ -281,6 +284,10 @@ private val SettingsIndex = listOf(
     SettingsEntry("Manage downloads", "Storage", "storage_settings", "downloads delete remove biggest offline space"),
     SettingsEntry("Remove all downloads", "Storage", "storage_settings", "delete clear downloads offline space"),
     SettingsEntry("Download order", "Storage", "storage_settings", "download order source priority provider where downloads come from", R.string.quality_download_order),
+    SettingsEntry("Download only on Wi-Fi", "Storage", "storage_settings", "downloads wifi only blocking metered mobile data wait", R.string.storage_download_wifi_only),
+    SettingsEntry("External downloader", "Storage", "storage_settings", "external downloader app package hand off youtube another", R.string.storage_external_downloader),
+    SettingsEntry("Canvas cache", "Storage", "storage_settings", "canvas cache limit clear video loops animated covers", R.string.storage_canvas_cache),
+    SettingsEntry("Clear lyrics cache", "Storage", "storage_settings", "clear lyrics cache delete saved refetch", R.string.storage_clear_lyrics_cache),
     SettingsEntry("Backup", "Storage", com.mochyy.mochymusic.ui.screens.settings.integrations.backup.BackupRoute, "backup restore cloud dropbox webdav onedrive schedule", R.string.integration_backup_name),
 
     // Experimental

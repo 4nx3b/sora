@@ -39,6 +39,10 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.mochyy.mochymusic.R
+import com.mochyy.mochymusic.constants.CanvasVideoCacheLimitKey
+import com.mochyy.mochymusic.constants.DownloadWifiOnlyKey
+import com.mochyy.mochymusic.constants.ExternalDownloaderEnabledKey
+import com.mochyy.mochymusic.constants.ExternalDownloaderPackageKey
 import com.mochyy.mochymusic.constants.MaxSongCacheSizeKey
 import com.mochyy.mochymusic.playback.ExportStep
 import com.mochyy.mochymusic.playback.MoveStep
@@ -104,6 +108,9 @@ fun StorageScreen(
         ClearButtons(viewModel, downloadCount = downloads?.size ?: 0, usage = usage)
 
         Spacer(Modifier.height(26.dp))
+        CanvasCacheCard()
+
+        Spacer(Modifier.height(26.dp))
         SectionText(stringResource(R.string.storage_backup_title))
         Spacer(Modifier.height(10.dp))
         StorageActionButton(
@@ -111,6 +118,12 @@ fun StorageScreen(
             detail = stringResource(R.string.integration_backup_desc),
             onClick = { navController.navigate(BackupRoute) },
         )
+
+        // Neiro's downloads rules: hold the queue to Wi-Fi, or hand tracks to another app
+        Spacer(Modifier.height(26.dp))
+        SectionText(stringResource(R.string.storage_downloads_rules_title))
+        Spacer(Modifier.height(10.dp))
+        DownloadsRulesCard()
 
         // where each download comes from, moved in from the audio quality page (Neiro keeps it on storage)
         Spacer(Modifier.height(26.dp))
@@ -390,6 +403,107 @@ private fun ClearButtons(viewModel: StorageViewModel, downloadCount: Int, usage:
             label = stringResource(R.string.storage_manage_downloads),
             enabled = downloadCount > 0,
             onClick = { menuState.showManageDownloadsSheet(viewModel) },
+        )
+        StorageActionButton(
+            label = stringResource(R.string.storage_clear_lyrics_cache),
+            danger = true,
+            enabled = !busy,
+            onClick = { viewModel.clearLyricsCache() },
+        )
+    }
+}
+
+// Neiro's "download only on Wi-Fi" (BLOCKING) and the external downloader hand-off
+@Composable
+private fun DownloadsRulesCard() {
+    val (wifiOnly, onWifiOnly) = rememberPreference(DownloadWifiOnlyKey, false)
+    val (externalOn, onExternalOn) = rememberPreference(ExternalDownloaderEnabledKey, false)
+    val (externalPackage, onExternalPackage) = rememberPreference(ExternalDownloaderPackageKey, "")
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val metered = remember {
+        (context.getSystemService(android.content.Context.CONNECTIVITY_SERVICE) as? android.net.ConnectivityManager)
+            ?.isActiveNetworkMetered == true
+    }
+    var editPackage by remember { androidx.compose.runtime.mutableStateOf(false) }
+    com.mochyy.mochymusic.ui.component.SettingsGroup(
+        style = com.mochyy.mochymusic.ui.component.SettingsGroupStyle.Grouped,
+        items = listOf(
+            com.mochyy.mochymusic.ui.screens.settings.wifiOnlyItem(
+                checked = wifiOnly,
+                onCheckedChange = onWifiOnly,
+                blocking = wifiOnly && metered,
+            ),
+            com.mochyy.mochymusic.ui.screens.settings.externalDownloaderItem(
+                checked = externalOn,
+                onCheckedChange = onExternalOn,
+                packageName = externalPackage,
+                onEdit = { editPackage = true },
+            ),
+        ),
+    )
+    if (editPackage) {
+        com.mochyy.mochymusic.ui.component.TextFieldDialog(
+            title = { Text(stringResource(R.string.storage_external_downloader_package)) },
+            placeholder = { Text("com.example.downloader") },
+            initialTextFieldValue = androidx.compose.ui.text.input.TextFieldValue(externalPackage),
+            isInputValid = { it.isNotBlank() },
+            onDone = { value ->
+                onExternalPackage(value.trim())
+                editPackage = false
+            },
+            onDismiss = { editPackage = false },
+        )
+    }
+}
+
+// the canvas loops: how much room they take, the ceiling the player keeps them under, and emptying them
+@Composable
+private fun CanvasCacheCard() {
+    val (limit, onLimit) = rememberPreference(CanvasVideoCacheLimitKey, 300)
+    val startingLimit = remember { limit }
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    val refresh = remember { androidx.compose.runtime.mutableIntStateOf(0) }
+    val bytes by androidx.compose.runtime.produceState(0L, refresh.intValue) {
+        value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            com.mochyy.mochymusic.ui.player.canvasVideoCacheBytes(context)
+        }
+    }
+    StorageCardColumn {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier
+                    .size(26.dp)
+                    .clip(CircleShape)
+                    .background(Color(0xFFDADADA)),
+            ) {
+                Icon(painterResource(R.drawable.sparks), contentDescription = null, tint = StorageCard, modifier = Modifier.size(16.dp))
+            }
+            Spacer(Modifier.width(12.dp))
+            Text(stringResource(R.string.storage_canvas_cache), style = storageText(15f, FontWeight.SemiBold), modifier = Modifier.weight(1f))
+            Text(formatSize(bytes), style = storageText(15f, FontWeight.Bold))
+        }
+        Spacer(Modifier.height(12.dp))
+        StepSlider(steps = listOf(128, 256, 300, 512, 1024, 2048), value = limit, onValueChange = onLimit)
+        if (limit != startingLimit) {
+            Text(
+                stringResource(R.string.storage_cache_applies_later),
+                style = storageText(12f, FontWeight.Medium, StorageMuted, -0.1f),
+                modifier = Modifier.padding(top = 6.dp),
+            )
+        }
+        Spacer(Modifier.height(10.dp))
+        StorageActionButton(
+            label = stringResource(R.string.storage_clear_canvas_cache),
+            danger = true,
+            enabled = bytes > 0L,
+            onClick = {
+                scope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                    com.mochyy.mochymusic.ui.player.clearCanvasVideoCache(context)
+                    refresh.intValue++
+                }
+            },
         )
     }
 }

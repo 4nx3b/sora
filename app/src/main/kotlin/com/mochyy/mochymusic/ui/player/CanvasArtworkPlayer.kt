@@ -41,6 +41,7 @@ import com.mochyy.mochymusic.constants.CanvasBestQualityKey
 import com.mochyy.mochymusic.utils.followAppProxy
 import com.mochyy.mochymusic.utils.rememberDataSaverActive
 import com.mochyy.mochymusic.utils.rememberPreference
+import com.mochyy.mochymusic.utils.dataStore
 import com.music.innertube.models.YouTubeClient
 import okhttp3.OkHttpClient
 import java.util.Locale
@@ -57,14 +58,32 @@ import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 private object CanvasVideoCache {
     @Volatile private var cache: SimpleCache? = null
 
+    // Neiro's canvas cache limit: the player reads it once as it builds the cache, so a new
+    // limit lands from the next start, the same way the song cache's does
+    private const val DefaultLimitMb = 300
+
     fun get(context: Context): SimpleCache =
         cache ?: synchronized(this) {
+            val limitMb = runCatching {
+                context.dataStore[com.mochyy.mochymusic.constants.CanvasVideoCacheLimitKey] ?: DefaultLimitMb
+            }.getOrDefault(DefaultLimitMb)
             cache ?: SimpleCache(
                 java.io.File(context.cacheDir, "canvas_video"),
-                LeastRecentlyUsedCacheEvictor(300L * 1024 * 1024),
+                LeastRecentlyUsedCacheEvictor(limitMb * 1024L * 1024L),
                 StandaloneDatabaseProvider(context),
             ).also { cache = it }
         }
+
+    /** how much room the cached loops take right now, for the storage page's card */
+    fun sizeBytes(context: Context): Long = runCatching { get(context).cacheSize }.getOrDefault(0L)
+
+    /** empties the cached loops; the one playing carries on, it is already open */
+    fun clear(context: Context) {
+        runCatching {
+            val active = get(context)
+            active.keys.forEach { key -> active.removeResource(key) }
+        }
+    }
 }
 
 /** how long a canvas has to stay before its video starts */
@@ -460,3 +479,9 @@ internal class CanvasTexture : TextureView.SurfaceTextureListener {
 
     override fun onSurfaceTextureUpdated(texture: SurfaceTexture) = Unit
 }
+
+
+/** the storage page's canvas cache card: how much room the loops take, and emptying them */
+fun canvasVideoCacheBytes(context: Context): Long = CanvasVideoCache.sizeBytes(context)
+
+fun clearCanvasVideoCache(context: Context) = CanvasVideoCache.clear(context)

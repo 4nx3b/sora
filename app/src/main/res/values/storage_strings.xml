@@ -44,6 +44,17 @@
     <!-- where things are saved, and exporting songs -->
     <string name="storage_or">Or</string>
     <string name="storage_backup_title">Backups</string>
+    <string name="storage_downloads_rules_title">Downloads</string>
+    <string name="storage_download_wifi_only">Download only on Wi-Fi</string>
+    <string name="storage_download_wifi_only_desc">Downloads wait for Wi-Fi and never touch mobile data</string>
+    <string name="storage_download_wifi_only_blocking">BLOCKING — on mobile data, downloads wait for Wi-Fi</string>
+    <string name="storage_external_downloader">External downloader</string>
+    <string name="storage_external_downloader_desc">Hand the download button\'s song to another app</string>
+    <string name="storage_external_downloader_no_package">Name the app songs are handed to</string>
+    <string name="storage_external_downloader_package">Downloader app package</string>
+    <string name="storage_canvas_cache">Canvas video cache</string>
+    <string name="storage_clear_canvas_cache">Clear canvas cache</string>
+    <string name="storage_clear_lyrics_cache">Clear lyrics cache</string>
     <string name="storage_downloads_place">Choose where downloads are saved</string>
     <string name="storage_cache_place">Choose where the cache is saved</string>
     <string name="storage_export_downloads">Export downloaded songs as a folder</string>
