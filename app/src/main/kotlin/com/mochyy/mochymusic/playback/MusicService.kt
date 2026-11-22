@@ -794,6 +794,12 @@ class MusicService :
      */
     private var playbackWakeLock: android.os.PowerManager.WakeLock? = null
 
+    // loudness normalization, minus the phone's own speaker when "Disable on phone speaker" is on (Neiro's loudnessOffOnSpeaker)
+    private fun normalizationWanted() = combine(
+        dataStore.data.map { (it[AudioNormalizationKey] ?: true) to (it[LoudnessOffOnSpeakerKey] ?: false) },
+        audioOutputs.devices.map { devices -> devices.firstOrNull { it.isActive }?.kind == com.mochyy.mochymusic.playback.audio.AudioOutputs.Kind.PHONE },
+    ) { (normalize, offOnSpeaker), onSpeaker -> normalize && !(offOnSpeaker && onSpeaker) }.distinctUntilChanged()
+
     private fun updatePlaybackWakeLock() {
         val lock = playbackWakeLock ?: return
         val shouldHold = dataStore.get(KeepCpuAwakeKey, false) && player.isPlaying
