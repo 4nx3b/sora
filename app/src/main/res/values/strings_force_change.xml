@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="pc_force_off">Switched off in Sources</string>
+    <string name="pc_force_sign_in">Sign in to play from here</string>
+    <string name="pc_force_search">Search %1$s for this song</string>
+    <string name="pc_force_looking">Looking in its catalogue\u2026</string>
+    <string name="pc_force_youtube_catalog">Plays from YouTube Music, at the quality picked below</string>
+    <string name="pc_force_not_found">Not in this catalogue</string>
+    <string name="pc_force_found">%1$s — %2$s</string>
+    <string name="pc_force_khz">%1$.1f kHz</string>
+    <string name="pc_force_lossless">Lossless</string>
+</resources>

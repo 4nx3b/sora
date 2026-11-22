@@ -123,10 +123,10 @@ object LiquidGlassLiveValues {
 
 @Composable
 private fun tuningValue(value: LiquidGlassValue): Float {
-    val on by rememberPreference(value.enabledKey, false)
+    // a slider always counts now; its old per-value switch key is kept so saved settings still read
     val v by rememberPreference(value.key, value.default)
     val live = LiquidGlassLiveValues.dragging[value.key]
-    return if (on) (live ?: v).coerceIn(value.range) else value.default
+    return (live ?: v).coerceIn(value.range)
 }
 
 @Composable

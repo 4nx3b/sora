@@ -264,6 +264,9 @@ class ModuleRegistry @Inject constructor(
         LyricsProviderRegistry.setModuleProviders(
             list.filter { it.active && it.adds(ModuleFeature.Lyrics) }.mapNotNull { (it.module as? LyricsModule)?.let(::ModuleLyricsProvider) },
         )
+        LyricsProviderRegistry.setKnownModules(
+            list.filter { it.adds(ModuleFeature.Lyrics) && it.module is LyricsModule }.associate { "module:${it.module.info.id}" to it.module.info.name },
+        )
         ModuleMetadata.sources = list.filter { it.active && it.adds(ModuleFeature.Metadata) }.mapNotNull { it.module as? MetadataModule }
         ModuleMenu.publish(list.filter { it.active }.mapNotNull { (it.module as? SkinSource)?.skin })
     }
