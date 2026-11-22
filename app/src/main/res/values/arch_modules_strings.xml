@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The ArchiveTune modules tab, ported from ArchiveTune (github.com/rukamori/ArchiveTune,
+     GPL-3.0). English only, the way the other ported pages ship. -->
+<resources>
+    <!-- the list page -->
+    <string name="arch_modules_use">Use ArchiveTune modules</string>
+    <string name="arch_modules_use_desc">%1$d of %2$d on · .arch packages, added from a file, an address or a catalog</string>
+    <string name="arch_modules_installed">Installed</string>
+    <string name="arch_modules_add">Add modules</string>
+    <string name="arch_modules_add_url">Add module URL</string>
+    <string name="arch_modules_add_url_desc">An .arch package, a plain provider.js or an extension manifest</string>
+    <string name="arch_modules_import_file">Import module file</string>
+    <string name="arch_modules_import_file_desc">An .arch package or a provider script from this phone</string>
+    <string name="arch_modules_add_catalog">Add catalog URL</string>
+    <string name="arch_modules_add_catalog_desc">A page that lists modules to install from</string>
+    <string name="arch_modules_catalogs">Catalogs</string>
+    <string name="arch_modules_catalog_entries">%1$d entries</string>
+    <string name="arch_modules_page_footer">An ArchiveTune module supplies alternative audio for a song through its own provider script. Code in a module can make network requests — install sources you trust.</string>
+    <string name="arch_modules_remove_catalog_title">Remove catalog</string>
+    <string name="arch_modules_remove_catalog_desc">The catalog leaves the list. Modules installed from it stay.</string>
+
+    <!-- the install review -->
+    <string name="arch_modules_install_review">Install module</string>
+    <string name="arch_modules_origin">From %1$s</string>
+    <string name="arch_modules_required_settings">Needs setting up: %1$s</string>
+    <string name="arch_modules_install_warning">Provider code can make network requests. Install sources you trust.</string>
+    <string name="arch_modules_install">Install</string>
+    <string name="arch_modules_replace">Replace</string>
+    <string name="arch_modules_already_installed">Installed</string>
+    <string name="arch_modules_unsupported">Unsupported</string>
+
+    <!-- the details page -->
+    <string name="arch_modules_position">Priority</string>
+    <string name="arch_modules_position_value">Asked %1$d.</string>
+    <string name="arch_modules_configuration">Configuration</string>
+    <string name="arch_modules_save">Save</string>
+    <string name="arch_modules_diagnostics">Diagnostics</string>
+    <string name="arch_modules_actions">Actions</string>
+    <string name="arch_modules_check">Check</string>
+    <string name="arch_modules_authorize">Authorize</string>
+    <string name="arch_modules_authorize_desc">Opens the provider\'s sign-in page in the browser</string>
+    <string name="arch_modules_check_update">Check for update</string>
+    <string name="arch_modules_edit_metadata">Edit name and description</string>
+    <string name="arch_modules_metadata_name">Name</string>
+    <string name="arch_modules_metadata_author">Author</string>
+    <string name="arch_modules_metadata_description">Description</string>
+    <string name="arch_modules_remove">Remove</string>
+    <string name="arch_modules_remove_module_title">Remove module</string>
+    <string name="arch_modules_remove_module_desc">The module and its configuration are deleted. Its saved storage goes with it.</string>
+    <string name="arch_modules_homepage">Homepage</string>
+    <string name="arch_modules_repository">Repository</string>
+    <string name="arch_modules_quality_hi_res">HI-RES</string>
+    <string name="arch_modules_quality_max">MAX</string>
+
+    <!-- the catalog page -->
+    <string name="arch_modules_catalog_refreshed">%1$d entries · refreshed %2$s</string>
+    <string name="arch_modules_refresh">Refresh</string>
+
+    <!-- the status line -->
+    <string name="arch_modules_checking">Checking…</string>
+    <string name="arch_modules_not_checked">Not checked</string>
+    <string name="arch_modules_ready">Ready</string>
+    <string name="arch_modules_needs_configuration">Needs configuration</string>
+    <string name="arch_modules_unavailable">Unreachable</string>
+    <string name="arch_modules_timeout">Timed out</string>
+    <string name="arch_modules_failed">Failed</string>
+
+    <!-- what the actions say -->
+    <string name="arch_modules_enabled">ArchiveTune modules on</string>
+    <string name="arch_modules_disabled">ArchiveTune modules off</string>
+    <string name="arch_modules_removed">Removed</string>
+    <string name="arch_modules_saved">Saved</string>
+    <string name="arch_modules_catalog_added">Catalog added</string>
+    <string name="arch_modules_catalog_refresh_toast">Catalog refreshed</string>
+    <string name="arch_modules_no_update">No update</string>
+    <string name="arch_modules_already_authorized">Already authorized</string>
+    <string name="arch_modules_action_failed">That didn\'t work</string>
+    <string name="arch_modules_network_failed">The network let it down</string>
+    <string name="arch_modules_invalid_document">Not a module anyone can read</string>
+    <string name="arch_modules_integrity_failed">The file didn\'t match its checksum</string>
+    <string name="arch_modules_configuration_failed">The settings don\'t add up</string>
+    <string name="arch_modules_unsupported_toast">That format isn\'t supported</string>
+    <string name="arch_modules_execution_failed">The module script failed</string>
+    <string name="arch_modules_session_connected">Session connected</string>
+    <string name="arch_modules_session_failed">The session didn\'t come back</string>
+</resources>

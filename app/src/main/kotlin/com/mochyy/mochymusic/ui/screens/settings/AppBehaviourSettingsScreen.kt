@@ -1,5 +1,9 @@
 package com.mochyy.mochymusic.ui.screens.settings
 
+import com.mochyy.mochymusic.ui.screens.settings.previews.ProxyPreview
+import com.mochyy.mochymusic.ui.screens.settings.previews.PlaybackCategoryPreview
+import com.mochyy.mochymusic.ui.screens.settings.previews.NowPlayingPreview
+import com.mochyy.mochymusic.ui.screens.settings.previews.InternetPreview
 import android.widget.Toast
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
@@ -208,6 +212,15 @@ private fun networkItems(navController: NavController): List<SettingsItem> {
             subOptionOf = dataSaver,
         ),
         linkItem(
+            key = "Internet",
+            title = stringResource(R.string.internet),
+            description = stringResource(R.string.settings_internet_link_desc),
+            icon = painterResource(R.drawable.language),
+            onClick = { navController.navigate(com.mochyy.mochymusic.ui.screens.settings.InternetSettingsRoute) },
+            category = androidx.compose.ui.res.stringResource(com.mochyy.mochymusic.R.string.preview_cat_network),
+            preview = { InternetPreview() },
+        ),
+        linkItem(
             key = "Proxy",
             title = stringResource(R.string.proxy),
             description = if (proxyOn && AppProxy.parseAddress(proxyAddress) != null) {
@@ -217,6 +230,12 @@ private fun networkItems(navController: NavController): List<SettingsItem> {
             },
             icon = painterResource(R.drawable.wifi_proxy),
             onClick = { navController.navigate(ProxySettingsRoute) },
+            category = if (proxyOn && AppProxy.parseAddress(proxyAddress) != null) {
+                stringResource(R.string.proxy_status_on, proxyAddress)
+            } else {
+                stringResource(R.string.proxy_status_off)
+            },
+            preview = { ProxyPreview() },
         ),
     )
 }
@@ -275,6 +294,8 @@ private fun relatedItems(navController: NavController): List<SettingsItem> = lis
         description = stringResource(R.string.settings_playback_link_desc),
         icon = painterResource(R.drawable.play),
         onClick = { navController.navigate(PlaybackSettingsRoute) },
+        category = androidx.compose.ui.res.stringResource(com.mochyy.mochymusic.R.string.preview_cat_listening),
+        preview = { PlaybackCategoryPreview() },
     ),
     linkItem(
         key = "Now playing page",
@@ -282,5 +303,7 @@ private fun relatedItems(navController: NavController): List<SettingsItem> = lis
         description = stringResource(R.string.settings_now_playing_link_desc),
         icon = painterResource(R.drawable.lyrics),
         onClick = { navController.navigate(NowPlayingSettingsRoute) },
+        category = androidx.compose.ui.res.stringResource(com.mochyy.mochymusic.R.string.preview_cat_player),
+        preview = { NowPlayingPreview() },
     ),
 )

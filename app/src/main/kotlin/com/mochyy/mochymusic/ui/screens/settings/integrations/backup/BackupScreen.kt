@@ -2,6 +2,7 @@
 
 package com.mochyy.mochymusic.ui.screens.settings.integrations.backup
 
+import com.mochyy.mochymusic.ui.screens.settings.previews.BackupPreview
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.text.format.DateUtils
@@ -131,6 +132,8 @@ fun BackupScreen(
         onBack = { navController.navigateUp() },
         backLabel = stringResource(R.string.integrations),
     ) {
+        com.mochyy.mochymusic.ui.screens.gesture.PortedPreviewHeader { BackupPreview() }
+        androidx.compose.foundation.layout.Spacer(androidx.compose.ui.Modifier.height(16.dp))
         IntegrationPageSubtitle(stringResource(R.string.backup_page_subtitle))
         CloudGroup(
             account = account,

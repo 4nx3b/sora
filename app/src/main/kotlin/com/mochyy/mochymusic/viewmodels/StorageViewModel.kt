@@ -142,6 +142,11 @@ class StorageViewModel @Inject constructor(
         com.mochyy.mochymusic.importer.LocalArtwork.clearAll(context, database)
     }
 
+    /** Every saved lyric, gone. They come back the next time each song plays. */
+    fun clearLyricsCache() = runBusy {
+        database.clearLyrics()
+    }
+
     fun removeAllDownloads() = runBusy {
         DownloadService.sendRemoveAllDownloads(context, ExoDownloadService::class.java, false)
         // the service deletes in the background; give it a moment before measuring again

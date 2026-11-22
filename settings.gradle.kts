@@ -41,6 +41,8 @@ include(":modules:bridge")
 include(":modules:applemusic")
 include(":modules:monochrome")
 include(":modules:jiosaavn")
+// the ArchiveTune module engine, ported whole (QuickJS .arch provider runtime)
+include(":modules:archivetune")
 
 
 // local newpipe extractor

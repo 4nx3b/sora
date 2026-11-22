@@ -15,53 +15,68 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.mochyy.mochymusic.R
+import com.mochyy.mochymusic.ui.screens.gesture.PreviewCard
+import com.mochyy.mochymusic.ui.screens.settings.previews.DevicesPreview
+import com.mochyy.mochymusic.ui.screens.settings.previews.DiscordPreview
+import com.mochyy.mochymusic.ui.screens.settings.previews.ListenBrainzPreview
+import com.mochyy.mochymusic.ui.screens.settings.previews.ListenTogetherPreview
+import com.mochyy.mochymusic.ui.screens.settings.previews.ScrobblePreview
+import com.mochyy.mochymusic.ui.screens.settings.previews.SourcesPreview
+import com.mochyy.mochymusic.ui.screens.settings.previews.YouTubeSyncPreview
 import com.mochyy.mochymusic.constants.WorkOutGenresKey
 import com.mochyy.mochymusic.utils.rememberPreference
 import com.mochyy.mochymusic.scrobble.ScrobbleSite
+import com.mochyy.mochymusic.ui.component.LocalZoomOutOverlayState
 import com.mochyy.mochymusic.ui.component.SubSettingsScaffold
+import com.mochyy.mochymusic.ui.screens.devices.rememberDevicesLink
 import com.mochyy.mochymusic.ui.screens.settings.importsync.YouTubeSyncRoute
-import com.mochyy.mochymusic.ui.screens.settings.integrations.backup.BackupRoute
 import com.mochyy.mochymusic.ui.screens.settings.integrations.discord.DiscordRoute
+import com.mochyy.mochymusic.ui.screens.devices.showDeviceIntegration
 
 const val IntegrationsRoute = "integrations_settings"
 
 // the youtube music logo is a red disc, this fills its corners so it sits as a tile like the others
 private val YouTubeMusicRed = Color(0xFFFF0000)
 
-// backup has no brand of its own, so its white cloud sits on a plain blue tile
-private val BackupBlue = Color(0xFF2F7CF6)
-
 @Composable
 fun IntegrationsScreen(navController: NavController) {
+    // device integration is a sheet over whatever page asked for it
+    val sheets = LocalZoomOutOverlayState.current
+    val devices = rememberDevicesLink()
+
+    val (rpc) = rememberPreference(com.mochyy.mochymusic.constants.EnableDiscordRPCKey, false)
+    val (listenBrainz) = rememberPreference(com.mochyy.mochymusic.constants.ListenBrainzEnabledKey, false)
+    val lastFm = rememberScrobbleConnected(ScrobbleSite.LASTFM)
+    val libreFm = rememberScrobbleConnected(ScrobbleSite.LIBREFM)
+    val status: @Composable (Boolean) -> String = {
+        stringResource(if (it) R.string.preview_status_connected else R.string.preview_status_not_connected)
+    }
+
     SubSettingsScaffold(
         title = stringResource(R.string.integrations),
         onBack = { navController.navigateUp() },
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            IntegrationRow(
-                name = "Discord",
-                description = stringResource(R.string.integration_discord_desc),
-                icon = R.drawable.integration_discord,
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            PreviewCard(
+                category = stringResource(if (rpc) R.string.preview_status_sharing else R.string.preview_status_off),
+                title = "Discord",
                 onClick = { navController.navigate(DiscordRoute) },
-            )
-            IntegrationRow(
-                name = ScrobbleSite.LASTFM.label,
-                description = stringResource(R.string.integration_scrobbling_desc, ScrobbleSite.LASTFM.label),
-                icon = R.drawable.integration_lastfm,
+            ) { DiscordPreview() }
+            PreviewCard(
+                category = status(lastFm),
+                title = ScrobbleSite.LASTFM.label,
                 onClick = { navController.navigate(scrobbleServiceRoute(ScrobbleSite.LASTFM)) },
-            )
-            IntegrationRow(
-                name = ScrobbleSite.LIBREFM.label,
-                description = stringResource(R.string.integration_scrobbling_desc, ScrobbleSite.LIBREFM.label),
-                icon = R.drawable.integration_librefm,
+            ) { ScrobblePreview(ScrobbleSite.LASTFM) }
+            PreviewCard(
+                category = status(libreFm),
+                title = ScrobbleSite.LIBREFM.label,
                 onClick = { navController.navigate(scrobbleServiceRoute(ScrobbleSite.LIBREFM)) },
-            )
-            IntegrationRow(
-                name = "ListenBrainz",
-                description = stringResource(R.string.integration_listenbrainz_desc),
-                icon = R.drawable.integration_librefm,
+            ) { ScrobblePreview(ScrobbleSite.LIBREFM) }
+            PreviewCard(
+                category = status(listenBrainz),
+                title = "ListenBrainz",
                 onClick = { navController.navigate(ListenBrainzRoute) },
-            )
+            ) { ListenBrainzPreview() }
             // the genres the stats page shows are asked of Last.fm, artist names only; the
             // switch travels with the scrobbling services that share its account
             var workOutGenres by rememberPreference(WorkOutGenresKey, defaultValue = true)
@@ -74,29 +89,37 @@ fun IntegrationsScreen(navController: NavController) {
                 checked = workOutGenres,
                 onCheckedChange = { workOutGenres = it },
             )
-            IntegrationRow(
-                name = stringResource(R.string.module_youtube_name),
-                description = stringResource(R.string.module_youtube_desc),
-                icon = R.drawable.provider_youtube_music,
-                iconBackground = YouTubeMusicRed,
+            PreviewCard(
+                category = stringResource(R.string.module_youtube_desc),
+                title = stringResource(R.string.module_youtube_name),
                 onClick = { navController.navigate(YouTubeSyncRoute) },
-            )
-            IntegrationRow(
-                name = stringResource(R.string.sources),
-                description = stringResource(R.string.addon_sources_desc),
-                icon = R.drawable.extension,
+            ) { YouTubeSyncPreview() }
+            // the listen together rooms, ported from Neiro, live here with the other things that reach out
+            PreviewCard(
+                category = stringResource(R.string.settings_listen_together_desc),
+                title = stringResource(R.string.ported_listen_together),
+                onClick = { navController.navigate("listen_together") },
+            ) { ListenTogetherPreview() }
+            // device integration opens as a sheet rather than its own page
+            PreviewCard(
+                category = stringResource(R.string.settings_devices_link_desc),
+                title = stringResource(R.string.devices_title),
+                onClick = { sheets.showDeviceIntegration(devices) },
+            ) { DevicesPreview() }
+            PreviewCard(
+                category = stringResource(R.string.sources_row_desc),
+                title = stringResource(R.string.sources),
                 onClick = { navController.navigate(SourcesRoute) },
-            )
-            IntegrationRow(
-                name = stringResource(R.string.integration_backup_name),
-                description = stringResource(R.string.integration_backup_desc),
-                icon = R.drawable.backup,
-                iconBackground = BackupBlue,
-                iconPadding = 7.dp,
-                onClick = { navController.navigate(BackupRoute) },
-            )
+            ) { SourcesPreview() }
         }
 
         Spacer(Modifier.height(140.dp))
     }
+}
+
+@Composable
+private fun rememberScrobbleConnected(site: ScrobbleSite): Boolean {
+    val (enabled) = rememberPreference(site.enabledKey, false)
+    val (session) = rememberPreference(site.sessionKey, "")
+    return enabled && session.isNotBlank()
 }

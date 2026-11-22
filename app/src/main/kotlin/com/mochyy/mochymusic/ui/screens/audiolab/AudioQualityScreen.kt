@@ -91,14 +91,12 @@ fun AudioQualityScreen(navController: NavController, modules: ModulesViewModel =
     val quality = if (stored.usesMonochrome) AudioQuality.HIGH else stored
     val entries by modules.entries.collectAsState()
     val order by modules.order.collectAsState()
-    val downloadOrder by modules.downloadOrder.collectAsState()
     val youTubeOn by modules.youTubeEnabled.collectAsState()
     val context = LocalContext.current
     val statusSignIn = stringResource(R.string.aq_status_sign_in)
     val statusSignInAgain = stringResource(R.string.aq_status_sign_in_again)
     val statusOn = stringResource(R.string.aq_status_on)
     val statusOffTap = stringResource(R.string.aq_status_off_tap)
-    val statusNotInstalled = stringResource(R.string.aq_status_not_installed)
     val moduleStatus = { entry: com.mochyy.mochymusic.modules.ModuleEntry ->
         when {
             entry.account is AccountState.SignedOut -> statusSignIn
@@ -115,8 +113,6 @@ fun AudioQualityScreen(navController: NavController, modules: ModulesViewModel =
     }
     // a module that's switched off isn't part of this page at all, only youtube and the modules that are on show up
     val shownModules = entries.filter { it.enabled && it.adds(ModuleFeature.AudioSource) }
-    val shownOrder = order.filter { id -> id == SourceModules.YouTubeId || shownModules.any { it.id == id } }
-    val shownDownloadOrder = downloadOrder.filter { id -> id == SourceModules.YouTubeId || shownModules.any { it.id == id } }
     // the first provider in the order that's on plays everything it has
     val first = order.firstOrNull(usable)
     val effective = when (first) {
@@ -190,7 +186,7 @@ fun AudioQualityScreen(navController: NavController, modules: ModulesViewModel =
             }
         }
 
-        // what a download from youtube is saved as; the download order below picks where each download comes from
+        // what a download from youtube is saved as; where each download comes from is the Sources page's download order
         Spacer(Modifier.height(24.dp))
         LabSheetTitle(stringResource(R.string.aq_section_download))
         LabGroup {
@@ -204,57 +200,11 @@ fun AudioQualityScreen(navController: NavController, modules: ModulesViewModel =
                     onDownloadQuality(option)
                 }
             }
+            LabTextAction(stringResource(R.string.aq_sources_link), R.drawable.navigate_next) {
+                navController.navigate(com.mochyy.mochymusic.ui.screens.settings.integrations.SourcesRoute)
+            }
         }
         Footnote(stringResource(R.string.quality_download_footnote))
-
-        Spacer(Modifier.height(24.dp))
-        LabSheetTitle(stringResource(R.string.aq_section_provider))
-        ProviderOrder(
-            order = shownOrder,
-            name = modules::nameOf,
-            logo = ::providerLogo,
-            usable = usable,
-            status = { id ->
-                if (id == SourceModules.YouTubeId) {
-                    if (youTubeOn) statusOn else statusOffTap
-                } else {
-                    entries.firstOrNull { it.module.info.id == id }?.let(moduleStatus) ?: statusNotInstalled
-                }
-            },
-            onTap = { id ->
-                // youtube switches right here; a module's switch is on its own page, switching it off here would make it vanish under the finger
-                if (id == SourceModules.YouTubeId) {
-                    modules.setEnabled(id, !youTubeOn)
-                } else {
-                    navController.navigate(com.mochyy.mochymusic.ui.screens.settings.modules.moduleRoute(id))
-                }
-            },
-            onReorder = modules::setVisibleOrder,
-        )
-        Footnote(stringResource(R.string.quality_provider_footnote))
-
-        Spacer(Modifier.height(24.dp))
-        LabSheetTitle(stringResource(R.string.quality_download_order))
-        val youTubeForDownloads = stringResource(R.string.quality_download_order_youtube)
-        ProviderOrder(
-            order = shownDownloadOrder,
-            name = modules::nameOf,
-            logo = ::providerLogo,
-            usable = { id -> id == SourceModules.YouTubeId || usable(id) },
-            status = { id ->
-                if (id == SourceModules.YouTubeId) {
-                    youTubeForDownloads
-                } else {
-                    entries.firstOrNull { it.module.info.id == id }?.let(moduleStatus) ?: statusNotInstalled
-                }
-            },
-            // youtube is always there for downloads, so only a module's row has somewhere to go
-            onTap = { id ->
-                if (id != SourceModules.YouTubeId) navController.navigate(com.mochyy.mochymusic.ui.screens.settings.modules.moduleRoute(id))
-            },
-            onReorder = modules::setVisibleDownloadOrder,
-        )
-        Footnote(stringResource(R.string.quality_download_order_footnote))
     }
 }
 

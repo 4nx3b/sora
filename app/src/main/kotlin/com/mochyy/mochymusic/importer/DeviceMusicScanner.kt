@@ -2,6 +2,9 @@
 
 package com.mochyy.mochymusic.importer
 
+import com.mochyy.mochymusic.constants.FilterNonMusicAudioKey
+import com.mochyy.mochymusic.utils.dataStore
+import kotlinx.coroutines.flow.first
 import android.Manifest
 import android.content.ContentUris
 import android.content.Context
@@ -55,14 +58,16 @@ object DeviceMusicScanner {
             MediaStore.Audio.Media.ALBUM_ID,
             MediaStore.Audio.Media.DISPLAY_NAME,
             MediaStore.Audio.Media.MIME_TYPE,
+            @Suppress("DEPRECATION") MediaStore.Audio.Media.DATA,
         )
+        val filterNonMusic = context.dataStore.data.first()[FilterNonMusicAudioKey] ?: false
         val songs = ArrayList<DeviceSong>()
         try {
             context.contentResolver.query(
                 collection,
                 projection,
-                "${MediaStore.Audio.Media.IS_MUSIC} != 0",
-                null,
+                if (filterNonMusic) NonMusicFilter.selection() else "${MediaStore.Audio.Media.IS_MUSIC} != 0",
+                if (filterNonMusic) NonMusicFilter.selectionArgs() else null,
                 "${MediaStore.Audio.Media.DATE_ADDED} DESC",
             )?.use { cursor ->
                 val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media._ID)
@@ -72,9 +77,17 @@ object DeviceMusicScanner {
                 val albumColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM_ID)
                 val nameColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DISPLAY_NAME)
                 val mimeColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.MIME_TYPE)
+                @Suppress("DEPRECATION") val pathColumn = cursor.getColumnIndex(MediaStore.Audio.Media.DATA)
                 while (cursor.moveToNext()) {
                     // wma, aiff and the like would come in and never play, so they aren't offered
                     if (!LocalFileNames.canPlay(cursor.getString(nameColumn).orEmpty(), cursor.getString(mimeColumn))) continue
+                    if (filterNonMusic && !NonMusicFilter.isEligible(
+                            cursor.getLong(durationColumn),
+                            cursor.getString(nameColumn).orEmpty(),
+                            if (pathColumn >= 0) cursor.getString(pathColumn) else null,
+                            cursor.getString(mimeColumn),
+                        )
+                    ) continue
                     val uri = ContentUris.withAppendedId(collection, cursor.getLong(idColumn))
                     if (uri.toString() in alreadyImported) continue
                     songs += DeviceSong(

@@ -2,6 +2,7 @@
 
 package com.mochyy.mochymusic.ui.screens.settings.modules
 
+import com.mochyy.mochymusic.ui.screens.settings.previews.ModulesPreview
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -50,6 +51,8 @@ import com.mochyy.mochymusic.ui.component.BetaBadge
 import com.mochyy.mochymusic.ui.component.LocalZoomOutOverlayState
 import com.mochyy.mochymusic.ui.component.SubSettingsScaffold
 import com.mochyy.mochymusic.ui.screens.audiolab.LabColors
+import com.mochyy.mochymusic.ui.screens.audiolab.LabSegmented
+import androidx.compose.runtime.saveable.rememberSaveable
 import com.mochyy.mochymusic.ui.screens.settings.devspace.openDevUrl
 import com.mochyy.mochymusic.ui.theme.InterFontFamily
 import com.mochyy.mochymusic.viewmodels.ModulesViewModel
@@ -81,15 +84,32 @@ fun ModulesScreen(navController: NavController, viewModel: ModulesViewModel = hi
     val scope = rememberCoroutineScope()
     val update: (ModuleEntry) -> Unit = { entry -> scope.launch { context.updateModule(viewModel, entry) } }
 
+    // the horizontal switch pill the page turns on: sora's modules on one side, the ported
+    // ArchiveTune ones on the other
+    var tab by rememberSaveable { mutableStateOf(0) }
+
     SubSettingsScaffold(
         title = stringResource(R.string.settings_modules_category),
         onBack = { navController.navigateUp() },
         titleBadge = { BetaBadge() },
     ) {
+        com.mochyy.mochymusic.ui.screens.gesture.PortedPreviewHeader { ModulesPreview() }
+        androidx.compose.foundation.layout.Spacer(androidx.compose.ui.Modifier.height(16.dp))
         // back puts the lines away first, a second back leaves the page
         BackHandler(enabled = sortingLooks || sortingSources) {
             sortingLooks = false
             sortingSources = false
+        }
+        LabSegmented(
+            options = listOf("sora", "archivetune"),
+            selectedIndex = tab,
+            onSelect = { tab = it },
+            height = 40.dp,
+        )
+        Spacer(Modifier.height(22.dp))
+        if (tab == 1) {
+            ArchModulesPage()
+            return@SubSettingsScaffold
         }
         ThirdPartyCard { context.openDevUrl(ModuleDocsUrl) }
         Spacer(Modifier.height(22.dp))

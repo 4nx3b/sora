@@ -27,6 +27,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import com.mochyy.mochymusic.utils.get
 
 class LyricsHelper
 @Inject
@@ -109,6 +110,10 @@ constructor(
         }
 
         val providers = resolveLyricsProviders()
+        // Neiro's "prefer syllabic lyrics": on (the default, and sora's own grading since it was
+        // written) a word-synced result beats a line-synced one from a higher source; off, the
+        // sync term drops away and the source order decides between them.
+        val preferSyllabic = context.dataStore[com.mochyy.mochymusic.constants.LyricsPreferSyllabicKey] ?: true
         // YouTube's auto captions only count when nothing else has lyrics (see [eligible]), so
         // they're only asked for then: asked every time, they cost every song YouTube requests
         // whose answer was nearly always thrown away.
@@ -116,10 +121,10 @@ constructor(
             .partition { it.value.name == YouTubeCaptionsLyricsProvider.name }
         var candidates = fetchIndexed(mediaMetadata, regular)
         // picking parses every candidate's lyrics, so it runs off the main thread the player calls from
-        var best = withContext(Dispatchers.Default) { pickBest(mediaMetadata, candidates, providers.size) }
+        var best = withContext(Dispatchers.Default) { pickBest(mediaMetadata, candidates, providers.size, preferSyllabic) }
         if (best == null && lastResort.isNotEmpty()) {
             candidates = candidates + fetchIndexed(mediaMetadata, lastResort)
-            best = withContext(Dispatchers.Default) { pickBest(mediaMetadata, candidates, providers.size) }
+            best = withContext(Dispatchers.Default) { pickBest(mediaMetadata, candidates, providers.size, preferSyllabic) }
         }
         if (best == null) return LyricsWithProvider(LYRICS_NOT_FOUND, "Unknown")
         val result = LyricsWithProvider(best.lyrics, best.providerName)
@@ -243,6 +248,7 @@ constructor(
         mediaMetadata: MediaMetadata,
         candidates: List<ProviderCandidate>,
         providerCount: Int,
+        preferSyllabic: Boolean = true,
     ): ProviderCandidate? {
         val metadataScript = LyricsUtils.dominantScript(
             listOfNotNull(
@@ -356,7 +362,7 @@ constructor(
 
             scriptScore * ScriptWeight +
                 preferredBonus +
-                syncScore * SyncWeight +
+                syncScore * (if (preferSyllabic) SyncWeight else 0) +
                 duetScore * DuetWeight +
                 orderScore
         }?.value

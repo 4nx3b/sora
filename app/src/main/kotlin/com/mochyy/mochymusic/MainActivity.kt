@@ -651,6 +651,8 @@ class MainActivity : ComponentActivity() {
                         Screens.MainScreens
                 }
                 val (slimNav) = rememberPreference(SlimNavBarKey, defaultValue = false)
+                // Neiro's font choice: keeps the app's type on the font picked in Customisation > Font
+                com.mochyy.mochymusic.ui.theme.ApplyAppFont()
                 // flipped in Experimental while the app is open: it starts (or stops) turning right away
                 val (landscapeUnlocked) = rememberPreference(com.mochyy.mochymusic.constants.LandscapeUnlockedKey, defaultValue = false)
                 LaunchedEffect(landscapeUnlocked) {
@@ -1119,7 +1121,10 @@ class MainActivity : ComponentActivity() {
                                             )
                                         }
 
-                                        CompositionLocalProvider(com.mochyy.mochymusic.ui.component.LocalMiniPillFrame provides miniPill) {
+                                        // the wide bar's pill frame (or the phone default) is what the mini player reads
+                                        androidx.compose.runtime.CompositionLocalProvider(
+                                            com.mochyy.mochymusic.ui.component.LocalMiniPillFrame provides miniPill,
+                                        ) {
                                             BottomSheetPlayer(
                                                 state = playerBottomSheetState,
                                                 navController = navController,

@@ -121,10 +121,13 @@ fun GestureScreen(navController: NavController) = CustomisationScreen(navControl
 private enum class CustomiseSection(@StringRes val titleRes: Int, val keys: List<String>, val words: String) {
     ICONS(R.string.customise_icons, listOf("Icons", "App icon"), "icon icons app launcher home screen mochy outline anime material you white black dark transparent"),
     ROUNDING(R.string.customise_cover_rounding, listOf("Cover rounding"), "cover rounding corner radius square rounded art"),
+    FONT(R.string.font, listOf("Font", "SF Pro fonts"), "font typeface type text sf pro inter system custom ttf otf apple catalog"),
     PLAYLIST(R.string.customise_playlist_styles, listOf("Playlist styles"), "playlist styles flow classic minimal header"),
     PLAYER(R.string.customise_player_styles, listOf("Player styles"), "player styles flagship turntable ipod poster timeline lyrics editor customize landscape sideways full cover square"),
     HOME(R.string.customise_home_styles, listOf("Home styles"), "home styles mochyy listen now hop in hero"),
     BLUR(R.string.appearance_blur, listOf("Blur", "Progressive blur", "Blur quality", "Blur strength"), "blur glass frosted progressive flat quality low high strength px"),
+    NAVIGATION_BAR(R.string.navigation_bar_settings_title, listOf("Navigation bar"), "navigation bar nav tabs labels glow width height opacity transparency corner radius spacing dimensions"),
+    AOD(R.string.aod_title, listOf("AOD custom"), "aod always on display screen saver dream bedside clock battery dim brightness pixel shift"),
     LIQUID_GLASS(R.string.customise_liquid_glass, listOf("Liquid glass", "Acrylic blur"), "liquid glass acrylic refraction lens blur frosted nav bar miniplayer slider toggle switch"),
     ELEMENT_BLUR(R.string.customise_element_blur, listOf("Element blur"), "element blur lyrics lines cover zoom titles menus page swipes"),
     ANIMATION(R.string.appearance_animation, listOf("Animation", "Animation speed"), "animation speed motion transitions off faster slower"),
@@ -192,7 +195,13 @@ fun CustomisationScreen(navController: NavController) {
                 shown.forEachIndexed { index, section ->
                     if (index > 0) SectionRule()
                     Box(Modifier.highlightTarget(section.keys)) {
-                        CustomiseSectionContent(section, onOpenLiquidGlass = { navController.navigate(com.mochyy.mochymusic.ui.screens.settings.LiquidGlassSettingsRoute) })
+                        CustomiseSectionContent(
+                            section,
+                            onOpenLiquidGlass = { navController.navigate(com.mochyy.mochymusic.ui.screens.settings.LiquidGlassSettingsRoute) },
+                            onOpenNavigationBar = { navController.navigate(com.mochyy.mochymusic.ui.screens.settings.NavigationBarSettingsRoute) },
+                            onOpenAod = { navController.navigate(com.mochyy.mochymusic.ui.screens.settings.AodSettingsRoute) },
+                            onOpenFont = { navController.navigate(com.mochyy.mochymusic.ui.screens.settings.FontSettingsRoute) },
+                        )
                     }
                 }
             }
@@ -201,7 +210,7 @@ fun CustomisationScreen(navController: NavController) {
 }
 
 @Composable
-private fun CustomiseSectionContent(section: CustomiseSection, onOpenLiquidGlass: () -> Unit = {}) {
+private fun CustomiseSectionContent(section: CustomiseSection, onOpenLiquidGlass: () -> Unit = {}, onOpenNavigationBar: () -> Unit = {}, onOpenAod: () -> Unit = {}, onOpenFont: () -> Unit = {}) {
     val pagerBleed = Modifier.bleedHorizontally(CustomisePageMargin)
     when (section) {
         CustomiseSection.ICONS -> IconsSection()
@@ -241,11 +250,10 @@ private fun CustomiseSectionContent(section: CustomiseSection, onOpenLiquidGlass
             ) { HomeStylePreview(style = it, coverRadius = coverRadiusPx.dp) }
         }
         CustomiseSection.BLUR -> BlurSection()
-        CustomiseSection.LIQUID_GLASS -> com.mochyy.mochymusic.ui.component.PreferenceEntry(
-            title = { androidx.compose.material3.Text(androidx.compose.ui.res.stringResource(R.string.customise_liquid_glass)) },
-            description = "Liquid glass and acrylic blur",
-            onClick = onOpenLiquidGlass,
-        )
+        CustomiseSection.NAVIGATION_BAR -> NavigationBarSection(onOpen = onOpenNavigationBar)
+        CustomiseSection.FONT -> FontSection(onOpen = onOpenFont)
+        CustomiseSection.AOD -> AodSection(onOpen = onOpenAod)
+        CustomiseSection.LIQUID_GLASS -> LiquidGlassSection(onOpen = onOpenLiquidGlass)
         CustomiseSection.ELEMENT_BLUR -> ElementBlurSection()
         CustomiseSection.ANIMATION -> AnimationSection()
         CustomiseSection.LYRICS -> LyricsStyleSection(modifier = pagerBleed)
@@ -350,7 +358,7 @@ private fun GestureSection() {
 
 // a section a search result or a related row points at scrolls into view and its outline flashes once
 @Composable
-private fun Modifier.highlightTarget(keys: List<String>): Modifier {
+internal fun Modifier.highlightTarget(keys: List<String>): Modifier {
     val requester = remember { BringIntoViewRequester() }
     val flash = remember { Animatable(0f) }
     val settingsScroll = LocalSettingsScroll.current

@@ -186,3 +186,8 @@
 -dontwarn net.engio.mbassy.**
 # smbj itself is reached only from SmbLibrary/SmbDataSource, R8 shrinks the rest
 -keep class com.hierynomus.smbj.** { *; }
+
+# the ArchiveTune module engine, ported: the QuickJS JNI bridge and the engine stay whole so a
+# stripped release build can never lose a native binding the runtime reaches for mid-song
+-keep class com.dokar.quickjs.** { *; }
+-keep class moe.rukamori.archivetune.modules.** { *; }

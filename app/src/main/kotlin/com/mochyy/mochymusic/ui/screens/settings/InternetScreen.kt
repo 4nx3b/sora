@@ -5,6 +5,7 @@
 
 package com.mochyy.mochymusic.ui.screens.settings
 
+import com.mochyy.mochymusic.ui.screens.settings.previews.InternetPreview
 import android.content.Context
 import android.content.Intent
 import android.widget.Toast
@@ -151,6 +152,8 @@ fun InternetSettingsScreen(navController: NavController) {
         title = stringResource(R.string.internet),
         onBack = { navController.navigateUp() },
     ) {
+        com.mochyy.mochymusic.ui.screens.gesture.PortedPreviewHeader { InternetPreview() }
+        androidx.compose.foundation.layout.Spacer(androidx.compose.ui.Modifier.height(16.dp))
         Column(
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {

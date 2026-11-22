@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Settings ported from Neiro (4nx3b/Neiro); English only, the values-* translations are untouched. -->
+<resources>
+    <string name="loudness_off_on_speaker">Disable on phone speaker</string>
+    <string name="loudness_off_on_speaker_sub">Normalization stays off while music plays from the phone\'s own speaker</string>
+    <string name="history_duration_value">%1$d s</string>
+    <string name="preload_songs">Preload songs</string>
+    <plurals name="preload_songs_value">
+        <item quantity="one">%1$d song</item>
+        <item quantity="other">%1$d songs</item>
+    </plurals>
+    <string name="preload_songs_desc">Fetches the start of the next songs ahead, so they begin at once. On mobile data or with data saver only the next song is fetched.</string>
+    <string name="preload_songs_off">Off</string>
+    <string name="settings_section_content_preferences">Content preferences</string>
+    <string name="hide_recents">Hide Recents</string>
+    <string name="hide_top_picks">Hide Top Picks for You</string>
+    <string name="hide_home_moods">Hide Find Your Mood</string>
+    <string name="hide_videos">Hide videos</string>
+    <string name="hide_videos_desc">Music videos come off Home, history, albums, Add music and Android Auto</string>
+    <string name="hide_recents_desc">Home\'s Recently played shelf</string>
+    <string name="hide_top_picks_desc">The \"Because you like\" and \"More like\" recommendation rows on Home</string>
+    <string name="hide_home_moods_desc">Home\'s moods and genres shelf; Explore keeps its moods</string>
+    <string name="settings_section_local_music">Local music</string>
+    <string name="local_music_folder">Local music folder</string>
+    <string name="local_music_folder_all">All audio folders</string>
+    <plurals name="local_music_folder_count">
+        <item quantity="one">%1$d folder</item>
+        <item quantity="other">%1$d folders</item>
+    </plurals>
+    <string name="filter_non_music_audio">Filter non-music audio</string>
+    <string name="filter_non_music_audio_desc">Hides clips under 30 seconds, WAV files, voice notes, recordings and system sounds</string>
+    <string name="square_video_thumbnails">Square video thumbnails</string>
+    <string name="square_video_thumbnails_desc">Show music videos as squares everywhere, including the player</string>
+    <string name="navigation_bar_glass_glow">Glass glow</string>
+    <string name="navigation_bar_glass_glow_desc">Nuvio-style rim light and soft sheen on the navigation bar</string>
+    <string name="navigation_bar_glass_glow_intensity">Glass glow intensity</string>
+    <string name="navigation_bar_glass_glow_intensity_desc">Scales the rim light and sheen strength of the navigation bar. 100% is the default look.</string>
+    <string name="navigation_bar_settings_title">Navigation bar</string>
+    <string name="navigation_bar_footer">The standard bar\'s own settings. The liquid glass bar, while Liquid Glass is on, carries its own shape.</string>
+    <string name="navigation_bar_labels">Show labels</string>
+    <string name="navigation_bar_labels_subtitle">The name under each tab\'s glyph</string>
+    <string name="navigation_bar_general">General</string>
+    <string name="navigation_bar_settings_desc">Glass glow, labels and the bar\'s own look</string>
+    <string name="aod_title">AOD custom</string>
+    <string name="aod_enabled">Always-on playing screen</string>
+    <string name="aod_enabled_desc">Shows the track instead of the system screen saver while charging or docked</string>
+    <string name="aod_show_thumbnail">Artwork</string>
+    <string name="aod_show_artist">Artist</string>
+    <string name="aod_show_album">Album</string>
+    <string name="aod_show_progress">Progress bar</string>
+    <string name="aod_show_time_labels">Time labels</string>
+    <string name="aod_show_controls">Controls</string>
+    <string name="aod_show_clock">Clock</string>
+    <string name="aod_show_battery">Battery</string>
+    <string name="aod_brightness">Brightness</string>
+    <string name="aod_auto_dimming">Auto dimming</string>
+    <string name="aod_auto_dimming_desc">Eases down to half the brightness over half an hour</string>
+    <string name="aod_auto_timer">Auto timer</string>
+    <string name="aod_auto_timer_off">Never</string>
+    <string name="aod_auto_timer_value">%1$d min</string>
+    <string name="aod_touch_lock">Touch lock</string>
+    <string name="aod_touch_lock_desc">Taps on the screen do nothing</string>
+    <string name="aod_pixel_shift">Pixel shift</string>
+    <string name="aod_pixel_shift_desc">Moves everything a little each minute so the panel ages evenly</string>
+    <string name="aod_open_system">Screen saver settings</string>
+    <string name="aod_open_system_desc">Pick Mochy as the screen saver in Android\'s settings</string>
+    <string name="aod_section_show">Shown</string>
+    <string name="aod_section_screen">Screen</string>
+    <!-- Font choice and the SF Pro catalog (Neiro) -->
+    <string name="font">Font</string>
+    <string name="font_settings_desc">Inter, SF Pro Display, the device\'s typeface or a font file of your own</string>
+    <string name="font_sora_default">Default</string>
+    <string name="font_sora_default_subtitle">Inter · the app\'s own type</string>
+    <string name="font_sf_pro">SF Pro</string>
+    <string name="font_sf_pro_subtitle">SF Pro Display · Apple Music weights</string>
+    <string name="font_system">System</string>
+    <string name="font_system_subtitle">The device\'s own typeface</string>
+    <string name="font_custom">Custom</string>
+    <string name="custom_font_none_subtitle">Pick a .ttf or .otf from your files</string>
+    <string name="custom_font_invalid">That file isn\'t a font this device can read</string>
+    <string name="sf_pro_fonts">SF Pro fonts</string>
+    <string name="sf_pro_fonts_subtitle">Browse sf-pro.kouzu.in and download fonts</string>
+    <string name="sf_pro_loading">Loading the font catalog</string>
+    <string name="sf_pro_error">Couldn\'t reach the font catalog</string>
+    <string name="sf_pro_error_subtitle">Check your connection and try again</string>
+    <string name="sf_pro_error_footer">The catalog is fetched from sf-pro.kouzu.in. Tapping a font downloads it once and uses it.</string>
+</resources>

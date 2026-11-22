@@ -4,6 +4,8 @@ package com.mochyy.mochymusic.lyrics
 
 import android.content.Context
 import com.music.innertube.YouTube
+import com.mochyy.mochymusic.utils.dataStore
+import com.mochyy.mochymusic.utils.get
 
 object YouTubeSubtitleLyricsProvider : LyricsProvider {
     // Must match the registry key, not the display name: this string is what gets persisted on
@@ -11,7 +13,7 @@ object YouTubeSubtitleLyricsProvider : LyricsProvider {
     // the un-spaced form. See LyricsProviderRegistry.getDisplayName for the pretty version.
     override val name = "YouTubeSubtitle"
 
-    override fun isEnabled(context: Context) = true
+    override fun isEnabled(context: Context) = context.dataStore[com.mochyy.mochymusic.constants.EnableYouTubeSubtitleLyricsKey] ?: true
 
     override suspend fun getLyrics(
         id: String,

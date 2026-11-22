@@ -1,5 +1,6 @@
 package com.mochyy.mochymusic.ui.screens.settings
 
+import com.mochyy.mochymusic.ui.screens.settings.previews.NowPlayingPreview
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -35,7 +36,6 @@ import com.mochyy.mochymusic.constants.PlayVideoBackgroundKey
 import com.mochyy.mochymusic.constants.ShowFormatBadgeKey
 import com.mochyy.mochymusic.constants.ShowFormatSampleRateKey
 import com.mochyy.mochymusic.constants.SpotifyCanvasKey
-import com.mochyy.mochymusic.constants.StudioForVideosKey
 import com.mochyy.mochymusic.constants.SyncLyricsToVideoKey
 import com.mochyy.mochymusic.constants.VideoQuality
 import com.mochyy.mochymusic.constants.VideoQualityKey
@@ -43,6 +43,7 @@ import com.mochyy.mochymusic.constants.YouTubeCaptionTranslationKey
 import com.mochyy.mochymusic.constants.YtVideoBackgroundLyricsSyncKey
 import com.mochyy.mochymusic.floating.rememberFloatingLyricsSwitch
 import com.mochyy.mochymusic.ui.component.LocalZoomOutOverlayState
+import com.mochyy.mochymusic.ui.screens.settings.showLyricsSourcesSheet
 import com.mochyy.mochymusic.ui.component.SettingsHighlight
 import com.mochyy.mochymusic.ui.component.SettingsItem
 import com.mochyy.mochymusic.ui.component.SubSettingsScaffold
@@ -65,18 +66,25 @@ const val BottomBarHighlightKey = "Bottom Bar on player"
 @Composable
 fun NowPlayingSettingsScreen(navController: NavController) {
     var query by remember { mutableStateOf("") }
+    var showCanvasCheck by remember { mutableStateOf(false) }
 
     SubSettingsScaffold(
         title = stringResource(R.string.settings_now_playing),
         onBack = { navController.navigateUp() },
         searchBar = { SubSettingsSearchBar(query = query, onQueryChange = { query = it }) },
     ) {
+        com.mochyy.mochymusic.ui.screens.gesture.PortedPreviewHeader { NowPlayingPreview() }
+        androidx.compose.foundation.layout.Spacer(androidx.compose.ui.Modifier.height(16.dp))
         SettingsSection(stringResource(R.string.settings_on_the_player), badgeItems().matching(query))
         SettingsSection(stringResource(R.string.settings_section_lyrics), lyricsItems().matching(query))
         SettingsSection(stringResource(R.string.settings_section_videos), videoItems().matching(query))
-        SettingsSection(stringResource(R.string.settings_section_canvas), canvasItems(navController).matching(query))
+        SettingsSection(stringResource(R.string.settings_section_canvas), canvasItems(navController) { showCanvasCheck = true }.matching(query))
         SettingsSection(stringResource(R.string.settings_related), relatedItems(navController).matching(query))
         Spacer(Modifier.height(140.dp))
+    }
+
+    if (showCanvasCheck) {
+        CanvasCheckDialog(onDismiss = { showCanvasCheck = false })
     }
 }
 
@@ -114,7 +122,16 @@ private fun lyricsItems(): List<SettingsItem> {
     val (softLight, onSoftLightChange) = rememberPreference(LyricsSoftLightKey, defaultValue = true)
     val (lyricsStyle) = rememberEnumPreference(LyricsMotionStyleKey, defaultValue = LyricsMotionStyle.MOTION)
     val (floatingLyrics, onFloatingLyricsChange) = rememberFloatingLyricsSwitch()
+    val overlay = LocalZoomOutOverlayState.current
     return listOf(
+        // Neiro's lyrics sources: the sheet with the order, the switches and "prefer syllabic lyrics"
+        linkItem(
+            key = "Lyrics sources",
+            title = stringResource(R.string.lyrics_sources_title),
+            description = stringResource(R.string.lyrics_sources_row_desc),
+            icon = painterResource(R.drawable.lyrics),
+            onClick = { overlay.showLyricsSourcesSheet() },
+        ),
         switchItem(
             key = "Translations from YouTube",
             title = stringResource(R.string.settings_youtube_translations),
@@ -178,7 +195,6 @@ private fun videoItems(): List<SettingsItem> {
     val (playVideoBackground, onPlayVideoBackgroundChange) = rememberPreference(PlayVideoBackgroundKey, defaultValue = false)
     val (lyricsSync, onLyricsSyncChange) = rememberPreference(YtVideoBackgroundLyricsSyncKey, defaultValue = true)
     val (disableVideoAutoplay, onDisableVideoAutoplayChange) = rememberPreference(DisableVideoAutoplayKey, defaultValue = false)
-    val (studioForVideos, onStudioForVideosChange) = rememberPreference(StudioForVideosKey, defaultValue = false)
     return listOf(
         switchItem(
             key = "Always enable Youtube background",
@@ -207,14 +223,6 @@ private fun videoItems(): List<SettingsItem> {
             checked = disableVideoAutoplay,
             onCheckedChange = onDisableVideoAutoplayChange,
         ),
-        switchItem(
-            key = "Studio version for music videos",
-            title = stringResource(R.string.settings_studio_for_videos),
-            description = stringResource(R.string.settings_studio_for_videos_desc),
-            icon = painterResource(R.drawable.music_note),
-            checked = studioForVideos,
-            onCheckedChange = onStudioForVideosChange,
-        ),
     )
 }
 
@@ -237,7 +245,7 @@ private fun videoQualityItem(): SettingsItem {
 }
 
 @Composable
-private fun canvasItems(navController: NavController): List<SettingsItem> {
+private fun canvasItems(navController: NavController, onCanvasCheck: () -> Unit): List<SettingsItem> {
     val (canvasEnabled, onCanvasEnabledChange) = rememberPreference(CanvasThumbnailAnimationKey, defaultValue = true)
     val (canvasWifiOnly, onCanvasWifiOnlyChange) = rememberPreference(CanvasWifiOnlyKey, defaultValue = true)
     val (canvasBest, onCanvasBestChange) = rememberPreference(CanvasBestQualityKey, defaultValue = true)
@@ -301,6 +309,16 @@ private fun canvasItems(navController: NavController): List<SettingsItem> {
             checked = canvasBest,
             onCheckedChange = onCanvasBestChange,
             subOptionOf = canvasEnabled,
+        ),
+        // Neiro's canvas check: asks every provider whether it answers at all
+        linkItem(
+            key = "Canvas check",
+            title = stringResource(R.string.canvas_check),
+            description = stringResource(R.string.canvas_check_desc),
+            icon = painterResource(R.drawable.sparks),
+            onClick = onCanvasCheck,
+            visible = canvasEnabled,
+            isSubOption = true,
         ),
     )
 }
