@@ -44,6 +44,52 @@ enum class DensityScale(val value: Float, val label: String) {
 
 val DefaultOpenTabKey = stringPreferencesKey("defaultOpenTab")
 val SlimNavBarKey = booleanPreferencesKey("slimNavBar")
+
+// Neiro's navigation bar page: the standard bar's look. Every default is sora's own bar as it was, so nothing moves until a dial does
+// Neiro's always-on playing screen (aod/AodDreamService), every part chosen on its settings page
+val AodEnabledKey = booleanPreferencesKey("aodEnabled")
+val AodShowThumbnailKey = booleanPreferencesKey("aodShowThumbnail")
+val AodShowArtistKey = booleanPreferencesKey("aodShowArtist")
+val AodShowAlbumKey = booleanPreferencesKey("aodShowAlbum")
+val AodShowProgressKey = booleanPreferencesKey("aodShowProgress")
+val AodShowTimeLabelsKey = booleanPreferencesKey("aodShowTimeLabels")
+val AodShowControlsKey = booleanPreferencesKey("aodShowControls")
+val AodShowClockKey = booleanPreferencesKey("aodShowClock")
+val AodShowBatteryKey = booleanPreferencesKey("aodShowBattery")
+val AodBrightnessKey = floatPreferencesKey("aodBrightness")
+const val AodBrightnessDefault = 0.15f
+val AodAutoDimmingKey = booleanPreferencesKey("aodAutoDimming")
+val AodAutoTimerSecondsKey = intPreferencesKey("aodAutoTimerSeconds")
+val AodTouchLockKey = booleanPreferencesKey("aodTouchLock")
+val AodPixelShiftKey = booleanPreferencesKey("aodPixelShift")
+
+// Neiro's font choice: sora's own Inter, SF Pro Display, the device's typeface, or a font file of the user's
+enum class AppFont { DEFAULT, SF_PRO, SYSTEM, CUSTOM }
+val AppFontKey = stringPreferencesKey("appFont")
+val CustomFontNameKey = stringPreferencesKey("customFontName")
+// an absolute path under filesDir/fonts, the picked or downloaded file copied in so its grant never runs out
+val CustomFontPathKey = stringPreferencesKey("customFontPath")
+
+// Neiro's "Mini player and bar behavior": when the mini player and the tabs fold into the compact row
+enum class MiniPlayerBarBehavior { ADAPTIVE, ALWAYS_EXPANDED, ALWAYS_COMPACT }
+val MiniPlayerBarBehaviorKey = stringPreferencesKey("miniPlayerBarBehavior")
+val NavBarGlassGlowKey = booleanPreferencesKey("navBarGlassGlow")
+val NavBarGlassGlowIntensityKey = floatPreferencesKey("navBarGlassGlowIntensity")
+val NavBarShowLabelsKey = booleanPreferencesKey("navBarShowLabels")
+val NavBarWidthKey = floatPreferencesKey("navBarWidth")
+val NavBarHeightKey = floatPreferencesKey("navBarHeight")
+val NavBarOpacityKey = floatPreferencesKey("navBarOpacity")
+val NavBarTransparencyKey = floatPreferencesKey("navBarTransparency")
+val NavBarLabelSpacingKey = floatPreferencesKey("navBarLabelSpacing")
+val NavBarCornerRadiusKey = floatPreferencesKey("navBarCornerRadius")
+const val NavBarGlowIntensityDefault = 1f
+const val NavBarWidthDefault = 1f
+const val NavBarHeightDefault = 1f
+const val NavBarOpacityDefault = 1f
+const val NavBarTransparencyDefault = 0f
+const val NavBarLabelSpacingDefault = 1f
+// sora's pill is fully round at its 64dp height; Neiro's 28dp would square it off for everyone
+const val NavBarCornerRadiusDefault = 32f
 val GridItemsSizeKey = stringPreferencesKey("gridItemSize")
 val SliderStyleKey = stringPreferencesKey("sliderStyle")
 val SquigglySliderKey = booleanPreferencesKey("squigglySlider")
@@ -119,6 +165,13 @@ val EnableLrcRedKey = booleanPreferencesKey("enableLrcRed")
 val EnableUnisonKey = booleanPreferencesKey("enableUnison")
 val HideExplicitKey = booleanPreferencesKey("hideExplicit")
 val HideVideoSongsKey = booleanPreferencesKey("hideVideoSongs")
+// Neiro's "Square video thumbnails": music videos drawn as square, centre-cropped covers everywhere, the player included
+val SquareVideoThumbnailsKey = booleanPreferencesKey("squareVideoThumbnails")
+// Neiro's "Filter non-music audio": the phone-wide scan skips short clips, WAV files, voice notes, recordings and system sounds
+val FilterNonMusicAudioKey = booleanPreferencesKey("filterNonMusicAudio")
+val HideRecentsKey = booleanPreferencesKey("hideRecents")
+val HideTopPicksKey = booleanPreferencesKey("hideTopPicks")
+val HideHomeMoodsKey = booleanPreferencesKey("hideHomeMoods")
 // no switch for it in settings, so every reader defaults it to on and shorts stay out
 val HideYoutubeShortsKey = booleanPreferencesKey("hideYoutubeShorts")
 val ShowArtistDescriptionKey = booleanPreferencesKey("showArtistDescription")
@@ -266,6 +319,7 @@ val ShuffleModeKey = booleanPreferencesKey("shuffleMode")
 val SkipSilenceKey = booleanPreferencesKey("skipSilence")
 val SkipSilenceInstantKey = booleanPreferencesKey("skipSilenceInstant")
 val AudioNormalizationKey = booleanPreferencesKey("audioNormalization")
+val LoudnessOffOnSpeakerKey = booleanPreferencesKey("loudnessOffOnSpeaker")
 val AutoLoadMoreKey = booleanPreferencesKey("autoLoadMore")
 val DisableLoadMoreWhenRepeatAllKey = booleanPreferencesKey("disableLoadMoreWhenRepeatAll")
 val InfiniteQueueKey = booleanPreferencesKey("infiniteQueue")
@@ -342,6 +396,9 @@ val SkipBlendKey = booleanPreferencesKey("skipBlend")
 // how many songs coming up get their start fetched for blend skips, 1 to 4; data saver keeps it at 1
 val SkipBlendAheadKey = intPreferencesKey("skipBlendAhead")
 const val SkipBlendAheadMax = 4
+val PreloadSongsCountKey = intPreferencesKey("preloadSongsCount")
+const val PreloadSongsDefault = 0
+const val PreloadSongsMax = 10
 
 // a music video plays its song's studio upload when there is one, without the video's skits and sound effects
 val StudioForVideosKey = booleanPreferencesKey("studioForVideos")
