@@ -14,6 +14,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.mochyy.mochymusic.ui.component.liquid.LiquidGlassSlider
+import com.mochyy.mochymusic.ui.component.liquid.LocalLiquidGlass
+import kotlin.math.roundToInt
 
 /** A settings slider that uses the player's default rounded seek-bar treatment. */
 @Composable
@@ -25,6 +28,20 @@ fun DefaultPlayerSeekBarSlider(
     steps: Int = 0,
     enabled: Boolean = true,
 ) {
+    // the liquid glass sliders switch, when it is on, is the look of every slider in the app
+    val glass = LocalLiquidGlass.current
+    if (glass.surface(glass.sliders)) {
+        LiquidGlassSlider(
+            value = value,
+            onValueChange = { raw ->
+                onValueChange(if (steps > 0) snapToSteps(raw, valueRange, steps) else raw)
+            },
+            modifier = modifier.sliderDragScrollLock(),
+            valueRange = valueRange,
+            enabled = enabled,
+        )
+        return
+    }
     val interactionSource = remember { MutableInteractionSource() }
     val isDragged by interactionSource.collectIsDraggedAsState()
     val isPressed by interactionSource.collectIsPressedAsState()
@@ -54,6 +71,22 @@ fun DefaultPlayerSeekBarSlider(
                 active = isDragged || isPressed,
             )
         },
-        modifier = modifier.fillMaxWidth().height(28.dp),
+        modifier = modifier
+            .sliderDragScrollLock()
+            .fillMaxWidth()
+            .height(28.dp),
     )
+}
+
+/** Material's steps mean this many stops strictly between the two ends: steps + 2 values in all. */
+private fun snapToSteps(
+    value: Float,
+    range: ClosedFloatingPointRange<Float>,
+    steps: Int,
+): Float {
+    val span = range.endInclusive - range.start
+    if (span <= 0f || steps <= 0) return value.coerceIn(range)
+    val intervals = steps + 1
+    val stepped = (((value - range.start) / span * intervals).roundToInt().toFloat() / intervals) * span + range.start
+    return stepped.coerceIn(range)
 }

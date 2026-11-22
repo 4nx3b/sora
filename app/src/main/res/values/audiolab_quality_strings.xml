@@ -7,6 +7,7 @@
     <string name="aq_youtube_tier">YouTube · %1$s</string>
     <string name="aq_section_streaming">Streaming</string>
     <string name="aq_section_download">Download</string>
+    <string name="aq_sources_link">Sources &amp; download order</string>
     <string name="aq_section_provider">Provider</string>
     <string name="aq_youtube_status_on">Plays what the others don\'t have</string>
     <string name="aq_youtube_status_off_none">Off, and nothing else is on, so songs won\'t play</string>

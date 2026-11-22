@@ -86,8 +86,8 @@ private val PreviewDot = 26.dp
 private val DotRoom = 64.dp
 
 // the colours under the blur preview's bars, bright enough that the frost shows
-private val PreviewArt = Brush.linearGradient(listOf(Color(0xFFF28BA8), Color(0xFF8C9EF2), Color(0xFFF2A46B)))
-private val PreviewTile = Brush.linearGradient(listOf(Color(0xFF6BD9C4), Color(0xFFB98CF2)))
+internal val PreviewArt = Brush.linearGradient(listOf(Color(0xFFF28BA8), Color(0xFF8C9EF2), Color(0xFFF2A46B)))
+internal val PreviewTile = Brush.linearGradient(listOf(Color(0xFF6BD9C4), Color(0xFFB98CF2)))
 
 // a little screen under a real top bar and nav pill, blurred by the same glass the app uses, so every blur setting shows here as it is
 @Composable

@@ -111,6 +111,12 @@ import kotlinx.coroutines.launch
 
 const val ActiveBoxAlpha = 0.6f
 
+
+/** a music video's thumbnail shape: 16:9, or square with Square video thumbnails on */
+@Composable
+fun videoThumbnailRatio(): Float =
+    if (com.mochyy.mochymusic.utils.rememberPreference(com.mochyy.mochymusic.constants.SquareVideoThumbnailsKey, defaultValue = false).value) 1f else 16f / 9f
+
 @Composable
 fun currentGridThumbnailHeight(): Dp {
     val gridItemSize = com.mochyy.mochymusic.LocalGridItemSize.current
@@ -979,7 +985,7 @@ fun YouTubeGridItem(
         if (item.explicit) Icon.Explicit()
         if (item is SongItem && downloadState != null) Icon.Download(downloadState)
     },
-    thumbnailRatio: Float = if (item is SongItem) 16f / 9 else 1f,
+    thumbnailRatio: Float = if (item is SongItem) videoThumbnailRatio() else 1f,
     isActive: Boolean = false,
     isPlaying: Boolean = false,
     fillMaxWidth: Boolean = false,

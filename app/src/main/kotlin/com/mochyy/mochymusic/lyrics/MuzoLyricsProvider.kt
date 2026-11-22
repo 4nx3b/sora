@@ -28,13 +28,15 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import com.mochyy.mochymusic.utils.dataStore
+import com.mochyy.mochymusic.utils.get
 
 object MuzoLyricsProvider : LyricsProvider {
     override val name = "Muzo"
 
     // The credential is the opt-in for the lossless source, not for this provider: lyrics answer
     // keyless today, so the provider is always in the chain and the key only makes it surer.
-    override fun isEnabled(context: Context): Boolean = true
+    override fun isEnabled(context: Context): Boolean = context.dataStore[com.mochyy.mochymusic.constants.EnableMuzoLyricsKey] ?: true
 
     private const val BASE = "https://data.kouzu.in/api/v1/lyrics"
 

@@ -20,6 +20,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.datastore.preferences.core.Preferences
 import androidx.navigation.NavController
+import com.mochyy.mochymusic.ui.component.sliderDragScrollLock
 import com.mochyy.mochymusic.constants.AcrylicBlurKey
 import com.mochyy.mochymusic.constants.LiquidGlassAdaptiveLuminanceKey
 import com.mochyy.mochymusic.constants.LiquidGlassChromaticAberrationKey
@@ -52,6 +53,8 @@ fun LiquidGlassSettingsScreen(navController: NavController) {
         onBack = { navController.navigateUp() },
         backLabel = "Customisation",
     ) {
+        com.mochyy.mochymusic.ui.screens.gesture.PortedPreviewHeader { com.mochyy.mochymusic.ui.screens.gesture.LiquidGlassPreview() }
+        androidx.compose.foundation.layout.Spacer(androidx.compose.ui.Modifier.height(16.dp))
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             if (!supported) Text("Liquid glass needs Android 12 or newer.", modifier = Modifier.padding(horizontal = 16.dp))
             SwitchPreference(
@@ -124,7 +127,9 @@ private fun ValueRow(title: String, value: LiquidGlassValue, enabled: Boolean) {
                 onValueChange = onChange,
                 valueRange = value.range,
                 onValueChangeFinished = onFinished,
-                modifier = Modifier.padding(horizontal = 24.dp),
+                modifier = Modifier
+                    .padding(horizontal = 24.dp)
+                    .sliderDragScrollLock(),
             )
         } else {
             Slider(
@@ -132,7 +137,9 @@ private fun ValueRow(title: String, value: LiquidGlassValue, enabled: Boolean) {
                 onValueChange = onChange,
                 onValueChangeFinished = onFinished,
                 valueRange = value.range,
-                modifier = Modifier.padding(horizontal = 24.dp),
+                modifier = Modifier
+                    .padding(horizontal = 24.dp)
+                    .sliderDragScrollLock(),
             )
         }
     }

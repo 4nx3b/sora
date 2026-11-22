@@ -397,5 +397,8 @@ data class SettingsItem(
     val highlightKey: String? = null,
     // the title as shown in the app's language, so a page's own search finds it in any language
     val searchText: String? = null,
-    val onClick: (() -> Unit)? = null
+    val onClick: (() -> Unit)? = null,
+    // a page link that shows a little screen of its page: drawn as a preview card above the section's rows
+    val preview: (@Composable androidx.compose.foundation.layout.BoxScope.() -> Unit)? = null,
+    val previewCategory: String? = null,
 )

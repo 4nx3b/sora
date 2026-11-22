@@ -1982,6 +1982,9 @@ interface DatabaseDao {
     @Query("DELETE FROM format WHERE id = :songId")
     fun deleteFormat(songId: String)
 
+    @Query("DELETE FROM lyrics")
+    suspend fun clearLyrics()
+
     @Query("DELETE FROM lyrics WHERE id = :songId")
     fun deleteLyrics(songId: String)
 
