@@ -99,7 +99,7 @@ fun IntegrationsScreen(navController: NavController) {
             )
             IntegrationRow(
                 name = stringResource(R.string.sources),
-                description = stringResource(R.string.addon_sources_desc),
+                description = stringResource(R.string.sources_row_desc),
                 icon = R.drawable.extension,
                 onClick = { navController.navigate(SourcesRoute) },
             )

@@ -262,8 +262,10 @@ private val SettingsIndex = listOf(
     SettingsEntry("Modules", "Modules", "modules", "apple music source module plugin extension stream subscription"),
     SettingsEntry("Apple Music", "Modules", "module/applemusic", "apple music itunes subscription stream aac"),
     SettingsEntry("Monochrome", "Modules", "module/monochrome", "monochrome lossless flac hi-res tidal"),
-    SettingsEntry("Provider order", "Audio Lab", "audio_quality", "source order apple music monochrome youtube priority"),
-    SettingsEntry("YouTube Music", "Audio Lab", "audio_quality", "youtube turn off disable provider only monochrome apple music"),
+    SettingsEntry("Provider order", "Integrations", com.mochyy.mochymusic.ui.screens.settings.integrations.SourcesRoute, "source order apple music monochrome youtube priority", R.string.sources_tab_sources),
+    SettingsEntry("YouTube Music", "Integrations", com.mochyy.mochymusic.ui.screens.settings.integrations.SourcesRoute, "youtube turn off disable provider only monochrome apple music"),
+    SettingsEntry("Sources", "Integrations", com.mochyy.mochymusic.ui.screens.settings.integrations.SourcesRoute, "sources addons plugins webdav smb remote library stream", R.string.sources),
+    SettingsEntry("Add plugin", "Integrations", com.mochyy.mochymusic.ui.screens.settings.integrations.SourcesRoute, "add plugin addon source server http manifest", R.string.sources_add_plugin),
 
     // Integrations
     SettingsEntry("Discord", "Integrations", DiscordRoute, "discord rich presence rpc status activity listening playing profile behaviour pause clear"),
@@ -278,6 +280,8 @@ private val SettingsIndex = listOf(
     SettingsEntry("Music cache limit", "Storage", "storage_settings", "cache size limit space song stream"),
     SettingsEntry("Manage downloads", "Storage", "storage_settings", "downloads delete remove biggest offline space"),
     SettingsEntry("Remove all downloads", "Storage", "storage_settings", "delete clear downloads offline space"),
+    SettingsEntry("Download order", "Storage", "storage_settings", "download order source priority provider where downloads come from", R.string.quality_download_order),
+    SettingsEntry("Backup", "Storage", com.mochyy.mochymusic.ui.screens.settings.integrations.backup.BackupRoute, "backup restore cloud dropbox webdav onedrive schedule", R.string.integration_backup_name),
 
     // Experimental
     SettingsEntry("Device integration", "Integrations", com.mochyy.mochymusic.ui.screens.devices.DeviceIntegrationRoute, "tv television android tv google tv phone tablet car head unit pair link sync stream downloads big screen remote control devices"),

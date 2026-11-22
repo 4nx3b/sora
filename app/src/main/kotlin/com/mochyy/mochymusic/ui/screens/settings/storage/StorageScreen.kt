@@ -43,12 +43,17 @@ import com.mochyy.mochymusic.constants.MaxSongCacheSizeKey
 import com.mochyy.mochymusic.playback.ExportStep
 import com.mochyy.mochymusic.playback.MoveStep
 import com.mochyy.mochymusic.playback.StoredKind
+import com.mochyy.mochymusic.module.AccountState
+import com.mochyy.mochymusic.module.ModuleFeature
 import com.mochyy.mochymusic.ui.component.LocalMenuState
 import com.mochyy.mochymusic.ui.component.SubSettingsScaffold
+import com.mochyy.mochymusic.ui.screens.audiolab.ProviderOrder
+import com.mochyy.mochymusic.ui.screens.audiolab.providerLogo
 import com.mochyy.mochymusic.ui.screens.library.showConfirm
 import com.mochyy.mochymusic.ui.screens.settings.integrations.backup.BackupRoute
 import com.mochyy.mochymusic.utils.rememberPreference
 import com.mochyy.mochymusic.viewmodels.DriveUsage
+import com.mochyy.mochymusic.viewmodels.ModulesViewModel
 import com.mochyy.mochymusic.viewmodels.StorageUsage
 import com.mochyy.mochymusic.viewmodels.StorageViewModel
 
@@ -58,7 +63,11 @@ const val StorageRoute = "storage_settings"
 private val CacheLimitSteps = listOf(0, 256, 512, 1024, 2048, 4096, 8192, -1)
 
 @Composable
-fun StorageScreen(navController: NavController, viewModel: StorageViewModel = hiltViewModel()) {
+fun StorageScreen(
+    navController: NavController,
+    viewModel: StorageViewModel = hiltViewModel(),
+    modules: ModulesViewModel = hiltViewModel(),
+) {
     val usage by viewModel.usage.collectAsState()
     val downloads by viewModel.downloads.collectAsState()
     val (cacheLimit, setCacheLimit) = rememberPreference(MaxSongCacheSizeKey, 1024)
@@ -103,6 +112,12 @@ fun StorageScreen(navController: NavController, viewModel: StorageViewModel = hi
             onClick = { navController.navigate(BackupRoute) },
         )
 
+        // where each download comes from, moved in from the audio quality page (Neiro keeps it on storage)
+        Spacer(Modifier.height(26.dp))
+        SectionText(stringResource(R.string.quality_download_order))
+        Spacer(Modifier.height(10.dp))
+        DownloadOrderCard(modules, navController)
+
         Spacer(Modifier.height(26.dp))
         SectionText(stringResource(R.string.storage_or))
         Spacer(Modifier.height(14.dp))
@@ -116,6 +131,60 @@ fun StorageScreen(navController: NavController, viewModel: StorageViewModel = hi
 @Composable
 private fun SectionText(text: String) {
     Text(text, style = storageText(17f, FontWeight.SemiBold), modifier = Modifier.padding(horizontal = 2.dp))
+}
+
+// the download order card, as it stood on the audio quality page: youtube always there for downloads
+@Composable
+private fun DownloadOrderCard(modules: ModulesViewModel, navController: NavController) {
+    val entries by modules.entries.collectAsState()
+    val downloadOrder by modules.downloadOrder.collectAsState()
+    val youTubeOn by modules.youTubeEnabled.collectAsState()
+
+    val statusSignIn = stringResource(R.string.aq_status_sign_in)
+    val statusSignInAgain = stringResource(R.string.aq_status_sign_in_again)
+    val statusOn = stringResource(R.string.aq_status_on)
+    val youTubeForDownloads = stringResource(R.string.quality_download_order_youtube)
+    val usable = { id: String ->
+        id == com.mochyy.mochymusic.modules.SourceModules.YouTubeId ||
+            entries.any { it.id == id && it.enabled && it.account is AccountState.SignedIn }
+    }
+    val sourceModules = entries.filter { it.adds(ModuleFeature.AudioSource) }
+    val shown = downloadOrder.filter { id -> id == com.mochyy.mochymusic.modules.SourceModules.YouTubeId || sourceModules.any { it.id == id } }
+
+    Column {
+        ProviderOrder(
+            order = shown,
+            name = modules::nameOf,
+            logo = ::providerLogo,
+            usable = usable,
+            status = { id ->
+                if (id == com.mochyy.mochymusic.modules.SourceModules.YouTubeId) {
+                    youTubeForDownloads
+                } else {
+                    entries.firstOrNull { it.id == id }?.let { entry ->
+                        when {
+                            entry.account is AccountState.SignedOut -> statusSignIn
+                            entry.account is AccountState.Expired -> statusSignInAgain
+                            entry.enabled -> statusOn
+                            else -> null
+                        }
+                    }
+                }
+            },
+            // youtube is always there for downloads, so only a module's row has somewhere to go
+            onTap = { id ->
+                if (id != com.mochyy.mochymusic.modules.SourceModules.YouTubeId) {
+                    navController.navigate(com.mochyy.mochymusic.ui.screens.settings.modules.moduleRoute(id))
+                }
+            },
+            onReorder = modules::setVisibleDownloadOrder,
+        )
+        Text(
+            text = stringResource(R.string.quality_download_order_footnote),
+            style = storageText(12f, FontWeight.Medium, StorageMuted, -0.1f),
+            modifier = Modifier.padding(top = 8.dp, start = 2.dp, end = 2.dp),
+        )
+    }
 }
 
 @Composable
