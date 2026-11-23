@@ -217,6 +217,8 @@ private fun networkItems(navController: NavController): List<SettingsItem> {
             description = stringResource(R.string.settings_internet_link_desc),
             icon = painterResource(R.drawable.language),
             onClick = { navController.navigate(com.mochyy.mochymusic.ui.screens.settings.InternetSettingsRoute) },
+            category = androidx.compose.ui.res.stringResource(com.mochyy.mochymusic.R.string.preview_cat_network),
+            preview = { InternetPreview() },
         ),
         linkItem(
             key = "Proxy",

@@ -15,4 +15,9 @@
     <string name="preview_status_not_connected">Not connected</string>
     <string name="preview_status_sharing">Sharing what you play</string>
     <string name="preview_status_off">Off</string>
+    <string name="preview_cat_sync">Sync</string>
+    <string name="preview_cat_together">Together</string>
+    <string name="preview_cat_devices">Devices</string>
+    <string name="preview_cat_sources">Sources</string>
+    <string name="lyrics_module_off">Off in Modules, switch it on there to use it</string>
 </resources>

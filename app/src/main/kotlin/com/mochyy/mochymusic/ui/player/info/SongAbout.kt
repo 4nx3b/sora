@@ -138,6 +138,7 @@ object SongAboutLoader {
                 artists = song.artists.map { it.name },
                 album = song.album?.title,
                 durationMs = song.duration.takeIf { it > 0 }?.times(1000L),
+                videoId = song.id,
             )
             val facts = ModuleMetadata.lookup(track)
             publish { it.copy(moduleDone = true, module = facts?.metadata, moduleName = facts?.aboutFrom) }

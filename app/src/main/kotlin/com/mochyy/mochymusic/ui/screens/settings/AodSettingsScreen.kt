@@ -3,6 +3,7 @@
 
 package com.mochyy.mochymusic.ui.screens.settings
 
+import androidx.compose.foundation.layout.height
 import android.content.Intent
 import android.provider.Settings
 import androidx.compose.foundation.layout.padding
@@ -64,6 +65,8 @@ fun AodSettingsScreen(navController: NavController) {
         onBack = { navController.navigateUp() },
         backLabel = stringResource(R.string.settings_customisation_category),
     ) {
+        com.mochyy.mochymusic.ui.screens.gesture.PortedPreviewHeader { com.mochyy.mochymusic.ui.screens.gesture.AodPreview() }
+        androidx.compose.foundation.layout.Spacer(androidx.compose.ui.Modifier.height(16.dp))
         SettingsSection(
             stringResource(R.string.aod_title),
             listOf(

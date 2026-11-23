@@ -88,12 +88,13 @@ private fun LyricsSourcesSheetContent(onDone: () -> Unit) {
     val names = remember(order, enabledTick) {
         (if (order.isBlank()) LyricsProviderRegistry.getDefaultProviderOrder()
         else LyricsProviderRegistry.deserializeProviderOrder(order))
-            .filter { it in LyricsProviderRegistry.providerNames }
+            .filter { it in LyricsProviderRegistry.orderNames }
     }
     val on = stringResource(R.string.lyrics_sources_on)
     val off = stringResource(R.string.lyrics_sources_off)
+    val moduleOff = stringResource(R.string.lyrics_module_off)
     fun isEnabled(name: String): Boolean =
-        LyricsProviderRegistry.getProviderByName(name)?.isEnabled(context) ?: true
+        !LyricsProviderRegistry.isModuleOff(name) && (LyricsProviderRegistry.getProviderByName(name)?.isEnabled(context) ?: true)
 
     Column(
         modifier = Modifier
@@ -122,7 +123,9 @@ private fun LyricsSourcesSheetContent(onDone: () -> Unit) {
                 logo = { null },
                 usable = { isEnabled(it) },
                 status = { name ->
-                    if (LyricsProviderRegistry.enableKey(name) == null) {
+                    if (LyricsProviderRegistry.isModuleOff(name)) {
+                        moduleOff
+                    } else if (LyricsProviderRegistry.enableKey(name) == null) {
                         sourceDescription(name)
                     } else {
                         sourceDescription(name) + " · " + (if (isEnabled(name)) on else off)
