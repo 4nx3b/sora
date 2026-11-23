@@ -18,6 +18,7 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.add
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.longOrNull
 import kotlinx.serialization.json.put
@@ -102,10 +103,10 @@ internal object SpotifyWeb {
         val content = ((file as? JsonObject)?.get("content") as? JsonPrimitive)?.contentOrNull ?: return null
         val nuances = json.parseToJsonElement(content) as? JsonArray ?: return null
         var secret = ""
-        var version = 0
+        var version = 0L
         for (element in nuances) {
             val obj = element as? JsonObject ?: continue
-            val v = obj.long("v") ?: 0
+            val v = obj.long("v") ?: 0L
             if (v >= version) {
                 version = v
                 secret = obj.string("s") ?: ""
@@ -164,7 +165,7 @@ internal object SpotifyWeb {
     /** the six-digit HMAC-SHA1 TOTP the token endpoint asks for, off the base32 secret */
     private fun totp(base32Secret: String, serverTimeSec: Long): String {
         val key = base32Decode(base32Secret)
-        val step = serverTimeSec / 30L
+        var step = serverTimeSec / 30L
         val time = ByteArray(8)
         for (i in 7 downTo 0) {
             time[i] = (step and 0xFF).toByte()

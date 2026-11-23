@@ -13,4 +13,6 @@ kotlin {
 dependencies {
     implementation(project(":modules:api"))
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
+    // the dealer session waits for the manifest on a deferred, timed out per song (bridge's arrangement)
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2")
 }

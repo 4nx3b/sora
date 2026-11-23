@@ -242,7 +242,7 @@ internal class DealerSocket(
     private fun uriEncode(value: String): String = buildString {
         for (b in value.toByteArray(Charsets.UTF_8)) {
             val c = b.toInt() and 0xFF
-            if (c in 0x30..0x39 || c in 0x41..0x5A || c in 0x61..0x7A || c == '-' || c == '_' || c == '.' || c == '~') {
+            if (c in 0x30..0x39 || c in 0x41..0x5A || c in 0x61..0x7A || c == '-'.code || c == '_'.code || c == '.'.code || c == '~'.code) {
                 append(c.toChar())
             } else {
                 append('%').append(String.format("%02X", c))
