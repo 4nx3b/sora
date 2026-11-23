@@ -43,6 +43,7 @@ fun IntegrationsScreen(navController: NavController) {
     // device integration is a sheet over whatever page asked for it
     val sheets = LocalZoomOutOverlayState.current
     val devices = rememberDevicesLink()
+
     val (rpc) = rememberPreference(com.mochyy.mochymusic.constants.EnableDiscordRPCKey, false)
     val (listenBrainz) = rememberPreference(com.mochyy.mochymusic.constants.ListenBrainzEnabledKey, false)
     val lastFm = rememberScrobbleConnected(ScrobbleSite.LASTFM)
@@ -89,24 +90,24 @@ fun IntegrationsScreen(navController: NavController) {
                 onCheckedChange = { workOutGenres = it },
             )
             PreviewCard(
-                category = stringResource(R.string.module_youtube_desc),
+                category = stringResource(R.string.preview_cat_sync),
                 title = stringResource(R.string.module_youtube_name),
                 onClick = { navController.navigate(YouTubeSyncRoute) },
             ) { YouTubeSyncPreview() }
             // the listen together rooms, ported from Neiro, live here with the other things that reach out
             PreviewCard(
-                category = stringResource(R.string.settings_listen_together_desc),
+                category = stringResource(R.string.preview_cat_together),
                 title = stringResource(R.string.ported_listen_together),
                 onClick = { navController.navigate("listen_together") },
             ) { ListenTogetherPreview() }
             // device integration opens as a sheet rather than its own page
             PreviewCard(
-                category = stringResource(R.string.settings_devices_link_desc),
+                category = stringResource(R.string.preview_cat_devices),
                 title = stringResource(R.string.devices_title),
                 onClick = { sheets.showDeviceIntegration(devices) },
             ) { DevicesPreview() }
             PreviewCard(
-                category = stringResource(R.string.sources_row_desc),
+                category = stringResource(R.string.preview_cat_sources),
                 title = stringResource(R.string.sources),
                 onClick = { navController.navigate(SourcesRoute) },
             ) { SourcesPreview() }
