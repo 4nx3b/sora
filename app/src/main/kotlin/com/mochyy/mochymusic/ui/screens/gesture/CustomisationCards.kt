@@ -456,7 +456,9 @@ internal fun PreviewCard(
             text = category,
             style = CardLabelStyle,
             color = Color.White.copy(alpha = 0.9f),
-            modifier = Modifier.padding(start = CardTextInset, top = CardTextInset),
+            maxLines = 2,
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+            modifier = Modifier.padding(start = CardTextInset, top = CardTextInset, end = PreviewWidth + 28.dp),
         )
         // a long name shrinks to fit beside the preview instead of breaking mid-word
         BasicText(

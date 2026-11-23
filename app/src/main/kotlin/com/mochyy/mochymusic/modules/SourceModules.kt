@@ -20,6 +20,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -59,7 +62,15 @@ class SourceModules @Inject constructor(
                 putBoolean("order_monochrome_first", true)
             }
         }
-        return (saved + KnownOrder).distinct()
+        // Muzo Data was tried before every source when it was built into playback; as a plugin it starts first, once
+        if (!prefs.getBoolean("order_muzo_first", false)) {
+            saved = listOf(com.mochyy.mochymusic.muzo.MuzoModule.Id) + saved.filter { it != com.mochyy.mochymusic.muzo.MuzoModule.Id }
+            prefs.edit {
+                putString("provider_order", (saved + KnownOrder).distinct().joinToString(","))
+                putBoolean("order_muzo_first", true)
+            }
+        }
+        return withEveryModule((saved + KnownOrder).distinct())
     }
 
     fun setOrder(ids: List<String>) {
@@ -78,10 +89,34 @@ class SourceModules @Inject constructor(
 
     private fun readDownloadOrder(): List<String> {
         val saved = prefs.getString("download_order", null)?.split(',')?.filter { it.isNotBlank() }
-        if (saved != null) return (saved + KnownOrder).distinct()
+        if (saved != null) return withEveryModule((saved + KnownOrder).distinct())
         val copy = _order.value
         prefs.edit { putString("download_order", copy.joinToString(",")) }
         return copy
+    }
+
+    init {
+        // every module that adds audio is in both orders as soon as the registry knows it, not only after a settings page asked for a refresh
+        resolveScope.launch {
+            registry.entries
+                .map { entries -> audioIds(entries) }
+                .distinctUntilChanged()
+                .collect { ids ->
+                    slotIn(ids, _order.value, ::setOrder)
+                    slotIn(ids, _downloadOrder.value, ::setDownloadOrder)
+                }
+        }
+    }
+
+    private fun audioIds(entries: List<ModuleEntry> = registry.entries.value): List<String> =
+        entries.filter { ModuleFeature.AudioSource in it.module.adds }.map { it.module.info.id }
+
+    // a saved order plus the modules it doesn't name yet, slotted in ahead of youtube
+    private fun withEveryModule(current: List<String>): List<String> {
+        val missing = audioIds().filter { it !in current }
+        if (missing.isEmpty()) return current
+        val at = current.indexOf(YouTubeId).let { if (it < 0) current.size else it }
+        return current.take(at) + missing + current.drop(at)
     }
 
     fun setDownloadOrder(ids: List<String>) {
@@ -259,6 +294,6 @@ class SourceModules @Inject constructor(
         /** youtube music in the provider order: not a module, and needs no account */
         const val YouTubeId = "youtube"
         // modules added later (jiosaavn, link modules) aren't listed: refresh slots them in just ahead of youtube, where they get asked
-        private val KnownOrder = listOf(MonochromeModule.Id, AppleMusicModule.Id, YouTubeId)
+        private val KnownOrder = listOf(com.mochyy.mochymusic.muzo.MuzoModule.Id, MonochromeModule.Id, AppleMusicModule.Id, YouTubeId)
     }
 }

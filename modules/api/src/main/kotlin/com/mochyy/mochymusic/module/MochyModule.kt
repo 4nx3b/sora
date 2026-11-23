@@ -92,6 +92,8 @@ data class TrackQuery(
     val album: String? = null,
     val durationMs: Long? = null,
     val isrc: String? = null,
+    /** the song's YouTube video id when Mochy has one; sources that look up by id (Muzo Data) need it */
+    val videoId: String? = null,
 )
 
 /**

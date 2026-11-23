@@ -394,6 +394,7 @@ constructor(
             artists = song.artists.map { it.name },
             album = song.song.albumName ?: song.album?.title,
             durationMs = song.song.duration.takeIf { it > 0 }?.times(1000L),
+            videoId = mediaId,
         )
         val route = runBlocking(Dispatchers.IO) { sourceModules.downloadRoute(track, failedProviders[mediaId].orEmpty()) }
         val (module, stream) = route as? SourceModules.Route.Module ?: return null
