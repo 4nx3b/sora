@@ -585,6 +585,8 @@ class ModuleRegistry @Inject constructor(
             com.mochyy.mochymusic.module.qobuzbackup.QobuzBackupModule(),
             com.mochyy.mochymusic.module.deezer.DeezerModule(),
             com.mochyy.mochymusic.module.soundcloud.SoundCloudModule(),
+            // the Spotify web player client, ported from Stopify
+            com.mochyy.mochymusic.module.spotify.SpotifyModule(),
         ).map { it to ModuleOrigin.BuiltIn }
         val apps = discover()
         val savedCode = savedCodeModules()

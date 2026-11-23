@@ -46,6 +46,8 @@ include(":modules:qobuz")
 include(":modules:qobuzbackup")
 include(":modules:deezer")
 include(":modules:soundcloud")
+// the Spotify web player client, ported from Stopify
+include(":modules:spotify")
 
 
 // local newpipe extractor

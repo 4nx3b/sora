@@ -37,6 +37,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -129,7 +130,13 @@ fun ForceProviderSheet(currentProviderId: String?, onDismiss: () -> Unit) {
         }
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.fillMaxWidth().navigationBarsPadding(),
+            // with every source installed the rows run past the screen; the sheet caps at its
+            // height and the list scrolls inside it, so the last source (Muzo Data at the end
+            // of a rearranged order) stays reachable instead of being cut off behind the bar
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .navigationBarsPadding(),
         ) {
             InfoColumn(modifier = Modifier.widthIn(max = 600.dp)) {
                 InfoSheetTitle(stringResource(R.string.pc_force_title))
