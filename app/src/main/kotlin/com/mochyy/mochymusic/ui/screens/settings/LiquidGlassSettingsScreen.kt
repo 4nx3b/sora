@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
@@ -108,13 +109,22 @@ private fun BoolRow(title: String, key: Preferences.Key<Boolean>, default: Boole
 
 @Composable
 private fun ValueRow(title: String, value: LiquidGlassValue, enabled: Boolean) {
-    val (on, setOn) = rememberPreference(value.enabledKey, false)
     val (v, setV) = rememberPreference(value.key, value.default)
-    SwitchPreference(title = { Text(title) }, checked = on, onCheckedChange = setOn, isEnabled = enabled)
-    AnimatedVisibility(on && enabled) {
-        val live = com.mochyy.mochymusic.ui.component.liquid.LiquidGlassLiveValues.dragging
-        androidx.compose.runtime.DisposableEffect(value.key) { onDispose { live.remove(value.key) } }
-        val shown = (live[value.key] ?: v).coerceIn(value.range)
+    val live = com.mochyy.mochymusic.ui.component.liquid.LiquidGlassLiveValues.dragging
+    androidx.compose.runtime.DisposableEffect(value.key) { onDispose { live.remove(value.key) } }
+    val shown = (live[value.key] ?: v).coerceIn(value.range)
+    androidx.compose.foundation.layout.Row(
+        modifier = Modifier.fillMaxWidth().padding(start = 24.dp, end = 24.dp, top = 12.dp),
+        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+    ) {
+        Text(title, modifier = Modifier.weight(1f), color = androidx.compose.ui.graphics.Color.White.copy(alpha = if (enabled) 1f else 0.38f))
+        Text(
+            "%.2f".format(java.util.Locale.ROOT, shown),
+            color = androidx.compose.ui.graphics.Color.White.copy(alpha = if (enabled) 0.6f else 0.3f),
+            style = androidx.compose.ui.text.TextStyle(fontFeatureSettings = "tnum"),
+        )
+    }
+    run {
         val onChange: (Float) -> Unit = { live[value.key] = it }
         val onFinished = {
             live.remove(value.key)?.let(setV)
@@ -126,6 +136,7 @@ private fun ValueRow(title: String, value: LiquidGlassValue, enabled: Boolean) {
                 value = shown,
                 onValueChange = onChange,
                 valueRange = value.range,
+                enabled = enabled,
                 onValueChangeFinished = onFinished,
                 modifier = Modifier
                     .padding(horizontal = 24.dp)
@@ -137,6 +148,7 @@ private fun ValueRow(title: String, value: LiquidGlassValue, enabled: Boolean) {
                 onValueChange = onChange,
                 onValueChangeFinished = onFinished,
                 valueRange = value.range,
+                enabled = enabled,
                 modifier = Modifier
                     .padding(horizontal = 24.dp)
                     .sliderDragScrollLock(),

@@ -77,6 +77,8 @@ import com.mochyy.mochymusic.ui.screens.search.rememberScrollCollapseProgress
 import com.mochyy.mochymusic.ui.screens.search.searchTopBarHeight
 import com.mochyy.mochymusic.ui.theme.InterFontFamily
 import com.mochyy.mochymusic.utils.rememberPreference
+import com.mochyy.mochymusic.ui.motion.morphClip
+import com.mochyy.mochymusic.ui.motion.onHeld
 
 private data class SettingsEntry(
     val title: String,
@@ -276,6 +278,7 @@ private val SettingsIndex = listOf(
     SettingsEntry("Qobuz backup", "Modules", "module/qobuzbackup", "qobuz backup community mirror lossless kouzu endpoint"),
     SettingsEntry("Deezer", "Modules", "module/deezer", "deezer flac cd 16 bit arl account"),
     SettingsEntry("SoundCloud", "Modules", "module/soundcloud", "soundcloud aac 160 uploads remixes sets client id"),
+    SettingsEntry("Spotify", "Modules", "module/spotify", "spotify web player cdn widevine aac free account sp_dc"),
     SettingsEntry("Provider order", "Integrations", com.mochyy.mochymusic.ui.screens.settings.integrations.SourcesRoute, "source order apple music monochrome youtube priority", R.string.sources_tab_sources),
     SettingsEntry("YouTube Music", "Integrations", com.mochyy.mochymusic.ui.screens.settings.integrations.SourcesRoute, "youtube turn off disable provider only monochrome apple music"),
     SettingsEntry("Sources", "Integrations", com.mochyy.mochymusic.ui.screens.settings.integrations.SourcesRoute, "sources addons plugins webdav smb remote library stream", R.string.sources),
@@ -653,10 +656,15 @@ internal fun CategoryBubble(
     // lit while its page is open beside the list on a wide screen
     selected: Boolean = false,
 ) {
+    // the badge turns from a circle into a cookie while the row is held
+    var held by remember { mutableStateOf(false) }
+    val badge = com.mochyy.mochymusic.ui.motion.rememberMorph(com.mochyy.mochymusic.ui.motion.MotionPolygons.Circle, com.mochyy.mochymusic.ui.motion.MotionPolygons.Cookie)
+    val badgeShape = com.mochyy.mochymusic.ui.motion.morphProgress(held)
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .height(64.dp)
+            .onHeld { held = it }
             .clip(RoundedCornerShape(22.dp))
             .background(if (selected) SelectedBubbleColor else BubbleColor)
             .clickable(onClick = onClick)
@@ -670,7 +678,7 @@ internal fun CategoryBubble(
             Box(
                 modifier = Modifier
                     .size(40.dp)
-                    .clip(CircleShape)
+                    .morphClip(badge) { badgeShape.value }
                     .background(IconBgColor),
                 contentAlignment = Alignment.Center
             ) {

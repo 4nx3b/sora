@@ -73,6 +73,7 @@ import com.mochyy.mochymusic.ui.component.shimmer.ShimmerHost
 import com.mochyy.mochymusic.ui.component.shimmer.TextPlaceholder
 import com.mochyy.mochymusic.ui.menu.YouTubeAlbumMenu
 import com.mochyy.mochymusic.ui.menu.YouTubeSongMenu
+import com.mochyy.mochymusic.ui.motion.flipIn
 import com.mochyy.mochymusic.ui.utils.SnapLayoutInfoProvider
 import com.mochyy.mochymusic.utils.listItemShape
 import com.mochyy.mochymusic.viewmodels.ChartsViewModel
@@ -339,6 +340,7 @@ fun ExploreScreen(
                                 isPlaying = active && isPlaying,
                                 coroutineScope = coroutineScope,
                                 modifier = Modifier
+                                    .flipIn(distinctNewReleases.indexOf(album))
                                     .combinedClickable(
                                         onClick = {
                                             navController.navigate("album/${album.id}")

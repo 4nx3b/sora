@@ -32,7 +32,6 @@ import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
-import java.util.concurrent.ConcurrentHashMap
 
 /** everything the about sheet shows for one song, as each source said it; the facts shown are picked from them */
 data class SongAbout(
@@ -81,7 +80,7 @@ data class StoreLink(val service: AccountService, val url: String)
 /** gathers [SongAbout] off the main thread: the library first, then every source side by side */
 object SongAboutLoader {
     // kept for the run, so closing and opening the sheet again is instant
-    private val cache = ConcurrentHashMap<String, SongAbout>()
+    private val cache = com.mochyy.mochymusic.utils.lruMap<String, SongAbout>(128)
 
     fun load(song: MediaMetadata, database: MusicDatabase, context: Context): Flow<SongAbout> = channelFlow {
         // here rather than at app start: it reads its saved key from disk, which belongs off the main thread
@@ -138,6 +137,7 @@ object SongAboutLoader {
                 artists = song.artists.map { it.name },
                 album = song.album?.title,
                 durationMs = song.duration.takeIf { it > 0 }?.times(1000L),
+                videoId = song.id,
             )
             val facts = ModuleMetadata.lookup(track)
             publish { it.copy(moduleDone = true, module = facts?.metadata, moduleName = facts?.aboutFrom) }

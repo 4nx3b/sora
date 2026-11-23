@@ -3,6 +3,30 @@
 package com.mochyy.mochymusic.ui.player.info
 
 import androidx.compose.animation.AnimatedVisibility
+import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import com.mochyy.mochymusic.module.TrackQuery
+import com.mochyy.mochymusic.module.SourceStream
+import com.mochyy.mochymusic.module.StreamFormat
+import com.mochyy.mochymusic.module.SourceModule
+import com.mochyy.mochymusic.module.ResolveResult
+import com.mochyy.mochymusic.module.ModuleFeature
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.foundation.layout.size
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.core.MutableTransitionState
+import androidx.compose.animation.core.CubicBezierEasing
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
@@ -13,6 +37,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -72,15 +97,24 @@ private fun qualityLabelRes(quality: AudioQuality): Int = when (quality) {
 /** "force change": plays this song from another of the providers that are switched on, at the quality picked */
 @Composable
 fun ForceProviderSheet(currentProviderId: String?, onDismiss: () -> Unit) {
-    val service = LocalPlayerConnection.current?.service ?: return
+    val connection = LocalPlayerConnection.current ?: return
+    val service = connection.service
     val modules = service.sourceModules
     val order by modules.order.collectAsState()
     val youTubeOn by modules.youTubeEnabled.collectAsState()
     val entries by modules.entries.collectAsState()
     val state by service.providerSwitch.state.collectAsState()
     val (youTubeQuality, setYouTubeQuality) = rememberPreference(AudioQualityKey, AudioQuality.AUTO.name)
-    // only what's switched on (and signed in) is offered: a provider that's off couldn't play it anyway
-    val providers = remember(order, youTubeOn, entries) { order.filter { modules.isUsable(it) } }
+    // every source the app has, in the play order; one that's off or signed out shows why and can still be searched
+    val providers = remember(order, youTubeOn, entries) {
+        (order + SourceModules.YouTubeId + entries.filter { ModuleFeature.AudioSource in it.module.adds }.map { it.module.info.id })
+            .distinct()
+            .filter { it == SourceModules.YouTubeId || modules.module(it) != null }
+    }
+    val metadata by connection.mediaMetadata.collectAsState()
+    val searchScope = rememberCoroutineScope()
+    val catalog = remember { mutableStateMapOf<String, CatalogCheck>() }
+    val shown = remember { MutableTransitionState(false).apply { targetState = true } }
 
     LaunchedEffect(Unit) { modules.refresh() }
     DisposableEffect(Unit) { onDispose { service.providerSwitch.acknowledge() } }
@@ -96,7 +130,13 @@ fun ForceProviderSheet(currentProviderId: String?, onDismiss: () -> Unit) {
         }
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.fillMaxWidth().navigationBarsPadding(),
+            // with every source installed the rows run past the screen; the sheet caps at its
+            // height and the list scrolls inside it, so the last source (Muzo Data at the end
+            // of a rearranged order) stays reachable instead of being cut off behind the bar
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .navigationBarsPadding(),
         ) {
             InfoColumn(modifier = Modifier.widthIn(max = 600.dp)) {
                 InfoSheetTitle(stringResource(R.string.pc_force_title))
@@ -108,15 +148,35 @@ fun ForceProviderSheet(currentProviderId: String?, onDismiss: () -> Unit) {
                 )
                 Spacer(Modifier.height(16.dp))
                 SwitchStatus(state, nameOf = modules::nameOf)
-                providers.forEach { id ->
+                providers.forEachIndexed { index, id ->
                     val module = modules.module(id)
+                    val usable = modules.isUsable(id)
+                    val blocked = when {
+                        usable -> null
+                        !modules.isEnabled(id) -> stringResource(R.string.pc_force_off)
+                        else -> stringResource(R.string.pc_force_sign_in)
+                    }
                     val choice = module?.choices?.firstOrNull { it.id.contains("quality", ignoreCase = true) }
                     val picked = choice?.let { c -> modules.picks(id)[c.id] ?: c.options.firstOrNull()?.id }
+                    androidx.compose.animation.AnimatedVisibility(
+                        visibleState = shown,
+                        enter = fadeIn(tween(260, delayMillis = index * 40, easing = SheetEasing)) +
+                            expandVertically(tween(280, delayMillis = index * 40, easing = SheetEasing)),
+                    ) {
+                    val name = modules.nameOf(id)
                     ProviderChoiceRow(
                         providerId = id,
-                        name = modules.nameOf(id),
+                        name = name,
                         isCurrent = id == currentProviderId,
                         busy = state is ProviderSwitchState.Working,
+                        blocked = blocked,
+                        check = catalog[id],
+                        onSearch = {
+                            catalog[id] = CatalogCheck.Looking
+                            searchScope.launch {
+                                catalog[id] = lookUp(id, module, metadata, modules)
+                            }
+                        },
                         options = when {
                             choice != null -> choice.options
                             id == SourceModules.YouTubeId -> YouTubeQualities.map { StreamOption(it.name, stringResource(qualityLabelRes(it)), "") }
@@ -130,6 +190,7 @@ fun ForceProviderSheet(currentProviderId: String?, onDismiss: () -> Unit) {
                             service.providerSwitch.force(id)
                         },
                     )
+                    }
                     Spacer(Modifier.height(8.dp))
                 }
             }
@@ -185,6 +246,9 @@ private fun ProviderChoiceRow(
     name: String,
     isCurrent: Boolean,
     busy: Boolean,
+    blocked: String?,
+    check: CatalogCheck?,
+    onSearch: () -> Unit,
     options: List<StreamOption>,
     selectedOption: String?,
     /** null when the row itself was tapped, keeping the quality as it is */
@@ -193,28 +257,53 @@ private fun ProviderChoiceRow(
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            .animateContentSize(tween(260, easing = SheetEasing))
             .clip(RoundedCornerShape(18.dp))
             .background(MenuRowSurface)
             .clickable(
-                enabled = !busy,
+                enabled = !busy && blocked == null,
                 interactionSource = remember { MutableInteractionSource() },
                 indication = RemoteFocus,
             ) { onPick(null) }
             .padding(horizontal = 14.dp, vertical = 12.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            ProviderLogo(providerId, name, 44.dp)
+            Box(Modifier.graphicsLayer { alpha = if (blocked == null) 1f else 0.45f }) {
+                ProviderLogo(providerId, name, 44.dp)
+            }
             Spacer(Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(text = name, color = Color.White, fontSize = 15.sp, lineHeight = 19.sp, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Text(text = name, color = Color.White.copy(alpha = if (blocked == null) 1f else 0.55f), fontSize = 15.sp, lineHeight = 19.sp, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 Text(
-                    text = stringResource(if (isCurrent) R.string.pc_force_playing_here else R.string.pc_force_tap_here),
+                    text = blocked ?: stringResource(if (isCurrent) R.string.pc_force_playing_here else R.string.pc_force_tap_here),
                     color = InfoMuted,
                     fontSize = 12.sp,
                 )
             }
+            IconButton(
+                onClick = onSearch,
+                enabled = check != CatalogCheck.Looking,
+                modifier = Modifier.size(44.dp),
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.search_outline),
+                    contentDescription = stringResource(R.string.pc_force_search, name),
+                    tint = Color.White.copy(alpha = 0.85f),
+                    modifier = Modifier.size(20.dp),
+                )
+            }
         }
-        if (options.size > 1) {
+        if (check != null) {
+            AnimatedContent(
+                targetState = check,
+                transitionSpec = {
+                    (fadeIn(tween(240, easing = SheetEasing)) + expandVertically(tween(260, easing = SheetEasing))) togetherWith
+                        fadeOut(tween(160))
+                },
+                label = "catalog",
+            ) { result -> CatalogResult(result) }
+        }
+        if (blocked == null && options.size > 1) {
             Spacer(Modifier.height(10.dp))
             Row(
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -246,5 +335,103 @@ private fun QualityChip(label: String, selected: Boolean, enabled: Boolean, onCl
             .padding(horizontal = 12.dp),
     ) {
         Text(text = label, color = if (selected) Color.Black else Color.White.copy(alpha = 0.8f), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+    }
+}
+
+private val SheetEasing = CubicBezierEasing(0.22f, 1f, 0.36f, 1f)
+
+private val Figures = TextStyle(fontFeatureSettings = "tnum")
+
+/** what the search beside a source found for this song in its catalogue */
+private sealed interface CatalogCheck {
+    data object Looking : CatalogCheck
+    data class Found(val stream: SourceStream) : CatalogCheck
+    data class Missing(val reason: String) : CatalogCheck
+    data object YouTube : CatalogCheck
+}
+
+private suspend fun lookUp(
+    id: String,
+    module: SourceModule?,
+    metadata: com.mochyy.mochymusic.models.MediaMetadata?,
+    modules: SourceModules,
+): CatalogCheck {
+    if (id == SourceModules.YouTubeId) return CatalogCheck.YouTube
+    if (module == null || metadata == null) return CatalogCheck.Missing("")
+    val track = TrackQuery(
+        title = metadata.title,
+        artists = metadata.artists.map { it.name },
+        album = metadata.album?.title,
+        durationMs = metadata.duration.takeIf { it > 0 }?.times(1000L),
+        videoId = metadata.id,
+    )
+    val result = withContext(Dispatchers.IO) {
+        withTimeoutOrNull(15_000) { runCatching { module.resolve(track, modules.playbackPicks(id, module)) }.getOrNull() }
+    }
+    return when (result) {
+        is ResolveResult.Found -> CatalogCheck.Found(result.stream)
+        is ResolveResult.NotFound -> CatalogCheck.Missing(result.reason)
+        is ResolveResult.Unavailable -> CatalogCheck.Missing(result.reason)
+        null -> CatalogCheck.Missing("")
+    }
+}
+
+@Composable
+private fun CatalogResult(result: CatalogCheck) {
+    Column(modifier = Modifier.fillMaxWidth().padding(top = 10.dp)) {
+        when (result) {
+            CatalogCheck.Looking -> Row(verticalAlignment = Alignment.CenterVertically) {
+                CircularProgressIndicator(color = Color.White, strokeWidth = 2.dp, modifier = Modifier.size(16.dp))
+                Spacer(Modifier.width(10.dp))
+                Text(stringResource(R.string.pc_force_looking), color = InfoMuted, fontSize = 12.sp)
+            }
+            CatalogCheck.YouTube -> Text(stringResource(R.string.pc_force_youtube_catalog), color = InfoMuted, fontSize = 12.sp)
+            is CatalogCheck.Missing -> {
+                Text(stringResource(R.string.pc_force_not_found), color = Color(0xFFFF7A7A), fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                if (result.reason.isNotBlank()) Text(result.reason, color = InfoMuted, fontSize = 12.sp)
+            }
+            is CatalogCheck.Found -> {
+                val stream = result.stream
+                Text(
+                    text = stringResource(R.string.pc_force_found, stream.matched.title, stream.matched.artist),
+                    color = Color.White,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Spacer(Modifier.height(6.dp))
+                val lossless = stream.codec?.uppercase() in setOf("FLAC", "ALAC")
+                val facts = listOfNotNull(
+                    stream.codec,
+                    stream.sampleRateHz?.let { stringResource(R.string.pc_force_khz, it / 1000f) },
+                    stream.qualityLabel.takeIf { it.isNotBlank() },
+                    stream.format.takeIf { it != StreamFormat.Progressive }?.name?.uppercase(),
+                )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.horizontalScroll(rememberScrollState()),
+                ) {
+                    if (lossless) Badge(stringResource(R.string.pc_force_lossless), filled = true)
+                    facts.forEach { Badge(it, filled = false) }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun Badge(text: String, filled: Boolean) {
+    val shape = RoundedCornerShape(50)
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = Modifier
+            .height(24.dp)
+            .clip(shape)
+            .then(if (filled) Modifier.background(Color.White) else Modifier.border(1.dp, Color.White.copy(alpha = 0.25f), shape))
+            .padding(horizontal = 10.dp),
+    ) {
+        Text(text = text, style = Figures, color = if (filled) Color.Black else Color.White.copy(alpha = 0.85f), fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
     }
 }

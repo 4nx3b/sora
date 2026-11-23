@@ -474,6 +474,7 @@ dependencies {
     implementation(project(":modules:qobuzbackup"))
     implementation(project(":modules:deezer"))
     implementation(project(":modules:soundcloud"))
+    implementation(project(":modules:spotify"))
     implementation(project(":modules:bridge"))
 
 

@@ -9,3 +9,5 @@ HSPLcom/kyant/backdrop/**->**(**)**
 Lcom/mochyy/mochymusic/**;
 Lcom/music/**;
 Lcom/kyant/backdrop/**;
+HSPLcom/mochyy/mochymusic/ui/motion/**->**(**)
+HSPLcom/mochyy/mochymusic/muzo/**->**(**)

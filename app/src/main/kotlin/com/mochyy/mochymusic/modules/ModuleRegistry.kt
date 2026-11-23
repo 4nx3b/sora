@@ -264,6 +264,9 @@ class ModuleRegistry @Inject constructor(
         LyricsProviderRegistry.setModuleProviders(
             list.filter { it.active && it.adds(ModuleFeature.Lyrics) }.mapNotNull { (it.module as? LyricsModule)?.let(::ModuleLyricsProvider) },
         )
+        LyricsProviderRegistry.setKnownModules(
+            list.filter { it.adds(ModuleFeature.Lyrics) && it.module is LyricsModule }.associate { "module:${it.module.info.id}" to it.module.info.name },
+        )
         ModuleMetadata.sources = list.filter { it.active && it.adds(ModuleFeature.Metadata) }.mapNotNull { it.module as? MetadataModule }
         ModuleMenu.publish(list.filter { it.active }.mapNotNull { (it.module as? SkinSource)?.skin })
     }
@@ -573,6 +576,7 @@ class ModuleRegistry @Inject constructor(
 
     private fun load(): List<Pair<MochyModule, ModuleOrigin>> {
         val builtIn = listOf<MochyModule>(
+            com.mochyy.mochymusic.muzo.MuzoModule(context),
             AppleMusicModule(),
             MonochromeModule(),
             JioSaavnModule(),
@@ -581,6 +585,8 @@ class ModuleRegistry @Inject constructor(
             com.mochyy.mochymusic.module.qobuzbackup.QobuzBackupModule(),
             com.mochyy.mochymusic.module.deezer.DeezerModule(),
             com.mochyy.mochymusic.module.soundcloud.SoundCloudModule(),
+            // the Spotify web player client, ported from Stopify
+            com.mochyy.mochymusic.module.spotify.SpotifyModule(),
         ).map { it to ModuleOrigin.BuiltIn }
         val apps = discover()
         val savedCode = savedCodeModules()
@@ -603,6 +609,7 @@ class ModuleRegistry @Inject constructor(
         // a module app or a zip's code replaces the built-in module with its id, so a module can be updated on its own
         val replacing = (apps + code).map { it.first.info.id }.toSet()
         migrateMonochromeSwitch()
+        migrateMuzoSwitch()
         return (builtIn.filter { it.first.info.id !in replacing } + apps + code + web + local)
             .distinctBy { it.first.info.id }
             .onEach { (module, _) ->
@@ -616,6 +623,17 @@ class ModuleRegistry @Inject constructor(
 
     // the folder a module keeps its own files in, the scripts or packs people add to it
     private fun folderFor(id: String) = File(context.filesDir, "module_data/" + id.replace(Regex("[^a-z0-9._-]"), "-"))
+
+    /** muzo data used to play whenever its key was set on the internet page; a saved key turns the plugin on, once */
+    private fun migrateMuzoSwitch() {
+        if (prefs.getBoolean("migrated_muzo", false)) return
+        val hadKey = runCatching { kotlinx.coroutines.runBlocking(kotlinx.coroutines.Dispatchers.IO) { com.mochyy.mochymusic.muzo.MuzoService.apiKey(context) } }
+            .getOrNull() != null
+        prefs.edit {
+            if (hadKey) putBoolean("enabled_${com.mochyy.mochymusic.muzo.MuzoModule.Id}", true)
+            putBoolean("migrated_muzo", true)
+        }
+    }
 
     /** monochrome used to be built into playback with its own switch; it carries over, once */
     private fun migrateMonochromeSwitch() {

@@ -273,6 +273,11 @@ internal fun Modifier.pageMediaDrift(pageOffset: () -> Float, peek: Boolean = fa
     scaleX = scale
     scaleY = scale
     translationX = d * size.width * PageMediaTravel
+    // the cover turns away on its vertical axis as it leaves, up to 14°
+    if (com.mochyy.mochymusic.ui.motion.motionOn()) {
+        rotationY = -d * 14f
+        cameraDistance = 12f * density
+    }
 }
 
 // text drifts further than the cover and is gone by half way, so the outgoing and incoming
