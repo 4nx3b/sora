@@ -356,7 +356,6 @@ private suspend fun lookUp(
         artists = metadata.artists.map { it.name },
         album = metadata.album?.title,
         durationMs = metadata.duration.takeIf { it > 0 }?.times(1000L),
-        videoId = metadata.id,
     )
     val result = withContext(Dispatchers.IO) {
         withTimeoutOrNull(15_000) { runCatching { module.resolve(track, modules.playbackPicks(id, module)) }.getOrNull() }

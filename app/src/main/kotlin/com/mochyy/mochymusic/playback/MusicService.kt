@@ -5380,13 +5380,18 @@ class MusicService :
         // a remote library's file (a WebDAV URL or an SMB share): it plays as the address
         // it already is, never re-resolved — the credentials ride the stored server, not the id
         remoteRoute(mediaId)?.let { return it }
-        // a provider picked by hand wins over the usual order
+        // Muzo Data first, as Neiro's resolver walks it: one video id answered with the
+        // 24-bit FLAC for exactly that recording. Without a key the source is inert by
+        // design (Neiro's MuzoSource: the opt-in is the credential itself), a miss lets
+        // the walk step on, and a capped request never pays lossless bytes for it.
+        // a provider picked by hand wins over everything else, Muzo included
         forcedRoutes[mediaId]?.let { forced ->
             if (forced.providerId == com.mochyy.mochymusic.modules.SourceModules.YouTubeId) return youTubeRoute(mediaId)
             forcedModuleStream(mediaId, forced)?.let { return it }
             // the picked provider doesn't have it any more: the usual order takes over
             forcedRoutes.remove(mediaId)
         }
+        muzoRoute(mediaId)?.let { return it }
         val skip = recentFailures(mediaId)
         // a fresh lookup: a notice from one that never got to play no longer holds
         if (skip.isEmpty()) decoderNotices.remove(mediaId)

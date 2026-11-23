@@ -62,14 +62,6 @@ class SourceModules @Inject constructor(
                 putBoolean("order_monochrome_first", true)
             }
         }
-        // Muzo Data was tried before every source when it was built into playback; as a plugin it starts first, once
-        if (!prefs.getBoolean("order_muzo_first", false)) {
-            saved = listOf(com.mochyy.mochymusic.muzo.MuzoModule.Id) + saved.filter { it != com.mochyy.mochymusic.muzo.MuzoModule.Id }
-            prefs.edit {
-                putString("provider_order", (saved + KnownOrder).distinct().joinToString(","))
-                putBoolean("order_muzo_first", true)
-            }
-        }
         return withEveryModule((saved + KnownOrder).distinct())
     }
 
