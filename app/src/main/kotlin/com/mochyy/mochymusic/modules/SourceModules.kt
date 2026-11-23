@@ -286,6 +286,6 @@ class SourceModules @Inject constructor(
         /** youtube music in the provider order: not a module, and needs no account */
         const val YouTubeId = "youtube"
         // modules added later (jiosaavn, link modules) aren't listed: refresh slots them in just ahead of youtube, where they get asked
-        private val KnownOrder = listOf(MonochromeModule.Id, AppleMusicModule.Id, YouTubeId)
+        private val KnownOrder = listOf(com.mochyy.mochymusic.muzo.MuzoModule.Id, MonochromeModule.Id, AppleMusicModule.Id, YouTubeId)
     }
 }

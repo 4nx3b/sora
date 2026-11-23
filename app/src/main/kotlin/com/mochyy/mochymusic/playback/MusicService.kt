@@ -5482,36 +5482,6 @@ class MusicService :
     }
 
 
-    /**
-     * Muzo Data's answer for this song, or null to step on: the 24-bit FLAC stream for
-     * the exact video id, keyed and announced like a module stream so the CDN's
-     * Authorization header rides the fetch and the stream info names the source. The
-     * credential is the opt-in (Neiro's shape): no key, no ask.
-     */
-    private suspend fun muzoRoute(mediaId: String): com.mochyy.mochymusic.playback.custom.CustomStreamResult? {
-        // a capped request is the one caller that cannot pay lossless bytes for
-        if (com.mochyy.mochymusic.utils.DataSaver.isActive(this)) return null
-        val key = com.mochyy.mochymusic.muzo.MuzoService.apiKey(this) ?: return null
-        val answer = com.mochyy.mochymusic.muzo.MuzoService.lossless(key, mediaId) ?: return null
-        val url = answer.url ?: return null
-        val codec = answer.format?.lowercase() ?: "flac"
-        resolvedSourceIds[mediaId] = MuzoSourceId
-        // the youtube path saves the song, a lossless source has to as well or its plays never reach history
-        scope.launch(Dispatchers.IO) { recoverSong(mediaId) }
-        val cacheKey = "$ModuleCacheKeyPrefix$MuzoSourceId|$mediaId"
-        // the CDN binds its file URLs to the key they were minted for; this header travels with the fetch
-        moduleStreamHeaders[cacheKey] = mapOf("Authorization" to "Bearer $key")
-        val quality = answer.quality?.takeIf { it.isNotBlank() } ?: "lossless"
-        streamFacts.update { it + (mediaId to StreamFacts(codec = codec, fromModule = true)) }
-        notePlayingFrom(mediaId, PlayingFrom(MuzoSourceId, "Muzo Data", quality, mediaId))
-        Timber.tag("StreamFetch").i("$mediaId plays from Muzo Data: $codec $quality")
-        return com.mochyy.mochymusic.playback.custom.CustomStreamResult(
-            streamUrl = url,
-            source = "Muzo Data · $quality",
-            cacheKey = cacheKey,
-        )
-    }
-
     private fun notePlayingFrom(mediaId: String, from: PlayingFrom) {
         _playingFrom.update { if (it[mediaId] == from) it else it + (mediaId to from) }
     }
@@ -5524,6 +5494,7 @@ class MusicService :
                 artists = it.artists.map { a -> a.name },
                 album = it.song.albumName ?: it.album?.title,
                 durationMs = it.song.duration.takeIf { d -> d > 0 }?.times(1000L),
+                videoId = mediaId,
             )
         }
         // only the youtube path saves a new song, so without this every module was passed over for it
@@ -5533,6 +5504,7 @@ class MusicService :
             artists = queued.artists.map { it.name },
             album = queued.album?.title,
             durationMs = queued.duration.takeIf { it > 0 }?.times(1000L),
+            videoId = mediaId,
         )
     }
 
@@ -5854,7 +5826,7 @@ class MusicService :
          */
         const val ModuleCacheKeyPrefix = "module|"
         /** Muzo Data, when its key is set: answers a video id with its 24-bit FLAC */
-        const val MuzoSourceId = "muzo"
+        const val MuzoSourceId = com.mochyy.mochymusic.muzo.MuzoModule.Id
 
         // a blended skip crosses the two songs over in the fade's Length; never shorter than this, or it's a click
         const val SkipBlendMinMs = 300L
