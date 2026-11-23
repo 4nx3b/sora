@@ -5,6 +5,9 @@ package com.mochyy.mochymusic.ui.screens.audiolab
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.CubicBezierEasing
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -33,6 +36,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import com.mochyy.mochymusic.ui.component.pressBounce
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -116,6 +120,7 @@ fun ProviderOrder(
                     }
                     val lift by animateFloatAsState(if (isDragged) 1f else 0f, spring(dampingRatio = 0.7f, stiffness = 600f), label = "lift")
                     val on = usable(id)
+                    val press = remember(id) { androidx.compose.foundation.interaction.MutableInteractionSource() }
                     Row(
                         modifier = Modifier
                             .zIndex(if (isDragged) 1f else 0f)
@@ -131,7 +136,8 @@ fun ProviderOrder(
                             .height(rowHeight)
                             .clip(RoundedCornerShape(22.dp))
                             .background(if (isDragged) Color(0xFF242428) else Color(0xFF111113))
-                            .clickable { onTap(id) }
+                            .pressBounce(press, pressedScale = 0.97f)
+                            .clickable(interactionSource = press, indication = androidx.compose.foundation.LocalIndication.current) { onTap(id) }
                             .padding(start = 16.dp, end = 6.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
@@ -139,10 +145,20 @@ fun ProviderOrder(
                             ProviderLogo(logo(id), size = 38, name = name(id))
                         }
                         Spacer(Modifier.width(14.dp))
-                        Column(Modifier.weight(1f).graphicsLayer { alpha = if (on) 1f else 0.5f }) {
+                        val dim by animateFloatAsState(if (on) 1f else 0.5f, tween(260, easing = RowEasing), label = "rowDim")
+                        Column(Modifier.weight(1f).graphicsLayer { alpha = dim }) {
                             Text(name(id), fontFamily = InterFontFamily, fontWeight = FontWeight.Bold, fontSize = 16.sp, color = Color.White, maxLines = 1)
-                            status(id)?.let {
-                                Text(it, fontFamily = InterFontFamily, fontSize = 11.sp, color = LabColors.Secondary, maxLines = 1)
+                            status(id)?.let { line ->
+                                androidx.compose.animation.AnimatedContent(
+                                    targetState = line,
+                                    transitionSpec = {
+                                        androidx.compose.animation.fadeIn(tween(240, easing = RowEasing)) togetherWith
+                                            androidx.compose.animation.fadeOut(tween(160))
+                                    },
+                                    label = "rowStatus",
+                                ) { text ->
+                                    Text(text, fontFamily = InterFontFamily, fontSize = 11.sp, color = LabColors.Secondary, maxLines = 1)
+                                }
                             }
                         }
                         // the handle: dragging it moves the row, a tap on it does nothing rather than reaching the row and switching the provider
@@ -194,3 +210,5 @@ fun ProviderOrder(
         }
     }
 }
+
+private val RowEasing = CubicBezierEasing(0.22f, 1f, 0.36f, 1f)
