@@ -75,6 +75,7 @@ import com.mochyy.mochymusic.ui.screens.search.SearchTitleBlockHeight
 import com.mochyy.mochymusic.ui.utils.resize
 import kotlinx.coroutines.launch
 import com.mochyy.mochymusic.ui.component.RemoteFocus
+import com.mochyy.mochymusic.ui.motion.pressDepth
 
 /** Title + subtitle block height, for the collapsing header on Library screens. */
 val LibraryTitleBlockHeight: Dp = SearchTitleBlockHeight + 16.dp
@@ -325,6 +326,7 @@ fun LibraryCategoryCard(
     Box(
         modifier = modifier
             .height(78.dp)
+            .pressDepth()
             .clip(RoundedCornerShape(16.dp))
             .background(SearchColors.Tile)
             .clickable(onClick = onClick),

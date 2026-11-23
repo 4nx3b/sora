@@ -77,6 +77,8 @@ import com.mochyy.mochymusic.ui.screens.search.rememberScrollCollapseProgress
 import com.mochyy.mochymusic.ui.screens.search.searchTopBarHeight
 import com.mochyy.mochymusic.ui.theme.InterFontFamily
 import com.mochyy.mochymusic.utils.rememberPreference
+import com.mochyy.mochymusic.ui.motion.morphClip
+import com.mochyy.mochymusic.ui.motion.onHeld
 
 private data class SettingsEntry(
     val title: String,
@@ -654,10 +656,15 @@ internal fun CategoryBubble(
     // lit while its page is open beside the list on a wide screen
     selected: Boolean = false,
 ) {
+    // the badge turns from a circle into a cookie while the row is held
+    var held by remember { mutableStateOf(false) }
+    val badge = com.mochyy.mochymusic.ui.motion.rememberMorph(com.mochyy.mochymusic.ui.motion.MotionPolygons.Circle, com.mochyy.mochymusic.ui.motion.MotionPolygons.Cookie)
+    val badgeShape = com.mochyy.mochymusic.ui.motion.morphProgress(held)
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .height(64.dp)
+            .onHeld { held = it }
             .clip(RoundedCornerShape(22.dp))
             .background(if (selected) SelectedBubbleColor else BubbleColor)
             .clickable(onClick = onClick)
@@ -671,7 +678,7 @@ internal fun CategoryBubble(
             Box(
                 modifier = Modifier
                     .size(40.dp)
-                    .clip(CircleShape)
+                    .morphClip(badge) { badgeShape.value }
                     .background(IconBgColor),
                 contentAlignment = Alignment.Center
             ) {

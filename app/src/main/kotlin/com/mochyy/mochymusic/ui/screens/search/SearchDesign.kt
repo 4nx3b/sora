@@ -477,11 +477,17 @@ fun SearchField(
         }
     }
 
+    // the pill squares off a little while it has the keyboard, and rounds back when it lets go
+    val corner by androidx.compose.animation.core.animateDpAsState(
+        targetValue = if (focused || fieldHasFocus) 14.dp else SearchFieldHeight / 2,
+        animationSpec = if (com.mochyy.mochymusic.ui.motion.motionOn()) tween(com.mochyy.mochymusic.ui.motion.MotionTokens.base, easing = com.mochyy.mochymusic.ui.motion.MotionTokens.Ease) else androidx.compose.animation.core.snap(),
+        label = "searchFieldCorner",
+    )
     Row(
         modifier = modifier
             .fillMaxWidth()
             .height(SearchFieldHeight)
-            .clip(RoundedCornerShape(50))
+            .clip(RoundedCornerShape(corner))
             .background(if (focused) SearchColors.FieldFocused else SearchColors.Field)
             .then(
                 if (readOnlyClick != null) {

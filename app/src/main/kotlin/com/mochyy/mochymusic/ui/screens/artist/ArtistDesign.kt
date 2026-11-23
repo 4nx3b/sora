@@ -116,6 +116,8 @@ import com.mochyy.mochymusic.viewmodels.ArtistRelease
 import com.mochyy.mochymusic.ui.utils.stableStatusBars
 import com.mochyy.mochymusic.ui.utils.stableStatusBarsPadding
 import com.mochyy.mochymusic.ui.component.RemoteFocus
+import com.mochyy.mochymusic.ui.motion.morphClip
+import com.mochyy.mochymusic.ui.motion.onHeld
 
 // the round photo sits this far down the banner, and the page's header starts there
 internal const val ArtistAvatarAt = 0.45f
@@ -329,10 +331,15 @@ private fun BoxScope.BannerScrims(background: State<Color>) {
 /** the round YouTube photo, a bone until it loads */
 @Composable
 internal fun ArtistAvatar(url: String?, modifier: Modifier = Modifier) {
+    // the round photo softens into a squircle while it's held, and back
+    var held by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    val morph = com.mochyy.mochymusic.ui.motion.rememberMorph(com.mochyy.mochymusic.ui.motion.MotionPolygons.Circle, com.mochyy.mochymusic.ui.motion.MotionPolygons.Squircle)
+    val progress = com.mochyy.mochymusic.ui.motion.morphProgress(held)
     Box(
         modifier = modifier
             .size(ArtistAvatarSize)
-            .clip(CircleShape)
+            .onHeld { held = it }
+            .morphClip(morph) { progress.value }
             .background(BoneColor),
     ) {
         if (url != null) {
