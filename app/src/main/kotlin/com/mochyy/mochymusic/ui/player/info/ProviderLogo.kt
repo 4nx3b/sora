@@ -64,6 +64,12 @@ internal fun ProviderLogo(providerId: String, name: String, size: Dp) {
             contentScale = ContentScale.Crop,
             modifier = Modifier.size(size).clip(SquircleShape),
         )
+        "spotify" -> Image(
+            painter = painterResource(R.drawable.provider_spotify),
+            contentDescription = name,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.size(size).clip(SquircleShape),
+        )
         PlayingFrom.Device, PlayingFrom.Downloads -> Box(
             contentAlignment = Alignment.Center,
             modifier = Modifier.size(size).clip(SquircleShape).background(Color.White.copy(alpha = 0.9f)),
