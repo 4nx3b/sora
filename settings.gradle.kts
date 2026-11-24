@@ -43,7 +43,6 @@ include(":modules:monochrome")
 include(":modules:jiosaavn")
 // the ArchiveTune fork's sources, ported as built-in modules
 include(":modules:qobuz")
-include(":modules:qobuzbackup")
 include(":modules:deezer")
 include(":modules:soundcloud")
 // the Spotify web player client, ported from Stopify

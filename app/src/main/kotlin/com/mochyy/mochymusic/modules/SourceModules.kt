@@ -4,6 +4,7 @@ package com.mochyy.mochymusic.modules
 
 import android.content.Context
 import androidx.core.content.edit
+import com.mochyy.mochymusic.muzo.MuzoModule
 import com.mochyy.mochymusic.module.AccountState
 import com.mochyy.mochymusic.module.ModuleFeature
 import com.mochyy.mochymusic.module.ResolveResult
@@ -52,7 +53,7 @@ class SourceModules @Inject constructor(
     val order: StateFlow<List<String>> = _order.asStateFlow()
 
     private fun readOrder(): List<String> {
-        var saved = prefs.getString("provider_order", null)?.split(',')?.filter { it.isNotBlank() }.orEmpty()
+        var saved = prefs.getString("provider_order", null)?.split(',')?.filter { it.isNotBlank() && it != GoneQobuzBackupId }.orEmpty()
         // Monochrome is preferred when it has the song (lossless): first by default, and moved to
         // the top once for orders saved before it was
         if (!prefs.getBoolean("order_monochrome_first", false)) {
@@ -88,7 +89,7 @@ class SourceModules @Inject constructor(
     val downloadOrder: StateFlow<List<String>> = _downloadOrder.asStateFlow()
 
     private fun readDownloadOrder(): List<String> {
-        val saved = prefs.getString("download_order", null)?.split(',')?.filter { it.isNotBlank() }
+        val saved = prefs.getString("download_order", null)?.split(',')?.filter { it.isNotBlank() && it != GoneQobuzBackupId }
         if (saved != null) return withEveryModule((saved + KnownOrder).distinct())
         val copy = _order.value
         prefs.edit { putString("download_order", copy.joinToString(",")) }
@@ -160,7 +161,15 @@ class SourceModules @Inject constructor(
         track: TrackQuery?,
         skip: Set<String>,
         onUndecodable: (id: String, stream: SourceStream) -> Unit = { _, _ -> },
-    ): Route = walk(_order.value, track, skip, ::isUsable, ::playbackPicks) { id, stream ->
+    ): Route = walk(
+        _order.value,
+        track,
+        skip,
+        // a capped connection does not pay lossless bytes for a song it is only playing; a download still may
+        { id -> isUsable(id) && !(id == MuzoModule.Id && DataSaver.isActive(context)) },
+        ::playbackPicks,
+        ModuleTimeoutMs,
+    ) { id, stream ->
         // a stream this phone has no decoder for would play in silence: the next provider has it
         DeviceDecoders.canPlay(stream).also { playable ->
             if (!playable) {
@@ -172,7 +181,7 @@ class SourceModules @Inject constructor(
 
     /** the download order's walk: the first provider that gives one whole file this phone can play, else youtube */
     suspend fun downloadRoute(track: TrackQuery?, skip: Set<String>): Route =
-        walk(_downloadOrder.value, track, skip, ::isUsableForDownload, { id, _ -> picks(id) }) { id, stream ->
+        walk(_downloadOrder.value, track, skip, ::isUsableForDownload, { id, _ -> picks(id) }, DownloadTimeoutMs) { id, stream ->
             // a download is saved as one file, so a stream in pieces or one only a cdm can open can't be kept
             (stream.format == StreamFormat.Progressive && stream.drm == null && DeviceDecoders.canPlay(stream)).also { savable ->
                 if (!savable) android.util.Log.i(Tag, "$id: ${track?.title}: can't download a ${stream.format} ${stream.codec} stream, passing over")
@@ -185,6 +194,8 @@ class SourceModules @Inject constructor(
         skip: Set<String>,
         usable: (String) -> Boolean,
         picksFor: (id: String, module: SourceModule) -> Map<String, String>,
+        // how long one provider may take before the walk steps past it; a download waits longer than a play
+        timeoutMs: Long,
         accept: (id: String, stream: SourceStream) -> Boolean,
     ): Route = withContext(Dispatchers.IO) {
         // the providers worth asking, in order, up to youtube, which needs no asking
@@ -210,9 +221,9 @@ class SourceModules @Inject constructor(
                 val module = module(id) ?: continue
                 val answer = answers[id] ?: continue
                 // timed on the waiting side, so a module stuck in a call that ignores cancelling can't hold the song either
-                val left = ModuleTimeoutMs - (System.currentTimeMillis() - startedAt)
+                val left = timeoutMs - (System.currentTimeMillis() - startedAt)
                 val result = withTimeoutOrNull(left.coerceAtLeast(1L)) { answer.await() }
-                if (result == null && answer.isActive) android.util.Log.i(Tag, "$id took longer than ${ModuleTimeoutMs / 1000} s for ${track?.title}, moving on")
+                if (result == null && answer.isActive) android.util.Log.i(Tag, "$id took longer than ${timeoutMs / 1000} s for ${track?.title}, moving on")
                 when (result) {
                     is ResolveResult.Found -> {
                         if (!accept(id, result.stream)) continue
@@ -288,6 +299,13 @@ class SourceModules @Inject constructor(
         private const val Tag = "SourceModules"
         // how long a module may take to find a song before the next provider in the order plays it
         private const val ModuleTimeoutMs = 12_000L
+
+        // a download is asked for on purpose and saved once, so it waits for the source people put first
+        // instead of falling to a lesser one: muzo's own lossless lookup allows 16 s by itself
+        private const val DownloadTimeoutMs = 30_000L
+
+        // the qobuz backup mirror is gone; a saved order can still name it, so it is dropped as the orders are read
+        private const val GoneQobuzBackupId = "qobuzbackup"
         // the choice every module names its stream quality with, and the option data saver steps down to
         const val QualityChoice = "quality"
         private const val SaverOption = "high"

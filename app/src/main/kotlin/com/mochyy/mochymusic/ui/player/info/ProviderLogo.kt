@@ -46,12 +46,6 @@ internal fun ProviderLogo(providerId: String, name: String, size: Dp) {
             contentScale = ContentScale.Crop,
             modifier = Modifier.size(size).clip(SquircleShape),
         )
-        "qobuzbackup" -> Image(
-            painter = painterResource(R.drawable.provider_qobuzbackup),
-            contentDescription = name,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.size(size).clip(SquircleShape),
-        )
         "deezer" -> Image(
             painter = painterResource(R.drawable.provider_deezer),
             contentDescription = name,

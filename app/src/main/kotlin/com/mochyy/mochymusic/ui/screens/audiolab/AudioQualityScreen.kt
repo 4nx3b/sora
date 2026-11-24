@@ -222,7 +222,6 @@ internal fun providerLogo(id: String): Int? = when (id) {
     MonochromeModule.Id -> R.drawable.provider_monochrome
     SourceModules.YouTubeId -> R.drawable.provider_youtube_music
     com.mochyy.mochymusic.module.qobuz.QobuzModule.Id -> R.drawable.provider_qobuz
-    com.mochyy.mochymusic.module.qobuzbackup.QobuzBackupModule.Id -> R.drawable.provider_qobuzbackup
     com.mochyy.mochymusic.module.deezer.DeezerModule.Id -> R.drawable.provider_deezer
     com.mochyy.mochymusic.module.soundcloud.SoundCloudModule.Id -> R.drawable.provider_soundcloud
     else -> null

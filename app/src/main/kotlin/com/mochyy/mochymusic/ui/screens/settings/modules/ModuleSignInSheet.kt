@@ -93,6 +93,13 @@ private fun ModuleSignInContent(
                     onApplePageProbe = { viewModel.onApplePageProbe(id, it, onDone) },
                     onCookies = { viewModel.onAppleCookies(id, it, onDone) },
                 )
+                // a module whose session is a cookie (spotify's sp_dc) reads it from the jar: the page
+                // never hands the Cookie header over, and this runs on every load and every couple of seconds
+                if (importService == null) {
+                    spec.sessionOrigins.forEach { origin ->
+                        viewModel.onSessionCookies(id, android.webkit.CookieManager.getInstance().getCookie(origin), origin, onDone)
+                    }
+                }
             },
             onExit = onClose,
             onUrlChange = { url = it },

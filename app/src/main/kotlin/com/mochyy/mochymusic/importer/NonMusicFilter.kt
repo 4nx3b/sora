@@ -1,6 +1,7 @@
 // NonMusicFilter.kt
 // Neiro's "Filter non-music audio" (data/LocalMediaRepository): the phone-wide scan leaves out clips under
 // 30 seconds, WAV files, voice notes, recordings and system sounds, so only songs are offered. Off unless turned on.
+// AMR and 3GPP are dropped like WAV: they are the voice-recorder and call-recorder formats, never music.
 
 package com.mochyy.mochymusic.importer
 
@@ -11,7 +12,11 @@ import java.util.Locale
 object NonMusicFilter {
     const val MinDurationMs = 30_000L
 
-    private val WavMimeTypes = setOf("audio/wav", "audio/x-wav", "audio/wave", "audio/vnd.wave")
+    private val RecordingExtensions = setOf("wav", "amr", "awb", "3gp", "3ga", "3gpp")
+    private val RecordingMimeTypes = setOf(
+        "audio/wav", "audio/x-wav", "audio/wave", "audio/vnd.wave",
+        "audio/amr", "audio/amr-wb", "audio/3gpp", "audio/3gpp2",
+    )
 
 
     private val nonMusicPathSegments = listOf(
@@ -36,7 +41,7 @@ object NonMusicFilter {
         if (durationMs in 1 until MinDurationMs) return false
         val fileName = path?.substringAfterLast('/')?.takeIf { it.isNotBlank() } ?: displayName
         val extension = fileName.substringAfterLast('.', "").lowercase(Locale.ROOT)
-        if (extension == "wav" || (extension.isEmpty() && mimeType?.lowercase(Locale.ROOT) in WavMimeTypes)) return false
+        if (extension in RecordingExtensions || (extension.isEmpty() && mimeType?.lowercase(Locale.ROOT) in RecordingMimeTypes)) return false
         val normalized = path?.replace('\\', '/')?.lowercase(Locale.ROOT) ?: return true
         return nonMusicPathSegments.none(normalized::contains)
     }

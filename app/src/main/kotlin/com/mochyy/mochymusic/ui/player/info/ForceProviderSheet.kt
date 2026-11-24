@@ -23,7 +23,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.foundation.layout.size
 import androidx.compose.animation.togetherWith
-import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.AnimatedContent
@@ -60,7 +59,9 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -114,9 +115,14 @@ fun ForceProviderSheet(currentProviderId: String?, onDismiss: () -> Unit) {
     val metadata by connection.mediaMetadata.collectAsState()
     val searchScope = rememberCoroutineScope()
     val catalog = remember { mutableStateMapOf<String, CatalogCheck>() }
-    val shown = remember { MutableTransitionState(false).apply { targetState = true } }
 
-    LaunchedEffect(Unit) { modules.refresh() }
+    // reading every module's account and settings again is real work; it waits until the sheet is in
+    // and runs off the main thread, so the entrance never stalls on it
+    LaunchedEffect(Unit) {
+        delay(320)
+        withContext(Dispatchers.Default) { modules.refresh() }
+    }
+    var resultsFor by remember { mutableStateOf<String?>(null) }
     DisposableEffect(Unit) { onDispose { service.providerSwitch.acknowledge() } }
 
     MenuSheetSurface(onDismiss = onDismiss, wrapHeight = true) { _ ->
@@ -158,10 +164,14 @@ fun ForceProviderSheet(currentProviderId: String?, onDismiss: () -> Unit) {
                     }
                     val choice = module?.choices?.firstOrNull { it.id.contains("quality", ignoreCase = true) }
                     val picked = choice?.let { c -> modules.picks(id)[c.id] ?: c.options.firstOrNull()?.id }
-                    androidx.compose.animation.AnimatedVisibility(
-                        visibleState = shown,
-                        enter = fadeIn(tween(260, delayMillis = index * 40, easing = SheetEasing)) +
-                            expandVertically(tween(280, delayMillis = index * 40, easing = SheetEasing)),
+                    // rows fade and rise in a layer rather than grow, so the sheet isn't measured again on every frame
+                    val rise = remember(id) { androidx.compose.animation.core.Animatable(if (com.mochyy.mochymusic.ui.utils.AppMotion.enabled) 0f else 1f) }
+                    LaunchedEffect(id) { rise.animateTo(1f, tween(280, delayMillis = index * 40, easing = SheetEasing)) }
+                    androidx.compose.foundation.layout.Box(
+                        Modifier.graphicsLayer {
+                            alpha = rise.value
+                            translationY = (1f - rise.value) * 12.dp.toPx()
+                        },
                     ) {
                     val name = modules.nameOf(id)
                     ProviderChoiceRow(
@@ -172,9 +182,13 @@ fun ForceProviderSheet(currentProviderId: String?, onDismiss: () -> Unit) {
                         blocked = blocked,
                         check = catalog[id],
                         onSearch = {
-                            catalog[id] = CatalogCheck.Looking
-                            searchScope.launch {
-                                catalog[id] = lookUp(id, module, metadata, modules)
+                            if (module != null) {
+                                resultsFor = id
+                            } else {
+                                catalog[id] = CatalogCheck.Looking
+                                searchScope.launch {
+                                    catalog[id] = lookUp(id, module, metadata, modules)
+                                }
                             }
                         },
                         options = when {
@@ -194,6 +208,23 @@ fun ForceProviderSheet(currentProviderId: String?, onDismiss: () -> Unit) {
                     Spacer(Modifier.height(8.dp))
                 }
             }
+        }
+    }
+    resultsFor?.let { id ->
+        val module = modules.module(id)
+        if (module != null) {
+            CatalogResultsSheet(
+                providerId = id,
+                providerName = modules.nameOf(id),
+                module = module,
+                metadata = metadata,
+                modules = modules,
+                onPicked = { stream ->
+                    resultsFor = null
+                    service.providerSwitch.force(id, ready = stream)
+                },
+                onDismiss = { resultsFor = null },
+            )
         }
     }
 }
