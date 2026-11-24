@@ -221,6 +221,34 @@ interface SourceModule : MochyModule {
     suspend fun diagnose(track: TrackQuery, picks: Map<String, String>, report: (DiagnosticStep) -> Unit): ResolveResult
 }
 
+/** one match a source's catalogue has for a song, with what is known about its stream */
+data class CatalogHit(
+    val id: String,
+    val title: String,
+    val artist: String,
+    val album: String? = null,
+    val durationMs: Long? = null,
+    val artworkUrl: String? = null,
+    val codec: String? = null,
+    val sampleRateHz: Int = 0,
+    val bitDepth: Int = 0,
+    val bitrateKbps: Int = 0,
+    val lossless: Boolean = false,
+    val sizeBytes: Long? = null,
+    val qualityLabel: String? = null,
+)
+
+/**
+ * A source that can list several matches for a song, for Force change's search. Optional: a source
+ * without it shows the one match [SourceModule.resolve] gives.
+ */
+interface CatalogSearch : SourceModule {
+    suspend fun searchCatalog(track: TrackQuery, limit: Int = 10): List<CatalogHit>
+
+    /** the stream for one listed match */
+    suspend fun resolveHit(hit: CatalogHit, picks: Map<String, String>): ResolveResult
+}
+
 /** a server a module plays from, as its page lists it; the built-in ones can't be removed */
 data class ModuleServer(val url: String, val name: String, val builtIn: Boolean)
 

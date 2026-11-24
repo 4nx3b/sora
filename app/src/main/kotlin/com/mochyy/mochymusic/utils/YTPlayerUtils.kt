@@ -290,7 +290,7 @@ object YTPlayerUtils {
     }
 
     // music video id -> its studio upload's id, "" when it has none
-    private val studioIds = java.util.concurrent.ConcurrentHashMap<String, String>()
+    private val studioIds = lruMap<String, String>(512)
 
     // the studio upload's stream for a music video, with the video's own details kept; null for a song or a video with no studio version
     private suspend fun studioVersionOf(

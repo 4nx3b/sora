@@ -35,7 +35,6 @@ import com.mochyy.mochymusic.constants.HideSettingsDescriptionsKey
 import com.mochyy.mochymusic.constants.HideUpdateNoticeKey
 import com.mochyy.mochymusic.constants.LarpLevelKey
 import com.mochyy.mochymusic.constants.LarpModeKey
-import com.mochyy.mochymusic.constants.LocalSongAutoMetadataKey
 import com.mochyy.mochymusic.constants.OfflineModeKey
 import com.mochyy.mochymusic.constants.PauseSearchHistoryKey
 import com.mochyy.mochymusic.constants.ProxyEnabledKey
@@ -243,7 +242,6 @@ private fun networkItems(navController: NavController): List<SettingsItem> {
 @Composable
 private fun libraryItems(): List<SettingsItem> {
     val (albumsFromLikes, onAlbumsFromLikesChange) = rememberPreference(AlbumsFromLikedSongsKey, defaultValue = false)
-    val (autoMetadata, onAutoMetadataChange) = rememberPreference(LocalSongAutoMetadataKey, defaultValue = true)
     val (pauseSearchHistory, onPauseSearchHistoryChange) = rememberPreference(PauseSearchHistoryKey, defaultValue = false)
     val (reportPlays, onReportPlaysChange) = rememberPreference(YtReportPlaysKey, defaultValue = true)
     return listOf(
@@ -255,14 +253,6 @@ private fun libraryItems(): List<SettingsItem> {
             icon = painterResource(R.drawable.album),
             checked = albumsFromLikes,
             onCheckedChange = onAlbumsFromLikesChange,
-        ),
-        switchItem(
-            key = "Local song auto metadata",
-            title = stringResource(R.string.settings_local_auto_metadata),
-            description = stringResource(R.string.settings_local_auto_metadata_desc),
-            icon = painterResource(R.drawable.cached),
-            checked = autoMetadata,
-            onCheckedChange = onAutoMetadataChange,
         ),
         switchItem(
             key = "Pause search history",

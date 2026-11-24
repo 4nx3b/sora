@@ -1,5 +1,15 @@
 @file:Suppress("UnstableApiUsage")
 
+// the hilt plugin's marker lives on google() and mavenCentral(); without these the release build
+// searched only the plugin portal and failed to resolve it
+pluginManagement {
+    repositories {
+        gradlePluginPortal()
+        google()
+        mavenCentral()
+    }
+}
+
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
 
@@ -43,7 +53,6 @@ include(":modules:monochrome")
 include(":modules:jiosaavn")
 // the ArchiveTune fork's sources, ported as built-in modules
 include(":modules:qobuz")
-include(":modules:qobuzbackup")
 include(":modules:deezer")
 include(":modules:soundcloud")
 // the Spotify web player client, ported from Stopify

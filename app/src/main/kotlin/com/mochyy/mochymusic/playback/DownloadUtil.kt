@@ -42,6 +42,7 @@ import com.mochyy.mochymusic.models.TransferItem
 import com.mochyy.mochymusic.models.TransferState
 import com.mochyy.mochymusic.models.toMediaMetadata
 import com.mochyy.mochymusic.utils.OfflineMode
+import timber.log.Timber
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import com.mochyy.mochymusic.di.DownloadCache
@@ -388,16 +389,22 @@ constructor(
     /** the first module in the download order with a whole file of [mediaId]; null when youtube comes first or nothing else has it */
     private fun moduleDownload(mediaId: String): ModuleDownload? {
         moduleDownloads[mediaId]?.let { return it }
-        val song = runBlocking(Dispatchers.IO) { database.song(mediaId).first() } ?: return null
+        // a song downloaded straight from search has no row yet; muzo and the other id-keyed sources
+        // still find it by its video id, so the walk is asked rather than dropped to youtube
+        val song = runBlocking(Dispatchers.IO) { database.song(mediaId).first() }
         val track = TrackQuery(
-            title = song.song.title,
-            artists = song.artists.map { it.name },
-            album = song.song.albumName ?: song.album?.title,
-            durationMs = song.song.duration.takeIf { it > 0 }?.times(1000L),
+            title = song?.song?.title.orEmpty(),
+            artists = song?.artists?.map { it.name }.orEmpty(),
+            album = song?.song?.albumName ?: song?.album?.title,
+            durationMs = song?.song?.duration?.takeIf { it > 0 }?.times(1000L),
             videoId = mediaId,
         )
         val route = runBlocking(Dispatchers.IO) { sourceModules.downloadRoute(track, failedProviders[mediaId].orEmpty()) }
-        val (module, stream) = route as? SourceModules.Route.Module ?: return null
+        val (module, stream) = route as? SourceModules.Route.Module ?: run {
+            Timber.tag("Download").i("$mediaId: no module in the download order has it, YouTube it is")
+            return null
+        }
+        Timber.tag("Download").i("$mediaId downloads from ${module.info.id}: ${stream.codec} ${stream.qualityLabel}")
         val (mimeType, codecs) = savedFormatOf(stream.codec)
 
         database.query {
@@ -416,7 +423,7 @@ constructor(
                     playbackUrl = null,
                 ),
             )
-            if (song.song.dateDownload == null) upsert(song.song.copy(dateDownload = LocalDateTime.now()))
+            if (song != null && song.song.dateDownload == null) upsert(song.song.copy(dateDownload = LocalDateTime.now()))
         }
         return ModuleDownload(module.info.id, stream.url, stream.headers).also { moduleDownloads[mediaId] = it }
     }

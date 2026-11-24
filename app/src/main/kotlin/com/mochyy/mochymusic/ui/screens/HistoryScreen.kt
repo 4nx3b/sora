@@ -41,6 +41,7 @@ import com.mochyy.mochymusic.ui.component.queueSwipeAction
 import com.mochyy.mochymusic.ui.component.rememberRevealSeenState
 import com.mochyy.mochymusic.ui.component.revealOnAppear
 import com.mochyy.mochymusic.ui.menu.SongMenu
+import com.mochyy.mochymusic.ui.motion.ruleIn
 import com.mochyy.mochymusic.ui.screens.playlist.GeneratedGroupHeader
 import com.mochyy.mochymusic.ui.screens.playlist.GeneratedNoResults
 import com.mochyy.mochymusic.ui.screens.playlist.GeneratedPlaylistPage
@@ -132,7 +133,7 @@ fun HistoryScreen(
 
         groups.forEach { (day, events) ->
             item(key = "header_$day", contentType = "group_header") {
-                GeneratedGroupHeader(historyDayHeading(day), modifier = Modifier.animateItem())
+                GeneratedGroupHeader(historyDayHeading(day), modifier = Modifier.animateItem().ruleIn())
             }
 
             items(items = events, key = { it.event.id }, contentType = { "track" }) { eventWithSong ->
