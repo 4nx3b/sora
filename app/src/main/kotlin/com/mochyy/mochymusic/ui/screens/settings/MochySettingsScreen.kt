@@ -273,7 +273,6 @@ private val SettingsIndex = listOf(
     SettingsEntry("Apple Music", "Modules", "module/applemusic", "apple music itunes subscription stream aac"),
     SettingsEntry("Monochrome", "Modules", "module/monochrome", "monochrome lossless flac hi-res tidal"),
     SettingsEntry("Qobuz", "Modules", "module/qobuz", "qobuz lossless hi-res flac 192 account instance"),
-    SettingsEntry("Qobuz backup", "Modules", "module/qobuzbackup", "qobuz backup community mirror lossless kouzu endpoint"),
     SettingsEntry("Deezer", "Modules", "module/deezer", "deezer flac cd 16 bit arl account"),
     SettingsEntry("SoundCloud", "Modules", "module/soundcloud", "soundcloud aac 160 uploads remixes sets client id"),
     SettingsEntry("Spotify", "Modules", "module/spotify", "spotify web player cdn widevine aac free account sp_dc"),

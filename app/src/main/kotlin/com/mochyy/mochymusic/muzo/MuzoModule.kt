@@ -19,7 +19,6 @@ import com.mochyy.mochymusic.module.SourceStream
 import com.mochyy.mochymusic.module.StreamFormat
 import com.mochyy.mochymusic.module.StreamOption
 import com.mochyy.mochymusic.module.TrackQuery
-import com.mochyy.mochymusic.utils.DataSaver
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 
@@ -102,7 +101,6 @@ class MuzoModule(private val context: Context) : SourceModule, ModuleFields {
 
     override suspend fun resolve(track: TrackQuery, picks: Map<String, String>): ResolveResult {
         // a capped connection never pays lossless bytes
-        if (DataSaver.isActive(context)) return ResolveResult.Unavailable("data saver is on")
         if (key.isBlank()) return ResolveResult.Unavailable("add your Muzo Data API key")
         if (!MuzoPrefs.stream) return ResolveResult.NotFound("streams are switched off")
         val videoId = track.videoId ?: return ResolveResult.NotFound("needs a YouTube video id")

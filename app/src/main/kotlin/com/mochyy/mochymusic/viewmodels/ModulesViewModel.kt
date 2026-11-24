@@ -294,6 +294,16 @@ class ModulesViewModel @Inject constructor(
     }
 
     /** apple also keeps the user token as a cookie on music.apple.com */
+    /**
+     * The cookies the sign-in page left in the WebView, for a module whose session rides on them.
+     * A WebView never puts its `Cookie` header into the requests it hands over, and a session cookie
+     * is usually HttpOnly, so reading it from the jar is the only way a module hears about it.
+     */
+    fun onSessionCookies(id: String, cookies: String?, url: String, onDone: (AccountState) -> Unit) {
+        if (cookies.isNullOrBlank()) return
+        onSignInHeader(id, "cookie", cookies, url, onDone)
+    }
+
     fun onAppleCookies(id: String, cookies: String?, onDone: (AccountState) -> Unit) {
         cookies?.split(';')?.forEach { pair ->
             if (pair.substringBefore('=').trim().equals("media-user-token", ignoreCase = true)) {

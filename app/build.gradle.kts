@@ -471,7 +471,6 @@ dependencies {
     implementation(project(":modules:monochrome"))
     implementation(project(":modules:jiosaavn"))
     implementation(project(":modules:qobuz"))
-    implementation(project(":modules:qobuzbackup"))
     implementation(project(":modules:deezer"))
     implementation(project(":modules:soundcloud"))
     implementation(project(":modules:spotify"))

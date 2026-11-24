@@ -582,7 +582,6 @@ class ModuleRegistry @Inject constructor(
             JioSaavnModule(),
             // the sources ported from the ArchiveTune fork
             com.mochyy.mochymusic.module.qobuz.QobuzModule(),
-            com.mochyy.mochymusic.module.qobuzbackup.QobuzBackupModule(),
             com.mochyy.mochymusic.module.deezer.DeezerModule(),
             com.mochyy.mochymusic.module.soundcloud.SoundCloudModule(),
             // the Spotify web player client, ported from Stopify

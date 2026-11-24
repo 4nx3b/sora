@@ -65,13 +65,14 @@ class ProviderSwitch(private val scope: () -> CoroutineScope, private val host: 
 
     private var job: Job? = null
 
-    fun force(providerId: String) {
+    /** [ready] is a stream already picked from the source's catalogue: it plays as it is, with no lookup */
+    fun force(providerId: String, ready: SourceStream? = null) {
         val mediaId = host.currentMediaId() ?: return
         job?.cancel()
         job = scope().launch {
             val wasPlaying = host.holdPlayback()
             _state.value = ProviderSwitchState.Working(providerId, 1, MaxTries)
-            val route = withTimeoutOrNull(DeadlineMs) {
+            val route = if (ready != null) ForcedRoute(providerId, ready) else withTimeoutOrNull(DeadlineMs) {
                 var found: ForcedRoute? = null
                 for (attempt in 1..MaxTries) {
                     _state.value = ProviderSwitchState.Working(providerId, attempt, MaxTries)
