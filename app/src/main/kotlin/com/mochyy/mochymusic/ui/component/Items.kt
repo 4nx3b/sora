@@ -57,6 +57,7 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.isSpecified
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -78,6 +79,7 @@ import androidx.media3.exoplayer.offline.Download.STATE_COMPLETED
 import androidx.media3.exoplayer.offline.Download.STATE_DOWNLOADING
 import androidx.media3.exoplayer.offline.Download.STATE_QUEUED
 import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
 import com.music.innertube.models.AlbumItem
 import com.music.innertube.models.ArtistItem
 import com.music.innertube.models.PlaylistItem
@@ -116,6 +118,43 @@ const val ActiveBoxAlpha = 0.6f
 @Composable
 fun videoThumbnailRatio(): Float =
     if (com.mochyy.mochymusic.utils.rememberPreference(com.mochyy.mochymusic.constants.SquareVideoThumbnailsKey, defaultValue = false).value) 1f else 16f / 9f
+val DefaultListContentPadding = PaddingValues(horizontal = 16.dp, vertical = 2.dp)
+private val ListThumbnailShape = RoundedCornerShape(ThumbnailCornerRadius)
+private val GridThumbnailShape = RoundedCornerShape(com.mochyy.mochymusic.constants.GridThumbnailCornerRadius)
+private val PlaylistQuadAlignments = listOf(
+    Alignment.TopStart,
+    Alignment.TopEnd,
+    Alignment.BottomStart,
+    Alignment.BottomEnd,
+)
+
+// caps decode size for both online urls and local file/content covers so fast scrolling never decodes full-res art
+@Composable
+private fun rememberThumbnailRequest(url: String?, sizePx: Int): Any? {
+    if (url == null) return null
+    val context = LocalContext.current
+    return remember(context, url, sizePx) {
+        val resized = url.resize(sizePx, sizePx)
+        ImageRequest.Builder(context)
+            .data(resized)
+            .size(sizePx)
+            .build()
+    }
+}
+
+// its own scope so download progress updates recompose only this icon instead of the whole row
+@Composable
+private fun DownloadBadge(songId: String, downloadState: Int?) {
+    if (downloadState != null) {
+        Icon.Download(downloadState)
+    } else {
+        val downloadUtil = LocalDownloadUtil.current
+        val download by remember(downloadUtil, songId) {
+            downloadUtil.getDownload(songId)
+        }.collectAsState(initial = null)
+        Icon.Download(download?.state)
+    }
+}
 
 @Composable
 fun currentGridThumbnailHeight(): Dp {
@@ -138,7 +177,7 @@ inline fun ListItem(
     shape: Shape = RectangleShape,
     drawHighlight: Boolean = true,
     backgroundColor: Color = Color.Unspecified,
-    contentPadding: PaddingValues = PaddingValues(horizontal = 16.dp, vertical = 2.dp),
+    contentPadding: PaddingValues = DefaultListContentPadding,
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -219,7 +258,7 @@ fun ListItem(
     shape: Shape = RectangleShape,
     drawHighlight: Boolean = true,
     backgroundColor: Color = Color.Unspecified,
-    contentPadding: PaddingValues = PaddingValues(horizontal = 16.dp, vertical = 2.dp),
+    contentPadding: PaddingValues = DefaultListContentPadding,
 ) = ListItem(
     title = title,
     subtitle = {
@@ -258,7 +297,7 @@ fun ListItem(
     shape: Shape = RectangleShape,
     drawHighlight: Boolean = true,
     backgroundColor: Color = Color.Unspecified,
-    contentPadding: PaddingValues = PaddingValues(horizontal = 16.dp, vertical = 2.dp),
+    contentPadding: PaddingValues = DefaultListContentPadding,
 ) = ListItem(
     title = title,
     subtitle = {
@@ -388,16 +427,7 @@ fun SongListItem(
             Icon.Library()
         }
         if (showDownloadIcon) {
-            if (downloadState != null) {
-                Icon.Download(downloadState)
-            } else {
-
-                val downloadUtil = LocalDownloadUtil.current
-                val download by remember(downloadUtil, song.id) {
-                    downloadUtil.getDownload(song.id)
-                }.collectAsState(initial = null)
-                Icon.Download(download?.state)
-            }
+            DownloadBadge(songId = song.id, downloadState = downloadState)
         }
     },
     isSelected: Boolean = false,
@@ -409,15 +439,18 @@ fun SongListItem(
     drawHighlight: Boolean = true,
     shape: Shape = RectangleShape,
     backgroundColor: Color = Color.Unspecified,
-    contentPadding: PaddingValues = PaddingValues(horizontal = 16.dp, vertical = 2.dp),
+    contentPadding: PaddingValues = DefaultListContentPadding,
 ) {
+    val subtitle = remember(song.id, song.song.duration, song.artists) {
+        joinByBullet(
+            song.artists.joinToString { it.name },
+            makeTimeString(song.song.duration * 1000L)
+        )
+    }
     val content: @Composable (Modifier) -> Unit = { rowModifier ->
         ListItem(
             title = song.song.title,
-            subtitle = joinByBullet(
-                song.artists.joinToString { it.name },
-                makeTimeString(song.song.duration * 1000L)
-            ),
+            subtitle = subtitle,
             badges = badges,
             thumbnailContent = {
                 ItemThumbnail(
@@ -426,7 +459,8 @@ fun SongListItem(
                     isSelected = isSelected,
                     isActive = isActive,
                     isPlaying = isPlaying,
-                    shape = RoundedCornerShape(ThumbnailCornerRadius),
+                    shape = ListThumbnailShape,
+                    imageSizePx = 256,
                     modifier = Modifier.size(ListThumbnailSize)
                 )
             },
@@ -471,16 +505,7 @@ fun SongGridItem(
             Icon.Library()
         }
         if (showDownloadIcon) {
-            if (downloadState != null) {
-                Icon.Download(downloadState)
-            } else {
-
-                val downloadUtil = LocalDownloadUtil.current
-                val download by remember(downloadUtil, song.id) {
-                    downloadUtil.getDownload(song.id)
-                }.collectAsState(initial = null)
-                Icon.Download(download?.state)
-            }
+            DownloadBadge(songId = song.id, downloadState = downloadState)
         }
     },
     isActive: Boolean = false,
@@ -498,11 +523,14 @@ fun SongGridItem(
         )
     },
     subtitle = {
-        Text(
-            text = joinByBullet(
+        val subtitle = remember(song.id, song.song.duration, song.artists) {
+            joinByBullet(
                 song.artists.joinToString { it.name },
                 makeTimeString(song.song.duration * 1000L)
-            ),
+            )
+        }
+        Text(
+            text = subtitle,
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.secondary,
             maxLines = 2,
@@ -516,7 +544,7 @@ fun SongGridItem(
             thumbnailUrl = song.song.thumbnailUrl,
             isActive = isActive,
             isPlaying = isPlaying,
-            shape = RoundedCornerShape(com.mochyy.mochymusic.constants.GridThumbnailCornerRadius),
+            shape = GridThumbnailShape,
             modifier = Modifier.size(gridHeight)
         )
         if (!isActive) {
@@ -553,7 +581,7 @@ fun ArtistListItem(
     badges = badges,
     thumbnailContent = {
         AsyncImage(
-            model = artist.artist.thumbnailUrl?.resize(256, 256),
+            model = rememberThumbnailRequest(artist.artist.thumbnailUrl, 256),
             contentDescription = null,
             modifier = Modifier
                 .size(ListThumbnailSize)
@@ -627,7 +655,8 @@ fun AlbumListItem(
             thumbnailUrl = album.album.thumbnailUrl,
             isActive = isActive,
             isPlaying = isPlaying,
-            shape = RoundedCornerShape(ThumbnailCornerRadius),
+            shape = ListThumbnailShape,
+            imageSizePx = 256,
             modifier = Modifier.size(ListThumbnailSize)
         )
     },
@@ -680,15 +709,11 @@ fun AlbumGridItem(
     },
     badges = badges,
     thumbnailContent = {
-        val database = LocalDatabase.current
-        val playerConnection = LocalPlayerConnection.current ?: return@GridItem
-        val scope = rememberCoroutineScope()
-
         ItemThumbnail(
             thumbnailUrl = album.album.thumbnailUrl,
             isActive = isActive,
             isPlaying = isPlaying,
-            shape = RoundedCornerShape(com.mochyy.mochymusic.constants.GridThumbnailCornerRadius),
+            shape = GridThumbnailShape,
             modifier = Modifier.homeSharedElement(sharedElementKey),
         )
     },
@@ -895,7 +920,8 @@ fun MediaMetadataListItem(
                 isSelected = isSelected,
                 isActive = isActive,
                 isPlaying = isPlaying,
-                shape = RoundedCornerShape(ThumbnailCornerRadius),
+                shape = ListThumbnailShape,
+                imageSizePx = 256,
                 modifier = Modifier.size(ListThumbnailSize)
             )
         },
@@ -946,7 +972,8 @@ fun YouTubeListItem(
                     isSelected = isSelected,
                     isActive = isActive,
                     isPlaying = isPlaying,
-                    shape = if (item is ArtistItem) CircleShape else RoundedCornerShape(ThumbnailCornerRadius),
+                    shape = if (item is ArtistItem) CircleShape else ListThumbnailShape,
+                    imageSizePx = 256,
                     modifier = Modifier.size(ListThumbnailSize)
                 )
             },
@@ -1022,22 +1049,17 @@ fun YouTubeGridItem(
     },
     badges = badges,
     thumbnailContent = {
-        val database = LocalDatabase.current
-        val playerConnection = LocalPlayerConnection.current ?: return@GridItem
-        val scope = rememberCoroutineScope()
-
         ItemThumbnail(
             thumbnailUrl = item.thumbnail,
             isActive = isActive,
             isPlaying = isPlaying,
-            shape = if (item is ArtistItem) CircleShape else RoundedCornerShape(com.mochyy.mochymusic.constants.GridThumbnailCornerRadius),
+            shape = if (item is ArtistItem) CircleShape else GridThumbnailShape,
             modifier = Modifier.homeSharedElement(
                 if (item is AlbumItem || item is PlaylistItem) sharedElementKey else null,
                 com.mochyy.mochymusic.constants.GridThumbnailCornerRadius,
                 coverUrl = item.thumbnail,
             ),
         )
-
     },
     thumbnailRatio = thumbnailRatio,
     fillMaxWidth = fillMaxWidth,
@@ -1140,8 +1162,9 @@ fun ItemThumbnail(
     modifier: Modifier = Modifier,
     albumIndex: Int? = null,
     isSelected: Boolean = false,
-    thumbnailRatio: Float = 1f
-) = ItemThumbnail(thumbnailUrl, isActive, { isPlaying }, shape, modifier, albumIndex, isSelected, thumbnailRatio)
+    thumbnailRatio: Float = 1f,
+    imageSizePx: Int = 544,
+) = ItemThumbnail(thumbnailUrl, isActive, { isPlaying }, shape, modifier, albumIndex, isSelected, thumbnailRatio, imageSizePx)
 
 // isPlaying is read only inside the indicator, so a play or pause leaves the cover image alone
 @Composable
@@ -1153,10 +1176,9 @@ fun ItemThumbnail(
     modifier: Modifier = Modifier,
     albumIndex: Int? = null,
     isSelected: Boolean = false,
-    thumbnailRatio: Float = 1f
+    thumbnailRatio: Float = 1f,
+    imageSizePx: Int = 544,
 ) {
-    val cropAlbumArt = LocalCropAlbumArt.current
-
     Box(
         contentAlignment = Alignment.Center,
         modifier = modifier
@@ -1167,7 +1189,7 @@ fun ItemThumbnail(
         if (albumIndex == null) {
             // the box above already clips to the shape, a second clip here was just one more layer per cover
             AsyncImage(
-                model = thumbnailUrl?.resize(544, 544),
+                model = rememberThumbnailRequest(thumbnailUrl, imageSizePx),
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize()
@@ -1223,10 +1245,9 @@ fun LocalThumbnail(
     modifier: Modifier = Modifier,
     showCenterPlay: Boolean = false,
     playButtonVisible: Boolean = false,
-    thumbnailRatio: Float = 1f
+    thumbnailRatio: Float = 1f,
+    imageSizePx: Int = 544,
 ) {
-    val cropAlbumArt = LocalCropAlbumArt.current
-
     Box(
         contentAlignment = Alignment.Center,
         modifier = modifier
@@ -1234,7 +1255,7 @@ fun LocalThumbnail(
             .clip(shape)
     ) {
         AsyncImage(
-            model = thumbnailUrl,
+            model = rememberThumbnailRequest(thumbnailUrl, imageSizePx),
             contentDescription = null,
             contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize()
@@ -1295,27 +1316,20 @@ fun LocalThumbnail(
         }
 
         if (playButtonVisible) {
-            AnimatedVisibility(
-                visible = true,
-                enter = fadeIn(),
-                exit = fadeOut(),
+            Box(
+                contentAlignment = Alignment.Center,
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
                     .padding(8.dp)
+                    .size(36.dp)
+                    .clip(CircleShape)
+                    .background(Color.Black.copy(alpha = ActiveBoxAlpha))
             ) {
-                Box(
-                    contentAlignment = Alignment.Center,
-                    modifier = Modifier
-                        .size(36.dp)
-                        .clip(CircleShape)
-                        .background(Color.Black.copy(alpha = ActiveBoxAlpha))
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.play),
-                        contentDescription = null,
-                        tint = Color.White
-                    )
-                }
+                Icon(
+                    painter = painterResource(R.drawable.play),
+                    contentDescription = null,
+                    tint = Color.White
+                )
             }
         }
     }
@@ -1330,7 +1344,8 @@ fun PlaylistThumbnail(
     cacheKey: String? = null,
     modifier: Modifier = Modifier,
 ) {
-    val cropAlbumArt = LocalCropAlbumArt.current
+    val singleSizePx = if (size <= 64.dp) 256 else 544
+    val quadSizePx = if (size <= 64.dp) 128 else 272
 
     when (thumbnails.size) {
         0 -> Box(
@@ -1343,7 +1358,7 @@ fun PlaylistThumbnail(
             placeHolder()
         }
         1 -> AsyncImage(
-            model = thumbnails[0].resize(544, 544),
+            model = rememberThumbnailRequest(thumbnails[0], singleSizePx),
             contentDescription = null,
             contentScale = ContentScale.Crop,
             placeholder = painterResource(R.drawable.queue_music),
@@ -1357,14 +1372,9 @@ fun PlaylistThumbnail(
                 .size(size)
                 .clip(shape)
         ) {
-            listOf(
-                Alignment.TopStart,
-                Alignment.TopEnd,
-                Alignment.BottomStart,
-                Alignment.BottomEnd
-            ).fastForEachIndexed { index, alignment ->
+            PlaylistQuadAlignments.fastForEachIndexed { index, alignment ->
                 AsyncImage(
-                    model = thumbnails.getOrNull(index)?.resize(544, 544),
+                    model = rememberThumbnailRequest(thumbnails.getOrNull(index), quadSizePx),
                     contentDescription = null,
                     contentScale = ContentScale.Crop,
                     placeholder = painterResource(R.drawable.queue_music),

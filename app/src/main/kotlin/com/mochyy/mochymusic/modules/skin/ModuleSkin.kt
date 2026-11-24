@@ -7,7 +7,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
+import androidx.compose.ui.unit.dp
 import com.mochyy.mochymusic.constants.PlayerBackgroundStyle
+import com.mochyy.mochymusic.module.bridge.shared.SurfaceBridge
 import com.mochyy.mochymusic.modules.web.resolveModulePath
 import java.io.File
 
@@ -26,6 +28,8 @@ class ModuleSkin(
     val bar: SkinBar? = null,
     /** the look's own mini player: its blocks in a row beside mochy's cover, over the pill */
     val mini: SkinPlayer? = null,
+    /** optional live framebuffer bridge when this skin comes from a signed code module */
+    val surface: SurfaceBridge? = null,
 ) {
     /** the first player, the one the look switches to when it's turned on */
     val player: SkinPlayer? get() = players.firstOrNull()
@@ -47,6 +51,7 @@ class ModuleSkin(
         val found = mutableSetOf<String>()
         fun background(b: SkinBackground) {
             if (b is SkinBackground.Shader) found += b.program.file
+            if (b is SkinBackground.Live) background(b.fallback)
         }
         fun player(p: SkinPlayer) {
             background(p.background)
@@ -163,7 +168,7 @@ data class SkinPlayer(
     val edit: List<SkinEditPart> = emptyList(),
 ) {
     /** whether anything in it moves with the music or a loop, so the shared clock only runs when something reads it */
-    val moves: Boolean get() = layers.any { it.motion != null } || background is SkinBackground.Shader || blocks.any(SkinBlock::moves) || header.any(SkinBlock::moves)
+    val moves: Boolean get() = layers.any { it.motion != null } || background.drawsShader || blocks.any(SkinBlock::moves) || header.any(SkinBlock::moves)
 
     // every block, the header's too, styled wrappers and groups opened up, worked out once since the layout never changes
     val all: List<SkinBlock> by lazy { (header + blocks).flatMap { it.walk() } }
@@ -260,6 +265,24 @@ sealed interface SkinBackground {
     data class Picture(val image: String, val blur: Float = 0f) : SkinBackground
     /** the module's own agsl, android 13+; [fallback] everywhere else and while it compiles */
     data class Shader(val program: SkinShaderSource, val fallback: SkinBackground) : SkinBackground
+    /** the song's moving cover filling the screen, over [fallback] until it starts and for songs that have none */
+    data class Live(val media: List<CoverMedia>, val fallback: SkinBackground) : SkinBackground
+
+    /** a shader is drawn, itself or under a moving cover, so the shared clock has to run for it */
+    val drawsShader: Boolean get() = this is Shader || (this is Live && fallback is Shader)
+}
+
+/** what moves over a cover's picture, tried in order until the song has one */
+@Immutable
+sealed interface CoverMedia {
+    /** the song's animated cover, from the sources picked in mochy's settings */
+    data object Animated : CoverMedia
+    /** the song's youtube video, kept in time with the song */
+    data object Video : CoverMedia
+    /** what the person turned on for mochy's own player: the video when video covers are on, then the animated cover */
+    data object Auto : CoverMedia
+    /** a loop of the module's own from its zip or a link, the same for every song: an mp4, webm or hls video, or a gif or webp that moves */
+    data class Loop(val path: String) : CoverMedia
 }
 
 /** a shader file in the zip and the module's own float uniforms for it */
@@ -321,12 +344,29 @@ enum class BottomBarKind { Cards, Pills, Volume }
 
 enum class StackAlign { Center, Top, Bottom, Start, End }
 
+/** where a live surface block puts its touch gamepad: under the screen, over it, or hidden */
+enum class SurfaceControls { Below, Overlay, None }
+
 /** which way a box's colours run when it has more than one */
 enum class GradientKind { Vertical, Horizontal, Diagonal, Radial }
 
 @Immutable
 sealed interface SkinBlock {
-    data class Cover(val shape: CoverShape, val corner: Dp, val size: Float, val spin: Boolean, val frame: String?, val shadow: Boolean, val spinSpeed: Float = 1f) : SkinBlock
+    /** [size] is its share of the width unless [width] or [height] fix it in dp, [aspect] is width over height, [fit] shows all of a picture or video that isn't its shape, [media] moves over the picture */
+    data class Cover(
+        val shape: CoverShape,
+        val corner: Dp,
+        val size: Float,
+        val spin: Boolean,
+        val frame: String?,
+        val shadow: Boolean,
+        val spinSpeed: Float = 1f,
+        val width: Dp? = null,
+        val height: Dp? = null,
+        val aspect: Float = 1f,
+        val fit: Boolean = false,
+        val media: List<CoverMedia> = emptyList(),
+    ) : SkinBlock
     data class Title(val text: SkinText) : SkinBlock
     data class Artist(val text: SkinText) : SkinBlock
     data class Album(val text: SkinText) : SkinBlock
@@ -373,6 +413,19 @@ sealed interface SkinBlock {
     data class Time(val kind: TimeKind, val text: SkinText) : SkinBlock
     /** the module's own agsl drawn in a box, [fallback] colour where shaders can't run */
     data class Shader(val program: SkinShaderSource, val width: Dp?, val height: Dp, val corner: Dp, val fallback: SkinColor?) : SkinBlock
+    /** a live interactive framebuffer surface driven by a signed code module inside the player */
+    data class Surface(
+        val asset: String? = null,
+        val extras: List<String> = emptyList(),
+        val title: String? = null,
+        val width: Dp? = null,
+        val height: Dp? = null,
+        val aspect: Float = 4f / 3f,
+        val corner: Dp = 12.dp,
+        val controls: SurfaceControls = SurfaceControls.Below,
+        val crisp: Boolean = true,
+        val accent: SkinColor? = null,
+    ) : SkinBlock
     /** the bar under the controls that opens the lyrics and the queue, on frosted [glass] or the module's colours */
     data class BottomBar(
         val kind: BottomBarKind,

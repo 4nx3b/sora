@@ -17,6 +17,8 @@ object ArtistImageResolver {
 
     private val client by lazy {
         OkHttpClient.Builder()
+            .dispatcher(AppProxy.dispatcher)
+            .connectionPool(AppProxy.connectionPool)
             .connectTimeout(10, TimeUnit.SECONDS)
             .readTimeout(10, TimeUnit.SECONDS)
             .build()

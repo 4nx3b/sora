@@ -131,7 +131,7 @@ constructor(
             // same ported decrypting reader the player plays it with
             DeezerSchemeRouting(
             OkHttpDataSource.Factory(
-                OkHttpClient.Builder()
+                com.mochyy.mochymusic.utils.AppProxy.sharedClient.newBuilder()
                     .addInterceptor(SoundCloudPlaybackHeaders.interceptor)
                     .dns(object : Dns {
                         override fun lookup(hostname: String): List<InetAddress> {
@@ -143,7 +143,6 @@ constructor(
                             }
                         }
                     })
-                    .followAppProxy()
                     .build(),
             ),
             ),
@@ -306,11 +305,25 @@ constructor(
 
     init {
         val result = mutableMapOf<String, Download>()
-        val cursor = downloadManager.downloadIndex.getDownloads()
-        while (cursor.moveToNext()) {
-            result[cursor.download.request.id] = cursor.download
+        // close the sqlite cursor once the initial download map is loaded
+        downloadManager.downloadIndex.getDownloads().use { cursor ->
+            while (cursor.moveToNext()) {
+                result[cursor.download.request.id] = cursor.download
+            }
         }
         downloads.value = result
+
+        // drop expired stream urls and stale retry state when the ui hides and nothing is downloading
+        com.mochyy.mochymusic.utils.AppMemory.register { level ->
+            if (level >= android.content.ComponentCallbacks2.TRIM_MEMORY_UI_HIDDEN && downloads.value.values.none { it.isUnderWay }) {
+                val now = System.currentTimeMillis()
+                songUrlCache.entries.removeIf { it.value.second <= now }
+                songStreamHeaders.keys.retainAll(songUrlCache.keys)
+                failedProviders.clear()
+                moduleDownloads.clear()
+                downloadItags.clear()
+            }
+        }
 
         scope.launch { followBatches() }
         scope.launch { followAutoDownloads(context) }

@@ -39,11 +39,8 @@ class MochyWidgetManager @Inject constructor(
     @ApplicationContext private val context: Context,
     private val database: MusicDatabase
 ) {
-    private val imageLoader by lazy {
-        ImageLoader.Builder(context)
-            .crossfade(false)
-            .build()
-    }
+    // share the app's singleton image loader instead of keeping a second untrimmed coil memory cache
+    private val imageLoader: ImageLoader get() = coil3.SingletonImageLoader.get(context)
 
     private var cachedArtworkUri: String? = null
     private var cachedAlbumArt: Bitmap? = null
@@ -69,6 +66,11 @@ class MochyWidgetManager @Inject constructor(
     // whether a lyric widget is on the home screen, so the service only follows lyrics when someone can see them
     @Volatile
     var hasLyricWidgets = false
+        private set
+
+    // whether any widget on the home screen needs the once-a-second progress or lyric tick
+    @Volatile
+    var hasTickingWidgets = true
         private set
 
     /** One update at a time: they share the cached artwork, and they no longer run on one thread. */
@@ -122,6 +124,7 @@ class MochyWidgetManager @Inject constructor(
         val np4x1Ids = if (progressOnly) IntArray(0) else appWidgetManager.getAppWidgetIds(ComponentName(context, NowPlaying4x1WidgetReceiver::class.java))
         val np4x2Ids = appWidgetManager.getAppWidgetIds(ComponentName(context, NowPlaying4x2WidgetReceiver::class.java))
         hasLyricWidgets = np2x2Ids.isNotEmpty() || np4x2Ids.isNotEmpty()
+        hasTickingWidgets = widgetIds.isNotEmpty() || hasLyricWidgets
         if (widgetIds.isEmpty() && turntableWidgetIds.isEmpty() &&
             np2x2Ids.isEmpty() && np4x1Ids.isEmpty() && np4x2Ids.isEmpty()
         ) return
@@ -511,7 +514,8 @@ class MochyWidgetManager @Inject constructor(
                     .data(artworkUri)
                     .size(size, size)
                     .allowHardware(false)
-                    .crossfade(300)
+                    .memoryCachePolicy(coil3.request.CachePolicy.DISABLED)
+                    .crossfade(false)
                     .build()
                 val result = imageLoader.execute(request)
                 result.image?.toBitmap()

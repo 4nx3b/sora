@@ -15,7 +15,10 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
 import okhttp3.RequestBody.Companion.toRequestBody
+import com.mochyy.mochymusic.constants.SimulateForkKey
 import com.mochyy.mochymusic.ui.component.DiscordMarkdown
+import com.mochyy.mochymusic.utils.dataStore
+import com.mochyy.mochymusic.utils.get
 import org.json.JSONObject
 import java.io.File
 import java.io.IOException
@@ -47,7 +50,9 @@ data class FeedModule(
     /** the store page's screenshots, set with /preview */
     val previews: List<String>,
     val install: FeedInstall,
-    /** the zip's size in bytes, null for a linked module */
+    /** a pack's modules, each added on its own; empty for anything else */
+    val pack: List<PackItem>,
+    /** the zip's size in bytes (a pack's zips together), null for a linked module */
     val size: Long?,
     /** when it last changed, in milliseconds */
     val updated: Long?,
@@ -56,8 +61,20 @@ data class FeedModule(
     val postUrl: String,
 )
 
-/** how the store gets a module: its post's zip, a link added like a pasted one, or a web page it opens */
-enum class FeedInstall { Zip, Link, Web }
+/** how the store gets a module: its post's zip, a link added like a pasted one, a web page it opens, or a pack of several */
+enum class FeedInstall { Zip, Link, Web, Pack }
+
+/** one module in a pack: a zip in the pack's post, or a link it's added from like a pasted one */
+data class PackItem(
+    val id: String,
+    val isLink: Boolean,
+    val name: String,
+    val moduleId: String?,
+    val version: String?,
+    val size: Long?,
+    val icon: String?,
+    val link: String?,
+)
 
 enum class FeedKind { Look, Player, Source, Other }
 
@@ -84,37 +101,63 @@ class ModuleFeed @Inject constructor(
 ) {
     private val prefs = context.getSharedPreferences(PrefsName, Context.MODE_PRIVATE)
     private val client by lazy {
-        OkHttpClient.Builder().connectTimeout(12, TimeUnit.SECONDS).readTimeout(30, TimeUnit.SECONDS).build()
+        OkHttpClient.Builder()
+            .dispatcher(com.mochyy.mochymusic.utils.AppProxy.dispatcher)
+            .connectionPool(com.mochyy.mochymusic.utils.AppProxy.connectionPool)
+            .connectTimeout(12, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
+            .build()
     }
 
-    private val _session = MutableStateFlow(prefs.getString(SessionKey, null))
+    private val _session = MutableStateFlow(readSession())
 
-    /** the session the feed gave back, null while signed out; the browser reloads when it changes */
     val session: StateFlow<String?> = _session.asStateFlow()
+
+    private fun readSession(): String? {
+        val raw = prefs.getString(SessionKey, null) ?: return null
+        val opened = com.mochyy.mochymusic.utils.SecretVault.open(raw, com.mochyy.mochymusic.utils.SecretVault.ModuleFeedDomain)
+        if (opened == null) {
+            prefs.edit { remove(SessionKey) }
+            return null
+        }
+        if (com.mochyy.mochymusic.utils.SecretVault.needsUpgrade(raw)) {
+            prefs.edit { putString(SessionKey, com.mochyy.mochymusic.utils.SecretVault.seal(opened, com.mochyy.mochymusic.utils.SecretVault.ModuleFeedDomain)) }
+        }
+        com.mochyy.mochymusic.modules.security.SecretGuard.register("module_feed", opened)
+        return opened
+    }
 
     val isSetUp: Boolean get() = FeedUrl.isNotBlank()
 
-    /** the page to sign in on; the check value is kept so only the sign-in started here is taken back */
-    fun signInUri(): Uri {
+    private fun isAllowed(): Boolean = StoreSignature.isOfficial(context) && !context.dataStore.get(SimulateForkKey, false)
+
+    /** the page to sign in on; the check value is kept so only the sign-in started here is taken back; null on unofficial builds */
+    fun signInUri(): Uri? {
+        if (!isSetUp || !isAllowed()) return null
         val state = ByteArray(24).also(SecureRandom()::nextBytes).joinToString("") { "%02x".format(it) }
-        prefs.edit { putString(StateKey, state) }
-        val login = Uri.parse("$FeedUrl/login").buildUpon().appendQueryParameter("state", state)
         // the sign-in page opens in a browser, so the build's signature rides along in the link instead of a header
-        StoreSignature.sign("GET", "/login", state)?.let { (time, signature) ->
-            login.appendQueryParameter("t", time).appendQueryParameter("sig", signature)
-        }
-        return login.build()
+        val (time, signature) = StoreSignature.sign(context, "GET", "/login", state) ?: return null
+        prefs.edit { putString(StateKey, state) }
+        return Uri.parse("$FeedUrl/login").buildUpon()
+            .appendQueryParameter("state", state)
+            .appendQueryParameter("t", time)
+            .appendQueryParameter("sig", signature)
+            .build()
     }
 
     /** back from the browser with mochy-modules://signed-in; true when it carried a session from the sign-in started here */
     fun finishSignIn(redirect: Uri): Boolean {
+        if (!isSetUp || !isAllowed()) {
+            prefs.edit { remove(StateKey) }
+            return false
+        }
+        if (redirect.scheme != "mochy-modules" || redirect.host != "signed-in") return false
         val expected = prefs.getString(StateKey, null) ?: return false
+        prefs.edit { remove(StateKey) }
         val session = redirect.getQueryParameter("session")?.takeIf { SessionPattern.matches(it) }
         if (redirect.getQueryParameter("state") != expected || session == null) return false
-        prefs.edit {
-            remove(StateKey)
-            putString(SessionKey, session)
-        }
+        prefs.edit { putString(SessionKey, com.mochyy.mochymusic.utils.SecretVault.seal(session, com.mochyy.mochymusic.utils.SecretVault.ModuleFeedDomain)) }
+        com.mochyy.mochymusic.modules.security.SecretGuard.register("module_feed", session)
         _session.value = session
         return true
     }
@@ -122,16 +165,16 @@ class ModuleFeed @Inject constructor(
     suspend fun signOut() = withContext(Dispatchers.IO) {
         val session = _session.value
         forgetSession()
-        if (session != null) runCatching { call(Request.Builder().url("$FeedUrl/signout").post(ByteArray(0).toRequestBody()), session).close() }
+        if (session != null) runCatching { call(Request.Builder().url("$FeedUrl/signout").post(ByteArray(0).toRequestBody()), session)?.close() }
     }
 
     suspend fun load(): FeedResult = withContext(Dispatchers.IO) {
         if (!isSetUp) return@withContext FeedResult.NotSetUp
-        // a build without the key would only be turned away, so it doesn't ask
-        if (!StoreSignature.isOfficial) return@withContext FeedResult.Unofficial
+        // a build without the official key and signature would only be turned away, so it doesn't ask; experimental can pretend to be one, to see what a fork gets
+        if (!isAllowed()) return@withContext FeedResult.Unofficial
         val session = _session.value ?: return@withContext FeedResult.SignedOut
         val response = try {
-            call(Request.Builder().url("$FeedUrl/modules"), session)
+            call(Request.Builder().url("$FeedUrl/modules"), session) ?: return@withContext FeedResult.Unofficial
         } catch (e: IOException) {
             return@withContext FeedResult.Offline
         }
@@ -141,6 +184,7 @@ class ModuleFeed @Inject constructor(
                 200 -> modulesPage(body)
                 401 -> FeedResult.SignedOut.also { forgetSession() }
                 403 -> if (body.optString("error") == "unofficial_build") {
+                    forgetSession()
                     FeedResult.Unofficial
                 } else {
                     FeedResult.NotMember(personOf(body), body.optString("invite").takeIf { link -> link.startsWith("https://") })
@@ -151,31 +195,59 @@ class ModuleFeed @Inject constructor(
         }
     }
 
-    /** the module's zip into the cache, ready to be checked like a zip picked from the phone; null when it couldn't be fetched */
-    suspend fun download(postId: String): File? = withContext(Dispatchers.IO) {
+    /** the module's zip, or one of a pack's by its [item] id, into the cache, ready to be checked like a zip picked from the phone; null when it couldn't be fetched */
+    suspend fun download(postId: String, item: String? = null): File? = withContext(Dispatchers.IO) {
+        if (!isSetUp || !isAllowed()) return@withContext null
+        if (!PostIdPattern.matches(postId) || (item != null && !ItemIdPattern.matches(item))) return@withContext null
         val session = _session.value ?: return@withContext null
         val folder = File(context.cacheDir, "module_browser").apply { mkdirs() }
-        val file = File(folder, "$postId.zip")
+        val file = File(folder, if (item != null) "$postId-$item.zip" else "$postId.zip")
+        val url = if (item != null) "$FeedUrl/modules/$postId/zip?item=${Uri.encode(item)}" else "$FeedUrl/modules/$postId/zip"
         runCatching {
-            call(Request.Builder().url("$FeedUrl/modules/$postId/zip"), session).use { response ->
-                if (!response.isSuccessful) return@use null
-                file.outputStream().use { out -> response.body.byteStream().copyTo(out) }
+            val response = call(Request.Builder().url(url), session) ?: return@runCatching null
+            response.use { res ->
+                if (res.code == 403) {
+                    val body = runCatching { JSONObject(res.body.string()) }.getOrNull()
+                    if (body?.optString("error") == "unofficial_build") forgetSession()
+                    return@use null
+                }
+                if (!res.isSuccessful) return@use null
+                // cap zip downloads so a busted or shady response can't nuke storage
+                val buffer = ByteArray(16 * 1024)
+                var written = 0L
+                val ok = file.outputStream().use { out ->
+                    val input = res.body.byteStream()
+                    while (true) {
+                        val n = input.read(buffer)
+                        if (n < 0) return@use true
+                        written += n
+                        if (written > MaxZipBytes) return@use false
+                        out.write(buffer, 0, n)
+                    }
+                    @Suppress("UNREACHABLE_CODE")
+                    false
+                }
+                if (!ok) {
+                    file.delete()
+                    return@use null
+                }
                 file
             }
         }.getOrNull()
     }
 
-    // every call carries the build's signature over what it asks for, so the feed can tell an official build from a fork
-    private fun call(request: Request.Builder, session: String): Response {
+    // every call carries the build's native signature over what it asks for, and never goes out unsigned
+    private fun call(request: Request.Builder, session: String): Response? {
+        if (!isAllowed()) return null
         val built = request.header("Authorization", "Bearer $session").build()
-        val signed = StoreSignature.sign(built.method, built.url.encodedPath, session)?.let { (time, signature) ->
-            built.newBuilder().header("X-Mochy-Time", time).header("X-Mochy-Sign", signature).build()
-        }
-        return client.newCall(signed ?: built).execute()
+        val (time, signature) = StoreSignature.sign(context, built.method, built.url.encodedPath, session) ?: return null
+        val signed = built.newBuilder().header("X-Mochy-Time", time).header("X-Mochy-Sign", signature).build()
+        return client.newCall(signed).execute()
     }
 
     private fun forgetSession() {
         prefs.edit { remove(SessionKey) }
+        com.mochyy.mochymusic.modules.security.SecretGuard.clear("module_feed")
         _session.value = null
     }
 
@@ -192,6 +264,20 @@ class ModuleFeed @Inject constructor(
             modules = modules,
             chart = chart,
             categories = body.optJSONArray("categories")?.let { names -> (0 until names.length()).map { names.optString(it) } }.orEmpty().filter { it.isNotBlank() },
+        )
+    }
+
+    private fun packItemOf(item: JSONObject?): PackItem? {
+        val id = item?.optString("id")?.takeIf { it.isNotBlank() } ?: return null
+        return PackItem(
+            id = id,
+            isLink = item.optString("kind") == "link",
+            name = item.optString("name").ifBlank { id },
+            moduleId = item.optString("moduleId").takeIf { it.isNotBlank() && !item.isNull("moduleId") },
+            version = item.optString("version").takeIf { it.isNotBlank() && !item.isNull("version") },
+            size = item.optLong("size", -1).takeIf { it >= 0 && !item.isNull("size") },
+            icon = item.optString("icon").takeIf { it.startsWith("https://") },
+            link = item.optString("link").takeIf { it.startsWith("https://") },
         )
     }
 
@@ -226,12 +312,14 @@ class ModuleFeed @Inject constructor(
                 install = when (item.optString("install")) {
                     "link" -> FeedInstall.Link
                     "web" -> FeedInstall.Web
+                    "pack" -> FeedInstall.Pack
                     else -> FeedInstall.Zip
                 },
+                pack = item.optJSONArray("pack")?.let { items -> (0 until items.length()).mapNotNull { packItemOf(items.optJSONObject(it)) } }.orEmpty(),
                 link = item.optString("link").takeIf { it.startsWith("https://") },
                 size = item.optLong("size", -1).takeIf { it >= 0 && !item.isNull("size") },
                 updated = item.optLong("updated", -1).takeIf { it > 0 },
-                postUrl = item.optString("postUrl"),
+                postUrl = item.optString("postUrl").takeIf { it.startsWith("https://") }.orEmpty(),
             )
         }
     }
@@ -243,6 +331,9 @@ class ModuleFeed @Inject constructor(
         private const val SessionKey = "session"
         private const val PrefsName = "module_browser"
         private const val StateKey = "state"
+        private const val MaxZipBytes = 40L * 1024 * 1024
         private val SessionPattern = Regex("^[0-9a-f]{64}$")
+        private val PostIdPattern = Regex("^\\d+$")
+        private val ItemIdPattern = Regex("^[A-Za-z0-9_-]{1,128}$")
     }
 }

@@ -205,6 +205,7 @@ private val SettingsIndex = listOf(
     SettingsEntry("Albums from liked songs", "App behaviour", "general_settings", "albums library liked songs old way apple music"),
     SettingsEntry("Pause search history", "App behaviour", "general_settings", "search history pause private incognito privacy", R.string.pause_search_history),
     SettingsEntry("Count plays on YouTube views", "App behaviour", "general_settings", "youtube history plays views report count privacy", R.string.settings_youtube_plays),
+    SettingsEntry("Override lyrics sorting", "App behaviour", "general_settings", "lyrics provider order sort priority duet word sync apple music source", R.string.settings_lyrics_order_override),
 
     // Playback
     SettingsEntry("Playback", "Playback", PlaybackSettingsRoute, "background bluetooth shuffle skip silence mute queue failure"),

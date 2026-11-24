@@ -424,6 +424,35 @@ class SkinParserTest {
     }
 
     @Test
+    fun `a cover takes its own size, ratio and moving media, and a live cover background sits on the blurred cover`() {
+        val text = """
+            { "id": "p", "name": "P",
+              "player": {
+                "background": { "type": "liveCover", "media": ["video", "loops/rain.mp4"] },
+                "blocks": [
+                  { "type": "cover", "aspect": "16:9", "width": 9000, "fit": "fit", "media": ["video", "Animated", "loops/idle.webp", "notes.txt", "auto"] },
+                  { "type": "cover", "height": 200, "aspect": 0.01 },
+                  { "type": "cover" }
+                ] } }
+        """
+        val player = skin(text)!!.player!!
+        val wide = player.blocks[0] as SkinBlock.Cover
+        assertEquals(16f / 9f, wide.aspect)
+        assertEquals(600.dp, wide.width)
+        assertTrue(wide.fit)
+        // a text file isn't something a cover can play, so it's dropped and the rest keep their order
+        assertEquals(listOf(CoverMedia.Video, CoverMedia.Animated, CoverMedia.Loop("loops/idle.webp"), CoverMedia.Auto), wide.media)
+        val tall = player.blocks[1] as SkinBlock.Cover
+        assertEquals(200.dp, tall.height)
+        assertEquals(0.25f, tall.aspect)
+        val plain = player.blocks[2] as SkinBlock.Cover
+        assertEquals(1f, plain.aspect)
+        assertTrue(plain.media.isEmpty())
+        val live = SkinBackground.Live(listOf(CoverMedia.Video, CoverMedia.Loop("loops/rain.mp4")), SkinBackground.Player(PlayerBackgroundStyle.APPLE_MUSIC))
+        assertEquals(live, player.background)
+    }
+
+    @Test
     fun `editor parts, the bottom bar and a mini player`() {
         val text = """
             { "id": "p", "name": "P",
@@ -518,5 +547,30 @@ class SkinParserTest {
         assertFalse(player.audio)
         assertFalse(player.playerFields)
         assertEquals(SkinPictureSource.Asset("pic.png"), (player.blocks[1] as SkinBlock.Picture).source)
+    }
+
+    @Test
+    fun `a surface block parses safe zip assets and blocks traversal or web modules`() {
+        val text = """
+            { "id": "arcade", "name": "Arcade", "player": { "blocks": [
+              { "type": "surface", "asset": "game.wad", "extras": ["mod.pk3", "../escape.wad", "bad.apk"], "title": "RETRO", "controls": "overlay", "aspect": "4:3", "crisp": false, "corner": 16 }
+            ] } }
+        """
+        val player = skin(text, files = File("/data/arcade"))!!.player!!
+        val surface = player.blocks.single() as SkinBlock.Surface
+        assertEquals("game.wad", surface.asset)
+        assertEquals(listOf("mod.pk3"), surface.extras)
+        assertEquals("RETRO", surface.title)
+        assertEquals(SurfaceControls.Overlay, surface.controls)
+        assertEquals(4f / 3f, surface.aspect, 0.001f)
+        assertFalse(surface.crisp)
+        assertEquals(16.dp, surface.corner)
+        // a web module without a zip cannot embed a live surface
+        assertNull(skin(text, base = "https://mod.dev"))
+        // path traversal or forbidden extension on the main asset drops the block
+        val traversal = """{ "id": "bad", "name": "Bad", "player": { "blocks": [ { "type": "surface", "asset": "../secret.wad" } ] } }"""
+        assertNull(skin(traversal, files = File("/data/bad")))
+        val remote = """{ "id": "bad", "name": "Bad", "player": { "blocks": [ { "type": "surface", "asset": "https://evil.example/a.wad" } ] } }"""
+        assertNull(skin(remote, files = File("/data/bad")))
     }
 }
