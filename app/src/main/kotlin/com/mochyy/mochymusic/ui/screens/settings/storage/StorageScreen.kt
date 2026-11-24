@@ -40,9 +40,11 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.mochyy.mochymusic.R
 import com.mochyy.mochymusic.constants.CanvasVideoCacheLimitKey
+import com.mochyy.mochymusic.constants.DownloadSpeedLimitKbKey
 import com.mochyy.mochymusic.constants.DownloadWifiOnlyKey
 import com.mochyy.mochymusic.constants.ExternalDownloaderEnabledKey
 import com.mochyy.mochymusic.constants.ExternalDownloaderPackageKey
+import com.mochyy.mochymusic.constants.MaxParallelDownloadsKey
 import com.mochyy.mochymusic.constants.MaxSongCacheSizeKey
 import com.mochyy.mochymusic.playback.ExportStep
 import com.mochyy.mochymusic.playback.MoveStep
@@ -66,6 +68,10 @@ const val StorageRoute = "storage_settings"
 
 // song cache limits on offer, in mb, -1 is no limit, the player's default is 1 gb
 private val CacheLimitSteps = listOf(0, 256, 512, 1024, 2048, 4096, 8192, -1)
+
+// the download queue's speed ceiling in kb/s, 0 = the line's full speed; and how many songs download at once
+private val DownloadSpeedSteps = listOf(0, 512, 1024, 2048, 5120, 12800, 25600)
+private val ParallelDownloadSteps = listOf(1, 2, 3, 4, 6, 8, 12, 16)
 
 @Composable
 fun StorageScreen(
@@ -125,6 +131,8 @@ fun StorageScreen(
         SectionText(stringResource(R.string.storage_downloads_rules_title))
         Spacer(Modifier.height(10.dp))
         DownloadsRulesCard()
+        Spacer(Modifier.height(10.dp))
+        DownloadSpeedCard()
 
         // where each download comes from, moved in from the audio quality page (Neiro keeps it on storage)
         Spacer(Modifier.height(26.dp))
@@ -454,6 +462,60 @@ private fun DownloadsRulesCard() {
             },
             onDismiss = { editPackage = false },
         )
+    }
+}
+
+// the download queue's speed: how many songs go at once, and the ceiling every one of them shares
+@Composable
+private fun DownloadSpeedCard() {
+    val (parallel, onParallel) = rememberPreference(MaxParallelDownloadsKey, 6)
+    val (limitKb, onLimitKb) = rememberPreference(DownloadSpeedLimitKbKey, 0)
+    StorageCardColumn {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier
+                    .size(26.dp)
+                    .clip(CircleShape)
+                    .background(Color(0xFFDADADA)),
+            ) {
+                Icon(painterResource(R.drawable.download), contentDescription = null, tint = StorageCard, modifier = Modifier.size(16.dp))
+            }
+            Spacer(Modifier.width(12.dp))
+            Text(stringResource(R.string.storage_download_speed), style = storageText(15f, FontWeight.SemiBold), modifier = Modifier.weight(1f))
+            Text(speedLimitLabel(limitKb), style = storageText(15f, FontWeight.Bold))
+        }
+        Spacer(Modifier.height(12.dp))
+        StepSlider(steps = DownloadSpeedSteps, value = limitKb, onValueChange = onLimitKb)
+        Row(Modifier.padding(top = 4.dp, start = 4.dp, end = 4.dp)) {
+            Text(stringResource(R.string.storage_download_speed_unlimited), style = storageText(10f, FontWeight.Medium, StorageMuted, 0f), modifier = Modifier.weight(1f))
+            Text(stringResource(R.string.storage_download_speed_top), style = storageText(10f, FontWeight.Medium, StorageMuted, 0f))
+        }
+        Text(stringResource(R.string.storage_download_speed_desc), style = storageText(12f, FontWeight.Medium, StorageMuted, -0.1f), modifier = Modifier.padding(top = 8.dp))
+
+        Spacer(Modifier.height(16.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(stringResource(R.string.storage_parallel_downloads), style = storageText(15f, FontWeight.SemiBold), modifier = Modifier.weight(1f))
+            Text(stringResource(R.string.storage_parallel_count, parallel), style = storageText(15f, FontWeight.Bold))
+        }
+        Spacer(Modifier.height(12.dp))
+        StepSlider(steps = ParallelDownloadSteps, value = parallel, onValueChange = onParallel)
+        Text(stringResource(R.string.storage_parallel_downloads_desc), style = storageText(12f, FontWeight.Medium, StorageMuted, -0.1f), modifier = Modifier.padding(top = 8.dp))
+    }
+}
+
+@Composable
+private fun speedLimitLabel(kb: Int): String = when {
+    kb <= 0 -> stringResource(R.string.storage_download_speed_unlimited)
+    kb < 1024 -> stringResource(R.string.storage_download_speed_kb, kb)
+    else -> {
+        val megabytes = kb / 1024.0
+        val rounded = (megabytes + 0.5).toInt()
+        if (megabytes == rounded.toDouble()) {
+            stringResource(R.string.storage_download_speed_mb_int, rounded)
+        } else {
+            stringResource(R.string.storage_download_speed_mb_dec, String.format("%.1f", megabytes))
+        }
     }
 }
 

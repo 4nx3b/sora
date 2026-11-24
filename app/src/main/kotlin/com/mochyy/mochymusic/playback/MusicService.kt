@@ -1526,11 +1526,14 @@ class MusicService :
             silenceProcessor.instantModeEnabled = skipSilence && instantSkip
         }
 
-        // 15-25 s instead of media3's 50 s, and time wins over the 6 mb cap so a 24/192 dac stream still keeps its full 15 s instead of stopping at ~8
+        // 50-90 s of runway and time wins over the byte cap so a 24/192 dac stream keeps its full
+        // buffer instead of stopping short; playback starts on a second of audio, and what played
+        // stays for 30 s so a quick scrub back is instant
         val loadControl = androidx.media3.exoplayer.DefaultLoadControl.Builder()
-            .setBufferDurationsMs(15_000, 25_000, 1_500, 3_000)
-            .setTargetBufferBytes(6 * 1024 * 1024)
+            .setBufferDurationsMs(50_000, 90_000, 1_000, 2_000)
+            .setTargetBufferBytes(64 * 1024 * 1024)
             .setPrioritizeTimeOverSizeThresholds(true)
+            .setBackBuffer(30_000, false)
             .build()
 
         val player = ExoPlayer.Builder(this)
@@ -3984,6 +3987,7 @@ class MusicService :
         com.mochyy.mochymusic.utils.AppProxy.sharedClient.newBuilder()
             // soundcloud streams need their playback headers on every request
             .addInterceptor(SoundCloudPlaybackHeaders.interceptor)
+            .readTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
             .dns(object : Dns {
                 override fun lookup(hostname: String): List<InetAddress> {
                     val addresses = Dns.SYSTEM.lookup(hostname)

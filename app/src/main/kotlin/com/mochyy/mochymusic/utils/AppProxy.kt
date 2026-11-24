@@ -44,8 +44,11 @@ object AppProxy {
     // one pool and dispatcher for every client in the app, so dozens of helpers don't each spin up their own thread pools
     internal val connectionPool = ConnectionPool()
     internal val dispatcher = Dispatcher().apply {
-        maxRequests = 64
-        maxRequestsPerHost = 10
+        // covers stream in from a handful of picture hosts while the download queue runs beside
+        // them, so both need room: a per-host cap of 10 left a fast-scrolling grid queued behind
+        // ten thumbnails, and a big download batch behind ten streams
+        maxRequests = 96
+        maxRequestsPerHost = 32
     }
 
     // shared base client so callers can use newBuilder() instead of allocating fresh pools and executors

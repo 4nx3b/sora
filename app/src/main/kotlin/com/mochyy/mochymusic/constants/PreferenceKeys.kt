@@ -542,6 +542,11 @@ val ExternalDownloaderEnabledKey = booleanPreferencesKey("externalDownloaderEnab
 val ExternalDownloaderPackageKey = stringPreferencesKey("externalDownloaderPackage")
 val CanvasVideoCacheLimitKey = intPreferencesKey("canvasVideoCacheLimitMb")
 
+// the download throughput settings: how many songs download at once, and the speed ceiling they
+// all share in kilobytes per second (0 = the line's full speed)
+val MaxParallelDownloadsKey = intPreferencesKey("maxParallelDownloads")
+val DownloadSpeedLimitKbKey = intPreferencesKey("downloadSpeedLimitKb")
+
 // on: the provider order above decides, off: the lyrics with the most features win and the order only breaks ties
 val LyricsOrderOverrideKey = booleanPreferencesKey("lyricsOrderOverride")
 val QueueEditLockKey = booleanPreferencesKey("queueEditLock")

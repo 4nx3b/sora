@@ -48,6 +48,16 @@
     <string name="storage_download_wifi_only">Download only on Wi-Fi</string>
     <string name="storage_download_wifi_only_desc">Downloads wait for Wi-Fi and never touch mobile data</string>
     <string name="storage_download_wifi_only_blocking">BLOCKING — on mobile data, downloads wait for Wi-Fi</string>
+    <string name="storage_download_speed">Download speed</string>
+    <string name="storage_download_speed_unlimited">Unlimited</string>
+    <string name="storage_download_speed_top">25 MB/s</string>
+    <string name="storage_download_speed_kb">%1$d KB/s</string>
+    <string name="storage_download_speed_mb_int">%1$d MB/s</string>
+    <string name="storage_download_speed_mb_dec">%1$s MB/s</string>
+    <string name="storage_download_speed_desc">The ceiling every running download shares, applied straight away</string>
+    <string name="storage_parallel_downloads">Songs downloading at once</string>
+    <string name="storage_parallel_count">%1$d</string>
+    <string name="storage_parallel_downloads_desc">How many songs the queue downloads at the same time</string>
     <string name="storage_external_downloader">External downloader</string>
     <string name="storage_external_downloader_desc">Hand the download button\'s song to another app</string>
     <string name="storage_external_downloader_no_package">Name the app songs are handed to</string>

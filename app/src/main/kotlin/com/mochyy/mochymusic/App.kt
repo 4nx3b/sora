@@ -370,12 +370,14 @@ class App : Application(), SingletonImageLoader.Factory {
                 add(com.mochyy.mochymusic.utils.ImageRetry)
             }
             // covers ease in as they arrive; coil skips the fade for ones already in memory, so scrolling back never flickers
-            crossfade(300)
+            crossfade(150)
             allowHardware(Build.VERSION.SDK_INT >= Build.VERSION_CODES.P)
 
             memoryCache {
                 MemoryCache.Builder()
-                    .maxSizePercent(context, 0.15)
+                    // a quarter of the app's memory: covers of everything on screen and more stay
+                    // decoded, so scrolling back through a list shows them the same frame
+                    .maxSizePercent(context, 0.25)
                     .build()
             }
             if (cacheSize == 0) {
