@@ -4,7 +4,6 @@ package com.mochyy.mochymusic.utils
 
 import com.mochyy.mochymusic.models.ArtistGroup
 import com.music.innertube.pages.ArtistPage
-import java.util.concurrent.ConcurrentHashMap
 
 /**
  * what an artist's page shows at the top: the round photo from YouTube Music, and the banner,
@@ -33,10 +32,10 @@ data class ArtistBannerLook(val hasStill: Boolean, val hasMotion: Boolean)
  * similar artists) open on the same banner and shelves at once instead of fetching them again.
  */
 object ArtistPageCache {
-    private val pages = ConcurrentHashMap<String, ArtistPage>()
-    private val headers = ConcurrentHashMap<String, ArtistHeader>()
-    private val picks = ConcurrentHashMap<String, ArtistGroup>()
-    private val bannerLooks = ConcurrentHashMap<String, ArtistBannerLook>()
+    private val pages = lruMap<String, ArtistPage>(24)
+    private val headers = lruMap<String, ArtistHeader>(64)
+    private val picks = lruMap<String, ArtistGroup>(64)
+    private val bannerLooks = lruMap<String, ArtistBannerLook>(64)
 
     fun page(artistId: String): ArtistPage? = pages[artistId]
 

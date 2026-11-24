@@ -48,14 +48,14 @@ object MuzoService {
     // Tighter than the shared client's stream-oriented timeouts, after Neiro's
     // MuzoService: this sits inside the playback resolver's walk, which wants an
     // answer in seconds.
-    private val client = OkHttpClient.Builder()
+    internal val client = OkHttpClient.Builder()
         .connectTimeout(8, TimeUnit.SECONDS)
         .readTimeout(12, TimeUnit.SECONDS)
         .callTimeout(16, TimeUnit.SECONDS)
         .build()
 
     /** One GET done, or null for any failure at all. */
-    private fun fetch(path: String, key: String): Pair<Int, String?>? = runCatching {
+    internal fun fetch(path: String, key: String): Pair<Int, String?>? = runCatching {
         val request = Request.Builder()
             .url("$BASE$path")
             .header("Accept", "application/json")
@@ -73,7 +73,7 @@ object MuzoService {
             ?: "HTTP $code"
 
     /** Query-component encoding without the `+`-for-space behaviour URLEncoder adds. */
-    private fun encode(value: String): String =
+    internal fun encode(value: String): String =
         java.net.URLEncoder.encode(value, "UTF-8").replace("+", "%20")
 
     /** The key set in Settings, or null while Muzo Data is unconfigured. */
@@ -125,20 +125,20 @@ object MuzoService {
      * id and answers for that exact recording, which is also why its answer is
      * worth a 24-bit FLAC.
      */
-    suspend fun lossless(key: String, videoId: String): LosslessAnswer? =
+    suspend fun lossless(key: String, videoId: String, path: String = "/stream/lossless"): LosslessAnswer? =
         withContext(Dispatchers.IO) {
-            if (key.isBlank() || videoId.isBlank()) return@withContext null
-            val (code, body) = fetch("/stream/lossless?id=${encode(videoId)}", key)
+            if (key.isBlank() || videoId.isBlank() || MuzoEndpoints.limited()) return@withContext null
+            val (code, body) = fetch("$path?id=${encode(videoId)}", key)
                 ?: return@withContext null
+            if (code == 429) MuzoEndpoints.hitLimit()
             if (code != 200) return@withContext null
             val answer = body?.let {
                 runCatching { json.decodeFromString<LosslessAnswer>(it) }.getOrNull()
             } ?: return@withContext null
-            // The documented answer is `url` plus a `urls` mirror list; taking
-            // either keeps a working answer when one of the two shapes drifts.
-            val url = answer.url?.takeIf { it.isNotBlank() }
+            val url = answer.streamUrl?.takeIf { it.isNotBlank() }
+                ?: answer.url?.takeIf { it.isNotBlank() }
                 ?: answer.urls?.firstOrNull { !it.isNullOrBlank() }
-            url?.let { answer.copy(url = it) }
+            url?.let { answer.copy(url = it, quality = answer.quality ?: answer.bitrate) }
         }
 
     /** The sentence the settings row shows for a working key. */
@@ -166,6 +166,9 @@ object MuzoService {
         val cdnInstances: List<String>? = null,
         val url: String? = null,
         val urls: List<String>? = null,
+        val streamUrl: String? = null,
+        val bitrate: String? = null,
+        val cdnInstance: String? = null,
     )
 }
 

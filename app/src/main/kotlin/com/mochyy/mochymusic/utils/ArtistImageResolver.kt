@@ -10,7 +10,6 @@ import okhttp3.Request
 import org.json.JSONObject
 import java.net.URLEncoder
 import java.util.Locale
-import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 
 object ArtistImageResolver {
@@ -23,7 +22,7 @@ object ArtistImageResolver {
             .build()
     }
 
-    private val memoryCache = ConcurrentHashMap<String, String>()
+    private val memoryCache = lruMap<String, String>(512)
 
     suspend fun resolveThumbnail(artist: ArtistEntity): String? {
         val normalizedName = artist.name.trim()

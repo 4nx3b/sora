@@ -586,8 +586,6 @@ val VideoModeReturnStyleKey = stringPreferencesKey("videoModeReturnStyle")
 // the full video mode shows the whole picture with room round it, instead of zooming it to fill the screen
 val VideoModeWholeVideoKey = booleanPreferencesKey("videoModeWholeVideo")
 
-val LocalSongAutoMetadataKey = booleanPreferencesKey("local_song_auto_metadata")
-
 enum class LibraryViewType {
     LIST,
     GRID,

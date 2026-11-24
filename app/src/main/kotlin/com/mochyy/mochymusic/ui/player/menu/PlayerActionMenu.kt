@@ -67,8 +67,10 @@ import com.mochyy.mochymusic.R
 import com.mochyy.mochymusic.constants.CanvasBestQualityKey
 import com.mochyy.mochymusic.constants.KeepScreenOn
 import com.mochyy.mochymusic.constants.PlayVideoBackgroundKey
+import com.mochyy.mochymusic.constants.TranslateLanguageKey
 import com.mochyy.mochymusic.constants.VideoQuality
 import com.mochyy.mochymusic.constants.VideoQualityKey
+import com.mochyy.mochymusic.lyrics.LyricsTranslationHelper
 import com.mochyy.mochymusic.ui.menu.songedit.SongEditSheet
 import com.mochyy.mochymusic.ui.menu.songedit.VideoPickerSheet
 import com.mochyy.mochymusic.ui.player.PlayerCanvasPlayback
@@ -145,6 +147,8 @@ fun PlayerActionMenu(
     var songToEdit by remember { mutableStateOf<com.mochyy.mochymusic.models.MediaMetadata?>(null) }
     var songForVideo by remember { mutableStateOf<com.mochyy.mochymusic.models.MediaMetadata?>(null) }
     val videoBackgroundOn by rememberPreference(PlayVideoBackgroundKey, defaultValue = false)
+    val translateTarget by rememberPreference(TranslateLanguageKey, defaultValue = "en")
+    val translationOn by LyricsTranslationHelper.translationOn.collectAsState()
 
     // Only touched by the lyrics section. hiltViewModel() itself is cheap, but the flows are
     // collected lazily so a menu opened from the player does no lyrics work at all.
@@ -221,11 +225,16 @@ fun PlayerActionMenu(
                         SheetActionCard(
                             icon = R.drawable.translate,
                             title = stringResource(R.string.menu_ai_translation),
-                            // Greyed out until the AI translation settings are filled in — an
-                            // enabled button that silently does nothing is worse than a disabled
-                            // one that says so.
-                            enabled = false,
-                            onClick = {},
+                            // switches the lyrics translation on or off, as the lyrics tools' translate button does
+                            enabled = translateTarget.isNotBlank(),
+                            onClick = {
+                                if (translationOn) {
+                                    LyricsTranslationHelper.triggerClearTranslations()
+                                } else {
+                                    LyricsTranslationHelper.triggerManualTranslation()
+                                }
+                                onDismiss()
+                            },
                             modifier = Modifier.weight(1f),
                         )
                         SheetActionCard(
