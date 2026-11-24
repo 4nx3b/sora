@@ -17,6 +17,7 @@ import com.mochyy.mochymusic.module.ResolveResult
 import com.mochyy.mochymusic.module.SourceModule
 import com.mochyy.mochymusic.module.SourceStream
 import com.mochyy.mochymusic.module.StreamFormat
+import com.mochyy.mochymusic.module.StreamOption
 import com.mochyy.mochymusic.module.TrackQuery
 import com.mochyy.mochymusic.utils.DataSaver
 import kotlinx.coroutines.Dispatchers
@@ -45,13 +46,41 @@ class MuzoModule(private val context: Context) : SourceModule, ModuleFields {
                 hint = context.getString(R.string.muzo_api_key_hint),
                 description = context.getString(R.string.muzo_api_key_subtitle),
             ),
+            ModuleField(
+                id = FormatField,
+                label = "Stream format",
+                kind = FieldKind.Select,
+                options = listOf(
+                    StreamOption(MuzoFormat.Lossless.id, "Lossless", "/stream/lossless: the FLAC master, 1 credit"),
+                    StreamOption(MuzoFormat.Aac.id, "AAC", "/stream/aac: the M4A, 1 credit"),
+                    StreamOption(MuzoFormat.Auto.id, "Auto", "/stream: FLAC when there is one, else the M4A, 1 credit"),
+                ),
+                default = MuzoFormat.Lossless.id,
+            ),
+            toggle(StreamField, "Streams", "/stream, /stream/lossless and /stream/aac", true),
+            toggle(LyricsField, "Lyrics", "/lyrics, word and syllable timed, 1 credit", true),
+            toggle(CanvasField, "Canvas", "/canvas, the looping cover video, 1 credit", true),
+            toggle(MetadataField, "Metadata", "/metadata, title, artists, album and art, 1 credit", false),
+            toggle(AutoqueueField, "Radio queue", "/ytm/autoqueue and /ytm/next, 0.25 credit a page", false),
+            toggle(CatalogField, "Add played songs", "/stream/add, free and keyless: songs you play join the lossless catalog", true),
         )
+
+    private fun toggle(id: String, label: String, description: String, on: Boolean) =
+        ModuleField(id = id, label = label, kind = FieldKind.Toggle, default = on.toString(), description = description)
 
     override fun attach(host: ModuleHost) {
         key = runBlocking(Dispatchers.IO) { MuzoService.apiKey(context) }.orEmpty()
     }
 
     override fun onFields(values: Map<String, String>) {
+        fun on(id: String, default: Boolean) = values[id]?.toBooleanStrictOrNull() ?: default
+        MuzoPrefs.stream = on(StreamField, true)
+        MuzoPrefs.lyrics = on(LyricsField, true)
+        MuzoPrefs.canvas = on(CanvasField, true)
+        MuzoPrefs.metadata = on(MetadataField, false)
+        MuzoPrefs.autoqueue = on(AutoqueueField, false)
+        MuzoPrefs.catalogAdd = on(CatalogField, true)
+        MuzoPrefs.format = MuzoFormat.entries.firstOrNull { it.id == values[FormatField] } ?: MuzoFormat.Lossless
         val given = values[KeyField].orEmpty().trim()
         if (given == key) return
         key = given
@@ -75,9 +104,15 @@ class MuzoModule(private val context: Context) : SourceModule, ModuleFields {
         // a capped connection never pays lossless bytes
         if (DataSaver.isActive(context)) return ResolveResult.Unavailable("data saver is on")
         if (key.isBlank()) return ResolveResult.Unavailable("add your Muzo Data API key")
+        if (!MuzoPrefs.stream) return ResolveResult.NotFound("streams are switched off")
         val videoId = track.videoId ?: return ResolveResult.NotFound("needs a YouTube video id")
-        val answer = MuzoService.lossless(key, videoId) ?: return ResolveResult.NotFound("not on Muzo Data")
-        val url = answer.url ?: return ResolveResult.NotFound("not on Muzo Data")
+        val (url, quality, codec) = when (MuzoPrefs.format) {
+            MuzoFormat.Lossless -> MuzoService.lossless(key, videoId)?.let { a -> a.url?.let { Triple(it, a.quality, codecOf(a.format, "FLAC")) } }
+            MuzoFormat.Aac -> MuzoEndpoints.aac(key, videoId)?.let { a -> a.url?.let { Triple(it, a.quality, codecOf(a.format, "AAC")) } }
+            MuzoFormat.Auto -> MuzoEndpoints.stream(key, videoId)?.let { s ->
+                s.losslessUrl?.let { Triple(it, "lossless", "FLAC") } ?: s.m4aUrl?.let { Triple(it, "AAC", "AAC") }
+            }
+        } ?: return ResolveResult.NotFound("not on Muzo Data")
         return ResolveResult.Found(
             SourceStream(
                 url = url,
@@ -85,7 +120,7 @@ class MuzoModule(private val context: Context) : SourceModule, ModuleFields {
                 // the CDN binds its file URLs to the key they were minted for
                 headers = mapOf("Authorization" to "Bearer $key"),
                 sourceLabel = "Muzo Data",
-                qualityLabel = answer.quality?.takeIf { it.isNotBlank() } ?: "lossless",
+                qualityLabel = quality?.takeIf { it.isNotBlank() } ?: "lossless",
                 matched = MatchedTrack(
                     id = videoId,
                     title = track.title,
@@ -94,7 +129,7 @@ class MuzoModule(private val context: Context) : SourceModule, ModuleFields {
                     durationMs = track.durationMs,
                     confidence = 1f,
                 ),
-                codec = (answer.format ?: "flac").uppercase(),
+                codec = codec,
             ),
         )
     }
@@ -115,9 +150,19 @@ class MuzoModule(private val context: Context) : SourceModule, ModuleFields {
         return result
     }
 
+    private fun codecOf(format: String?, fallback: String): String =
+        format?.substringAfterLast('/')?.takeIf { it.isNotBlank() }?.let { if (it.equals("mp4", true) || it.equals("m4a", true)) "AAC" else it.uppercase() } ?: fallback
+
     companion object {
         const val Id = "muzo"
         const val KeyField = "api_key"
+        const val FormatField = "muzo_format"
+        const val StreamField = "muzo_stream"
+        const val LyricsField = "muzo_lyrics"
+        const val CanvasField = "muzo_canvas"
+        const val MetadataField = "muzo_metadata"
+        const val AutoqueueField = "muzo_autoqueue"
+        const val CatalogField = "muzo_catalog_add"
         private const val KeySet = "API key set"
     }
 }

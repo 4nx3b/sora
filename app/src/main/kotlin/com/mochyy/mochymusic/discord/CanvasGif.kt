@@ -171,8 +171,8 @@ internal class CanvasGif(
     private val onReady: () -> Unit,
 ) {
     private val context = appContext.applicationContext
-    private val made = ConcurrentHashMap<String, PictureHosts.Hosted>()
-    private val failedAt = ConcurrentHashMap<String, Long>()
+    private val made = com.mochyy.mochymusic.utils.lruMap<String, PictureHosts.Hosted>(64)
+    private val failedAt = com.mochyy.mochymusic.utils.lruMap<String, Long>(128)
     private val working = ConcurrentHashMap.newKeySet<String>()
 
     fun urlFor(title: String, artist: String, durationSec: Int?, source: PresencePicture.CanvasSource, fps: Int, size: Int): String? {

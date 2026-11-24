@@ -92,6 +92,7 @@ import com.mochyy.mochymusic.ui.menu.AlbumMenu
 import com.mochyy.mochymusic.ui.menu.SelectionSongMenu
 import com.mochyy.mochymusic.ui.menu.SongMenu
 import com.mochyy.mochymusic.ui.menu.YouTubeAlbumMenu
+import com.mochyy.mochymusic.ui.motion.scrollFold
 import com.mochyy.mochymusic.ui.utils.backToMain
 import com.mochyy.mochymusic.utils.makeTimeString
 import com.mochyy.mochymusic.utils.rememberPreference
@@ -272,6 +273,7 @@ fun AlbumScreen(
             // read here, not at the top of the screen: a track change then only redraws the header
             val isThisAlbum = mediaMetadata?.album?.id == album.album.id
             PlaylistHeader(
+                modifier = androidx.compose.ui.Modifier.scrollFold(lazyListState, "album_header", maxDeg = 10f),
                 onSearchClick = { isSearching = true },
                 title = album.album.title,
                 creators = album.artists.map { CreatorUi(name = it.name, avatarUrl = it.thumbnailUrl, artistId = it.id) },

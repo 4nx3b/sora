@@ -138,6 +138,7 @@ import com.mochyy.mochymusic.ui.component.revealOnAppear
 import com.mochyy.mochymusic.ui.menu.LocalPlaylistMenu
 import com.mochyy.mochymusic.ui.menu.SelectionSongMenu
 import com.mochyy.mochymusic.ui.menu.SongMenu
+import com.mochyy.mochymusic.ui.motion.fanOnce
 import com.mochyy.mochymusic.ui.utils.backToMain
 import com.mochyy.mochymusic.utils.makeTimeString
 import com.mochyy.mochymusic.utils.rememberEnumPreference
@@ -583,6 +584,7 @@ fun LocalPlaylistScreen(
                 val isThisQueue = queueTitle == currentPlaylist.playlist.name
                 val savedRemote = currentPlaylist.playlist.browseId != null && !currentPlaylist.playlist.isEditable
                 PlaylistHeader(
+                    modifier = androidx.compose.ui.Modifier.fanOnce(-3f),
                     onSearchClick = { isSearching = true },
                     title = currentPlaylist.playlist.name,
                     creators = creators,
