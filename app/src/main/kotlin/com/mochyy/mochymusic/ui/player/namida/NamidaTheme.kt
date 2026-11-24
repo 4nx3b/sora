@@ -56,6 +56,10 @@ class NamidaPalette(
     val secondaryContainer: Color = if (dark) Color.White.copy(alpha = 0.10f) else Color.Black.copy(alpha = 0.07f)
     val secondary: Color = if (dark) Color.White.copy(alpha = 0.71f) else Color.Black.copy(alpha = 0.54f)
 
+    // -- the screen behind the panel: the cover's own tone, deep enough for the white top row,
+    // easing down into the panel's first colour so the two read as one surface --
+    val backdropTop: Color = lerp(scaffold, currentColor, 0.45f)
+
     // -- the panel (miniplayer_base.dart _ThemedMiniplayerPanel) --
     val panelBackground: Color = scaffold
     val panelGradientTop: Color =

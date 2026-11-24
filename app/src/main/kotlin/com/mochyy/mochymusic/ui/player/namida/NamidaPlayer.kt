@@ -134,8 +134,18 @@ fun NamidaPlayerStyle(actions: StyleActions, modifier: Modifier, preview: Boolea
                 chip = palette.secondaryContainer,
             ),
             background = {
-                // namida's scaffold behind the panel card
-                Box(Modifier.fillMaxSize().background(palette.scaffold))
+                // the cover's tone fades down into the panel's own first colour, so the screen
+                // above the card is the song's colour rather than black
+                val spec = androidx.compose.animation.core.tween<androidx.compose.ui.graphics.Color>(
+                    if (com.mochyy.mochymusic.ui.utils.AppMotion.enabled) 300 else 0,
+                )
+                val top by androidx.compose.animation.animateColorAsState(palette.backdropTop, spec, label = "namidaBackdropTop")
+                val bottom by androidx.compose.animation.animateColorAsState(palette.panelGradientTop, spec, label = "namidaBackdropBottom")
+                Box(
+                    Modifier.fillMaxSize().drawBehind {
+                        drawRect(Brush.verticalGradient(0f to top, 1f to bottom))
+                    },
+                )
             },
         ) { landscape, _, _ ->
             BoxWithConstraints(Modifier.fillMaxSize()) {

@@ -1,5 +1,15 @@
 @file:Suppress("UnstableApiUsage")
 
+// the hilt plugin's marker lives on google() and mavenCentral(); without these the release build
+// searched only the plugin portal and failed to resolve it
+pluginManagement {
+    repositories {
+        gradlePluginPortal()
+        google()
+        mavenCentral()
+    }
+}
+
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
 

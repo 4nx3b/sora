@@ -13,6 +13,8 @@
 package com.mochyy.mochymusic.module.qobuz
 
 import com.mochyy.mochymusic.module.AccountState
+import com.mochyy.mochymusic.module.CatalogHit
+import com.mochyy.mochymusic.module.CatalogSearch
 import com.mochyy.mochymusic.module.CatalogTrack
 import com.mochyy.mochymusic.module.DiagnosticStep
 import com.mochyy.mochymusic.module.FieldKind
@@ -42,7 +44,7 @@ import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
 
 /** Qobuz's catalog in FLAC up to 24-bit/192 kHz, through an account or a community instance */
-class QobuzModule : SourceModule, ModuleFields {
+class QobuzModule : SourceModule, ModuleFields, CatalogSearch {
 
     override val info = ModuleInfo(
         id = Id,
@@ -167,12 +169,7 @@ class QobuzModule : SourceModule, ModuleFields {
             return ResolveResult.Unavailable("Add a Qobuz account or an instance first")
         }
 
-        val formatId = when (picks[ChoiceQuality]) {
-            FormatHiRes -> 7
-            FormatMax -> 27
-            OptionSaver -> 5
-            else -> 6
-        }
+        val formatId = formatIdOf(picks)
         val key = "${track.title}|${track.artists.joinToString(",")}"
         val missedAt = misses[key]
         if (missedAt != null && System.currentTimeMillis() - missedAt < MissMemoryMs) {
@@ -222,6 +219,84 @@ class QobuzModule : SourceModule, ModuleFields {
         )
         streamCache[streamCacheKey] = stream
         return stream
+    }
+
+    private fun formatIdOf(picks: Map<String, String>): Int = when (picks[ChoiceQuality]) {
+        FormatHiRes -> 7
+        FormatMax -> 27
+        OptionSaver -> 5
+        else -> 6
+    }
+
+    // ── the catalogue, for Force change's search: every recording a backend named ───────────
+
+    override suspend fun searchCatalog(track: TrackQuery, limit: Int): List<CatalogHit> {
+        val formatId = formatIdOf(emptyMap())
+        return candidatesOf(track).take(limit).map { (candidate, backendId) ->
+            CatalogHit(
+                id = "$backendId|${candidate.id}",
+                title = candidate.title,
+                artist = candidate.artist,
+                album = candidate.album,
+                durationMs = candidate.durationMs,
+                codec = "FLAC",
+                sampleRateHz = nominalSampleRate(formatId),
+                lossless = true,
+                qualityLabel = qualityLabel(formatId),
+            )
+        }
+    }
+
+    override suspend fun resolveHit(hit: CatalogHit, picks: Map<String, String>): ResolveResult {
+        val backendId = hit.id.substringBefore('|', "")
+        val trackId = hit.id.substringAfter('|')
+        val formatId = formatIdOf(picks)
+        val match = Match(trackId, hit.title, hit.artist, hit.album, hit.durationMs, 1f, backendId)
+        val download = downloadAll(match, formatId)
+            ?: return ResolveResult.NotFound("No Qobuz backend could open the song")
+        return ResolveResult.Found(
+            SourceStream(
+                url = download.url,
+                format = StreamFormat.Progressive,
+                sourceLabel = "Qobuz",
+                qualityLabel = download.label.substringAfter("Qobuz ").ifBlank { qualityLabel(formatId) },
+                codec = if (download.isFlac) "FLAC" else null,
+                sampleRateHz = if (download.isFlac) nominalSampleRate(formatId) else 44_100,
+                matched = MatchedTrack(trackId, hit.title, hit.artist, hit.album, hit.durationMs, 1f),
+            ),
+        )
+    }
+
+    private fun candidateOf(element: JsonElement): CatalogTrack? {
+        val item = element as? JsonObject ?: return null
+        val id = item.trackId() ?: return null
+        val title = item.string("title") ?: return null
+        val artist = (item["performer"] as? JsonObject)?.string("name")
+            ?: item.string("artist")
+            ?: (item["album"] as? JsonObject)?.let { (it["artist"] as? JsonObject)?.string("name") }
+            ?: ""
+        return CatalogTrack(
+            id = id,
+            title = title,
+            artist = artist,
+            album = (item["album"] as? JsonObject)?.string("title"),
+            durationMs = item.long("duration")?.times(1000L),
+        )
+    }
+
+    /** every recording the backends named for [track], best match first, each with the backend holding it */
+    private fun candidatesOf(track: TrackQuery): List<Pair<CatalogTrack, String>> {
+        val searchQuery = "${TrackMatcher.core(track.title)} ${track.artists.firstOrNull().orEmpty()}".trim()
+        val found = mutableListOf<Triple<CatalogTrack, String, Float>>()
+        for (backend in orderedBackends()) {
+            val items = runCatching { backend.search(searchQuery) }.getOrNull() ?: continue
+            val candidates = items.mapNotNull { element -> candidateOf(element) }
+            for (scored in TrackMatcher.ranked(track, candidates)) {
+                val candidate = candidates.firstOrNull { it.id == scored.track.id } ?: continue
+                if (found.none { it.first.id == candidate.id }) found += Triple(candidate, backend.id, scored.score)
+            }
+        }
+        return found.sortedByDescending { it.third }.map { it.first to it.second }
     }
 
     // ── the search: every backend asked, the best match overall taken ──────────────────────
