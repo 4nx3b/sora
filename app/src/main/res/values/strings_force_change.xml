@@ -9,4 +9,8 @@
     <string name="pc_force_found">%1$s — %2$s</string>
     <string name="pc_force_khz">%1$.1f kHz</string>
     <string name="pc_force_lossless">Lossless</string>
+    <string name="pc_force_results_title">%1$s\'s matches</string>
+    <string name="pc_force_results_none">No match for this song here</string>
+    <string name="pc_force_results_failed">Couldn\'t search: %1$s</string>
+    <string name="pc_force_results_lossless">Lossless</string>
 </resources>

@@ -14,6 +14,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.ConnectionPool
 import okhttp3.Credentials
+import okhttp3.Dispatcher
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.IOException
@@ -40,8 +41,24 @@ object AppProxy {
     var current: ProxyConfig? = null
         private set
 
-    // one pool for every client that follows the proxy, so a new proxy can drop the idle connections that went the old way
+    // one pool and dispatcher for every client in the app, so dozens of helpers don't each spin up their own thread pools
     internal val connectionPool = ConnectionPool()
+    internal val dispatcher = Dispatcher().apply {
+        // covers stream in from a handful of picture hosts while the download queue runs beside
+        // them, so both need room: a per-host cap of 10 left a fast-scrolling grid queued behind
+        // ten thumbnails, and a big download batch behind ten streams
+        maxRequests = 96
+        maxRequestsPerHost = 32
+    }
+
+    // shared base client so callers can use newBuilder() instead of allocating fresh pools and executors
+    val sharedClient: OkHttpClient by lazy {
+        OkHttpClient.Builder()
+            .dispatcher(dispatcher)
+            .connectionPool(connectionPool)
+            .followAppProxy()
+            .build()
+    }
 
     // with no proxy of ours the phone's own proxy setting still counts, as it did before
     internal val selector = object : ProxySelector() {
@@ -100,7 +117,7 @@ object AppProxy {
     suspend fun check(config: ProxyConfig): Result<Long> = withContext(Dispatchers.IO) {
         runCatching {
             useSocksLogin(config)
-            val client = OkHttpClient.Builder()
+            val client = sharedClient.newBuilder()
                 .proxy(Proxy(config.type, config.address))
                 .proxyAuthenticator { _, response ->
                     if (config.type != Proxy.Type.HTTP || !config.hasLogin || response.request.header(ProxyAuthHeader) != null) {
@@ -151,4 +168,5 @@ fun OkHttpClient.Builder.followAppProxy(): OkHttpClient.Builder =
                 response.request.newBuilder().header(ProxyAuthHeader, auth).build()
             }
         }
+        .dispatcher(AppProxy.dispatcher)
         .connectionPool(AppProxy.connectionPool)

@@ -19,7 +19,6 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONObject
 import java.net.URLEncoder
-import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 import kotlin.math.abs
 
@@ -34,14 +33,19 @@ import kotlin.math.abs
 object SongVersions {
 
     // video id -> what plays in its place, for the whole session; a miss maps to the video itself
-    private val resolved = ConcurrentHashMap<String, SongItem>()
+    private val resolved = lruMap<String, SongItem>(256)
     private val gate = Semaphore(4)
 
     private val client by lazy {
-        OkHttpClient.Builder()
+        AppProxy.sharedClient.newBuilder()
             .connectTimeout(8, TimeUnit.SECONDS)
             .readTimeout(8, TimeUnit.SECONDS)
             .build()
+    }
+
+    // drops cached video-to-song lookups when the ui hides so session maps stay bounded
+    fun trimMemory() {
+        resolved.clear()
     }
 
     suspend fun preferSongs(items: List<YTItem>): List<YTItem> = coroutineScope {

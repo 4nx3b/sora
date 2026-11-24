@@ -93,6 +93,7 @@ import com.mochyy.mochymusic.ui.menu.YouTubePlaylistMenu
 import com.mochyy.mochymusic.ui.menu.YouTubeSelectionSongMenu
 import com.mochyy.mochymusic.ui.menu.YouTubeSongMenu
 import com.mochyy.mochymusic.ui.menu.toggleSavedPlaylist
+import com.mochyy.mochymusic.ui.motion.fanOnce
 import com.mochyy.mochymusic.ui.utils.backToMain
 import com.mochyy.mochymusic.utils.makeTimeString
 import com.mochyy.mochymusic.viewmodels.OnlinePlaylistViewModel
@@ -268,6 +269,7 @@ fun OnlinePlaylistScreen(
                 val isThisQueue = queueTitle == currentPlaylist.title
                 val isEditableRemote = currentPlaylist.id == "LM" || currentPlaylist.isEditable
                 PlaylistHeader(
+                    modifier = androidx.compose.ui.Modifier.fanOnce(-3f),
                     onSearchClick = { isSearching = true },
                     title = currentPlaylist.title,
                     creators = listOfNotNull(

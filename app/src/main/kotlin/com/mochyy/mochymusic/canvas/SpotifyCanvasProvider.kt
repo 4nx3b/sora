@@ -12,7 +12,6 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import com.mochyy.mochymusic.utils.followAppProxy
 import java.util.UUID
-import java.util.concurrent.ConcurrentHashMap
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
@@ -62,11 +61,17 @@ object SpotifyCanvasProvider {
         ignoreUnknownKeys = true
         isLenient = true
     }
-    private val http = OkHttpClient.Builder().followAppProxy().build()
+    private val http get() = com.mochyy.mochymusic.utils.AppProxy.sharedClient
     private val main = CoroutineScope(SupervisorJob() + Dispatchers.Main)
-    private val hits = ConcurrentHashMap<String, CanvasArtwork>()
+    private val hits = com.mochyy.mochymusic.utils.lruMap<String, CanvasArtwork>(256)
     // songs with no canvas, so we dont ask spotify again every time they play
-    private val misses = ConcurrentHashMap.newKeySet<String>()
+    private val misses = com.mochyy.mochymusic.utils.lruSet<String>(512)
+
+    // frees cached canvas lookups when the ui hides so they don't grow without bound
+    fun trimMemory() {
+        hits.clear()
+        misses.clear()
+    }
 
     private class Harvest(val token: String, val expiresAt: Long, val clientId: String?)
 

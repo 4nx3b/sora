@@ -53,6 +53,7 @@ object MuzoCanvasProvider {
     )
 
     private val cache = ConcurrentHashMap<String, CacheEntry>()
+    private const val MaxCached = 256
 
     /**
      * The looping canvas video for [videoId], or null when Muzo Data has none for it. The URL
@@ -64,7 +65,7 @@ object MuzoCanvasProvider {
         songTitle: String? = null,
         artistName: String? = null,
     ): CanvasArtwork? {
-        if (videoId.isBlank()) return null
+        if (videoId.isBlank() || !com.mochyy.mochymusic.muzo.MuzoPrefs.canvas) return null
 
         cache[videoId]?.let { entry ->
             if (entry.expiresAtMs > System.currentTimeMillis()) return entry.value
@@ -83,6 +84,7 @@ object MuzoCanvasProvider {
         // catalogue id, and without the negative entry every revisit would pay for the probe
         // again to learn the same thing.
         val ttl = if (artwork != null) CACHE_TTL_MS else NEGATIVE_CACHE_TTL_MS
+        if (cache.size >= MaxCached) cache.clear()
         cache[videoId] = CacheEntry(artwork, System.currentTimeMillis() + ttl)
         return artwork
     }

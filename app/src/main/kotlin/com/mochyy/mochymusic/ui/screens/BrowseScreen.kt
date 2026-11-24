@@ -43,6 +43,7 @@ package com.mochyy.mochymusic.ui.screens
  import com.mochyy.mochymusic.ui.utils.backToMain
  import com.mochyy.mochymusic.utils.rememberEnumPreference
  import com.mochyy.mochymusic.viewmodels.BrowseViewModel
+ import com.mochyy.mochymusic.ui.motion.flipIn
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
  @Composable
@@ -79,6 +80,7 @@ package com.mochyy.mochymusic.ui.screens
                      fillMaxWidth = true,
                      coroutineScope = coroutineScope,
                      modifier = Modifier
+                         .flipIn(items.indexOf(item))
                          .combinedClickable(
                              onClick = {
                                  when (item) {

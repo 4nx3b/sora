@@ -22,11 +22,14 @@ import com.music.innertube.YouTube
 import com.mochyy.mochymusic.constants.AudioQuality
 import com.mochyy.mochymusic.constants.DownloadQuality
 import com.mochyy.mochymusic.constants.DownloadQualityKey
+import com.mochyy.mochymusic.constants.DownloadSpeedLimitKbKey
 import com.mochyy.mochymusic.constants.IpVersionKey
+import com.mochyy.mochymusic.constants.MaxParallelDownloadsKey
 import com.mochyy.mochymusic.constants.OfflineModeKey
 import com.mochyy.mochymusic.module.TrackQuery
 import com.mochyy.mochymusic.modules.SourceModules
 import com.mochyy.mochymusic.utils.dataStore
+import com.mochyy.mochymusic.utils.get
 import com.music.innertube.models.IpVersion
 import okhttp3.Dns
 import java.net.InetAddress
@@ -42,6 +45,7 @@ import com.mochyy.mochymusic.models.TransferItem
 import com.mochyy.mochymusic.models.TransferState
 import com.mochyy.mochymusic.models.toMediaMetadata
 import com.mochyy.mochymusic.utils.OfflineMode
+import timber.log.Timber
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import com.mochyy.mochymusic.di.DownloadCache
@@ -93,6 +97,9 @@ constructor(
     /** Each song's stream url and when it stops working (ms since 1970); read on the download threads. */
     private val songUrlCache = java.util.concurrent.ConcurrentHashMap<String, Pair<String, Long>>()
 
+    /** the shared speed ceiling of the Downloads settings; 0 leaves the queue the line's full speed */
+    private val downloadPacer = com.mochyy.mochymusic.utils.DownloadPacer()
+
     // the providers each song's download already failed from, so its next try goes further down the download order
     private val failedProviders = java.util.concurrent.ConcurrentHashMap<String, Set<String>>()
 
@@ -130,8 +137,10 @@ constructor(
             // same ported decrypting reader the player plays it with
             DeezerSchemeRouting(
             OkHttpDataSource.Factory(
-                OkHttpClient.Builder()
+                com.mochyy.mochymusic.utils.AppProxy.sharedClient.newBuilder()
                     .addInterceptor(SoundCloudPlaybackHeaders.interceptor)
+                    .addInterceptor(com.mochyy.mochymusic.utils.DownloadSpeedLimitInterceptor(downloadPacer))
+                    .readTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
                     .dns(object : Dns {
                         override fun lookup(hostname: String): List<InetAddress> {
                             val addresses = Dns.SYSTEM.lookup(hostname)
@@ -142,7 +151,6 @@ constructor(
                             }
                         }
                     })
-                    .followAppProxy()
                     .build(),
             ),
             ),
@@ -260,7 +268,9 @@ constructor(
             dataSourceFactory,
             Executor(Runnable::run)
         ).apply {
-            maxParallelDownloads = 3
+            // the queue starts as fast as the settings ask and follows their changes live (see the collector in init)
+            maxParallelDownloads = context.dataStore[MaxParallelDownloadsKey] ?: DEFAULT_PARALLEL_DOWNLOADS
+            minRetryCount = 5
             addListener(
                 object : DownloadManager.Listener {
                     override fun onDownloadChanged(
@@ -305,14 +315,46 @@ constructor(
 
     init {
         val result = mutableMapOf<String, Download>()
-        val cursor = downloadManager.downloadIndex.getDownloads()
-        while (cursor.moveToNext()) {
-            result[cursor.download.request.id] = cursor.download
+        // close the sqlite cursor once the initial download map is loaded
+        downloadManager.downloadIndex.getDownloads().use { cursor ->
+            while (cursor.moveToNext()) {
+                result[cursor.download.request.id] = cursor.download
+            }
         }
         downloads.value = result
 
+        // drop expired stream urls and stale retry state when the ui hides and nothing is downloading
+        com.mochyy.mochymusic.utils.AppMemory.register { level ->
+            if (level >= android.content.ComponentCallbacks2.TRIM_MEMORY_UI_HIDDEN && downloads.value.values.none { it.isUnderWay }) {
+                val now = System.currentTimeMillis()
+                songUrlCache.entries.removeIf { it.value.second <= now }
+                songStreamHeaders.keys.retainAll(songUrlCache.keys)
+                failedProviders.clear()
+                moduleDownloads.clear()
+                downloadItags.clear()
+            }
+        }
+
         scope.launch { followBatches() }
         scope.launch { followAutoDownloads(context) }
+
+        // the throughput settings apply straight away: how many songs download at once, and the
+        // ceiling every connection together is held to (0 = the line's full speed)
+        scope.launch {
+            context.dataStore.data
+                .map {
+                    (it[MaxParallelDownloadsKey] ?: DEFAULT_PARALLEL_DOWNLOADS) to
+                        (it[DownloadSpeedLimitKbKey] ?: 0)
+                }
+                .distinctUntilChanged()
+                .collect { (parallel, limitKb) ->
+                    downloadPacer.bytesPerSecond = limitKb * 1024L
+                    // the manager may only be touched on the thread it was made on
+                    kotlinx.coroutines.withContext(Dispatchers.Main) {
+                        downloadManager.maxParallelDownloads = parallel
+                    }
+                }
+        }
 
         // Neiro's "download only on Wi-Fi" (the BLOCKING badge): on a metered network the queue
         // pauses and waits, the same hold offline mode puts it under, and carries on from wherever
@@ -388,16 +430,22 @@ constructor(
     /** the first module in the download order with a whole file of [mediaId]; null when youtube comes first or nothing else has it */
     private fun moduleDownload(mediaId: String): ModuleDownload? {
         moduleDownloads[mediaId]?.let { return it }
-        val song = runBlocking(Dispatchers.IO) { database.song(mediaId).first() } ?: return null
+        // a song downloaded straight from search has no row yet; muzo and the other id-keyed sources
+        // still find it by its video id, so the walk is asked rather than dropped to youtube
+        val song = runBlocking(Dispatchers.IO) { database.song(mediaId).first() }
         val track = TrackQuery(
-            title = song.song.title,
-            artists = song.artists.map { it.name },
-            album = song.song.albumName ?: song.album?.title,
-            durationMs = song.song.duration.takeIf { it > 0 }?.times(1000L),
+            title = song?.song?.title.orEmpty(),
+            artists = song?.artists?.map { it.name }.orEmpty(),
+            album = song?.song?.albumName ?: song?.album?.title,
+            durationMs = song?.song?.duration?.takeIf { it > 0 }?.times(1000L),
             videoId = mediaId,
         )
         val route = runBlocking(Dispatchers.IO) { sourceModules.downloadRoute(track, failedProviders[mediaId].orEmpty()) }
-        val (module, stream) = route as? SourceModules.Route.Module ?: return null
+        val (module, stream) = route as? SourceModules.Route.Module ?: run {
+            Timber.tag("Download").i("$mediaId: no module in the download order has it, YouTube it is")
+            return null
+        }
+        Timber.tag("Download").i("$mediaId downloads from ${module.info.id}: ${stream.codec} ${stream.qualityLabel}")
         val (mimeType, codecs) = savedFormatOf(stream.codec)
 
         database.query {
@@ -416,7 +464,7 @@ constructor(
                     playbackUrl = null,
                 ),
             )
-            if (song.song.dateDownload == null) upsert(song.song.copy(dateDownload = LocalDateTime.now()))
+            if (song != null && song.song.dateDownload == null) upsert(song.song.copy(dateDownload = LocalDateTime.now()))
         }
         return ModuleDownload(module.info.id, stream.url, stream.headers).also { moduleDownloads[mediaId] = it }
     }
@@ -569,5 +617,8 @@ constructor(
 
     private companion object {
         const val LOG_TAG = "MochyDownload"
+
+        /** twice media3's own 3: an album comes down together instead of three at a time */
+        const val DEFAULT_PARALLEL_DOWNLOADS = 6
     }
 }

@@ -62,6 +62,7 @@ object MuzoLyricsProvider : LyricsProvider {
         duration: Int,
         album: String?,
     ): Result<String> = withContext(Dispatchers.IO) {
+        if (!com.mochyy.mochymusic.muzo.MuzoPrefs.lyrics) return@withContext Result.failure(IllegalStateException("Muzo lyrics are switched off"))
         if (id.isBlank()) return@withContext Result.failure(IllegalStateException("no id"))
         val request = Request.Builder()
             .url("$BASE?id=$id")

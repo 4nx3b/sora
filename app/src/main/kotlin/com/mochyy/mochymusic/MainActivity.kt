@@ -97,10 +97,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import com.airbnb.lottie.compose.LottieAnimation
-import com.airbnb.lottie.compose.LottieCompositionSpec
-import com.airbnb.lottie.compose.animateLottieCompositionAsState
-import com.airbnb.lottie.compose.rememberLottieComposition
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -130,6 +126,7 @@ import androidx.core.view.WindowInsetsControllerCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.coroutineScope
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.navigation.NavHostController
@@ -308,6 +305,7 @@ class MainActivity : ComponentActivity() {
     // keeps the app's animation speed following android's own animation scale while we're open
     private var systemScaleObserver: android.database.ContentObserver? = null
     private var introPlays = false
+    private var rootGlassState: GlassState? = null
 
     private val serviceConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
@@ -353,8 +351,10 @@ class MainActivity : ComponentActivity() {
     override fun onStart() {
         super.onStart()
         playerConnection?.isUiVisible?.value = true
-        // paired phones are checked on, and a steered device asked what it plays, only while mochy is on screen
-        if (!isTelevision()) phoneLink.get().appShown()
+        // paired phones are checked on only when at least one device is paired, keeping PhoneLinkHost lazy otherwise
+        if (!isTelevision() && com.mochyy.mochymusic.link.phone.PhoneLinkHost.hasPairedDevices(this)) {
+            phoneLink.get().appShown()
+        }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
@@ -371,7 +371,12 @@ class MainActivity : ComponentActivity() {
 
     override fun onStop() {
         playerConnection?.isUiVisible?.value = false
-        if (!isTelevision()) phoneLink.get().appHidden()
+        if (!isTelevision() && com.mochyy.mochymusic.link.phone.PhoneLinkHost.hasPairedDevices(this)) {
+            phoneLink.get().appHidden()
+        }
+        // drop the recorded backdrop display list and idle video players while the window is hidden
+        rootGlassState?.discard()
+        com.mochyy.mochymusic.ui.player.video.YouTubeVideoSessions.releaseIdle()
         unbindService(serviceConnection)
         super.onStop()
     }
@@ -385,8 +390,11 @@ class MainActivity : ComponentActivity() {
             isFinishing
         ) {
             stopService(Intent(this, MusicService::class.java))
-            unbindService(serviceConnection)
+            // onStop already unbound serviceConnection, so guard against a double unbind aborting cleanup below
+            runCatching { unbindService(serviceConnection) }
         }
+        rootGlassState?.discard()
+        rootGlassState = null
         // the service outlives us, so take our listener off its player or a recreate leaves the old one firing
         com.mochyy.mochymusic.link.LinkPlayer.release(playerConnection)
         playerConnection?.dispose()
@@ -591,30 +599,34 @@ class MainActivity : ComponentActivity() {
                 return@LaunchedEffect
             }
 
-            playerConnection.service.currentMediaMetadata.collectLatest { song ->
-                if (song?.thumbnailUrl != null) {
-                    withContext(Dispatchers.IO) {
-                        try {
-                            val result = imageLoader.execute(
-                                ImageRequest.Builder(this@MainActivity)
-                                    .data(song.thumbnailUrl)
-                                    .allowHardware(false)
-                                    .memoryCachePolicy(CachePolicy.ENABLED)
-                                    .diskCachePolicy(CachePolicy.ENABLED)
-                                    .networkCachePolicy(CachePolicy.ENABLED)
-                                    .crossfade(false)
-                                    .build()
-                            )
-                            themeColor = result.image?.toBitmap()?.extractThemeColor() ?: selectedThemeColor
-                        } catch (e: Exception) {
+            // pause dynamic theme extraction while the activity is stopped so background track changes don't decode covers or recompose hidden ui
+            lifecycle.repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) {
+                playerConnection.service.currentMediaMetadata.collectLatest { song ->
+                    if (song?.thumbnailUrl != null) {
+                        withContext(Dispatchers.IO) {
+                            try {
+                                val result = imageLoader.execute(
+                                    ImageRequest.Builder(this@MainActivity)
+                                        .data(song.thumbnailUrl)
+                                        .size(112, 112)
+                                        .allowHardware(false)
+                                        .memoryCachePolicy(CachePolicy.DISABLED)
+                                        .diskCachePolicy(CachePolicy.ENABLED)
+                                        .networkCachePolicy(CachePolicy.ENABLED)
+                                        .crossfade(false)
+                                        .build()
+                                )
+                                themeColor = result.image?.toBitmap()?.extractThemeColor() ?: selectedThemeColor
+                            } catch (e: Exception) {
 
-                            themeColor = selectedThemeColor
+                                themeColor = selectedThemeColor
+                            }
                         }
+                    } else {
+                        themeColor = selectedThemeColor
                     }
-                } else {
-                    themeColor = selectedThemeColor
+                    themeSettled = true
                 }
-                themeSettled = true
             }
         }
 
@@ -627,7 +639,7 @@ class MainActivity : ComponentActivity() {
                     .fillMaxSize()
                     .background(if (pureBlack) Color.Black else MaterialTheme.colorScheme.surface)
             ) {
-                val glassState = remember { GlassState() }
+                val glassState = remember { GlassState().also { rootGlassState = it } }
                 val liquidGlass = com.mochyy.mochymusic.ui.component.liquid.rememberLiquidGlassConfig()
                 val recordsBackdrop = androidx.compose.runtime.rememberUpdatedState(liquidGlass.anySurface)
                 val appBackdrop = com.kyant.backdrop.backdrops.rememberLayerBackdrop(

@@ -89,7 +89,7 @@ fun AlternatePlayerStyle(
         PlayerStyle.APPLE_MUSIC -> com.mochyy.mochymusic.ported.PortedPlayerHost(style, actions, modifier, preview)
         PlayerStyle.TIKTOK -> com.mochyy.mochymusic.ported.PortedPlayerHost(style, actions, modifier, preview)
         PlayerStyle.MODULE -> ModulePlayerStyle(actions, modifier, preview)
-        PlayerStyle.FLAGSHIP, PlayerStyle.CLASSIC, PlayerStyle.TURNTABLE -> Unit
+        PlayerStyle.FLAGSHIP, PlayerStyle.TURNTABLE -> Unit
     }
 }
 

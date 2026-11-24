@@ -233,6 +233,8 @@ import android.os.VibratorManager
 import android.os.VibrationEffect
 import com.mochyy.mochymusic.playback.queues.EmptyQueue
 import com.mochyy.mochymusic.playback.queues.ListQueue
+import com.mochyy.mochymusic.playback.queues.MuzoRadioQueue
+import kotlinx.coroutines.cancel
 import com.mochyy.mochymusic.playback.queues.Queue
 import com.mochyy.mochymusic.playback.queues.YouTubeQueue
 import com.mochyy.mochymusic.playback.queues.filterExplicit
@@ -410,6 +412,7 @@ class MusicService :
                 failed.removeListener(this)
                 playerCrossmixProcessors.remove(failed)
                 playerSilenceProcessors.remove(failed)
+                playerReplayGain.remove(failed)
                 unregisterEqualizer(failed)
                 failed.release()
             }
@@ -434,6 +437,8 @@ class MusicService :
     val streamFailure = MutableStateFlow<StreamFailure?>(null)
     private var failureJob: Job? = null
     private val isNetworkConnected = MutableStateFlow(false)
+    // tracks live playback so background timers rest completely while paused
+    private val isPlayingFlow = MutableStateFlow(false)
 
     private lateinit var audioQuality: com.mochyy.mochymusic.constants.AudioQuality
     private lateinit var ipVersion: IpVersion
@@ -602,7 +607,9 @@ class MusicService :
     private var loudnessEnhancerSessionId = C.AUDIO_SESSION_ID_UNSET
     // set while Crossmix replays the song-change hooks for the song it just handed over to
     private var promotingCrossmix = false
+    private var crossmixAnalysisInit = false
     private val crossmixAnalysisRepository by lazy {
+        crossmixAnalysisInit = true
         CrossmixAnalysisRepository(applicationContext) { createDataSourceFactory() }
     }
     private val crossmixDirector by lazy { CrossmixDirector(scope, CrossmixHost(), crossmixAnalysisRepository) }
@@ -623,7 +630,9 @@ class MusicService :
     private val listeningOnlyStreams: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
 
     // matches a song's recording against its music video's, for the video background and for a music video's lyrics
+    private var videoAudioSyncInit = false
     private val videoAudioSync by lazy {
+        videoAudioSyncInit = true
         com.mochyy.mochymusic.lyrics.VideoAudioSync({ createDataSourceFactory() }, listeningOnlyStreams)
     }
 
@@ -641,7 +650,9 @@ class MusicService :
     }
 
     /** Lyrics auto offset; the lyrics offset sheet starts it and shows how it's going. */
+    private var lyricsAutoSyncInit = false
     val lyricsAutoSync by lazy {
+        lyricsAutoSyncInit = true
         com.mochyy.mochymusic.lyrics.LyricsAutoSync(
             dataSourceFactory = { createDataSourceFactory() },
             saveOffset = { songId, offsetMs -> database.query { updateLyricsOffset(songId, offsetMs) } },
@@ -767,6 +778,41 @@ class MusicService :
 
     var castConnectionHandler: CastConnectionHandler? = null
         private set
+
+    private var selfControllerFuture: com.google.common.util.concurrent.ListenableFuture<MediaController>? = null
+    private var unregisterMemoryTrim: (() -> Unit)? = null
+
+    private fun trimServiceCaches() {
+        val now = System.currentTimeMillis()
+        val keepIds = HashSet<String>(4)
+        runCatching {
+            player.currentMediaItem?.mediaId?.let(keepIds::add)
+            val next = player.nextMediaItemIndex
+            if (next in 0 until player.mediaItemCount) {
+                keepIds.add(player.getMediaItemAt(next).mediaId)
+            }
+        }
+        synchronized(songUrlCache) {
+            songUrlCache.entries.removeIf { (id, entry) -> id !in keepIds && entry.second <= now }
+            if (songUrlCache.size > 64) {
+                songUrlCache.keys.retainAll(keepIds)
+            }
+        }
+        songStreamHeaders.keys.retainAll(keepIds)
+        moduleStreamHeaders.keys.removeIf { key -> keepIds.none { key.endsWith("|$it") || key == it } }
+        resolvedStreamSources.keys.retainAll(keepIds)
+        resolvedSourceIds.keys.retainAll(keepIds)
+        failedSources.keys.retainAll(keepIds)
+        failedSourcesAt.keys.retainAll(keepIds)
+        decoderNotices.keys.retainAll(keepIds)
+        playingStreams.keys.retainAll(keepIds)
+        recoveredSongs.retainAll(keepIds)
+        currentMediaIdRetryCount.keys.retainAll(keepIds)
+        if (usedInfiniteSeeds.size > 64) usedInfiniteSeeds.clear()
+        if (failedInfiniteSeeds.size > 64) failedInfiniteSeeds.clear()
+        streamFacts.update { all -> all.filterKeys { it in keepIds } }
+        if (crossmixAnalysisInit) crossmixAnalysisRepository.trimMemory()
+    }
 
     private val audioDeviceCallback = object : AudioDeviceCallback() {
         override fun onAudioDevicesAdded(addedDevices: Array<out AudioDeviceInfo>?) {
@@ -951,7 +997,15 @@ class MusicService :
 
         val sessionToken = SessionToken(this, ComponentName(this, MusicService::class.java))
         val controllerFuture = MediaController.Builder(this, sessionToken).buildAsync()
-        controllerFuture.addListener({ controllerFuture.get() }, MoreExecutors.directExecutor())
+        selfControllerFuture = controllerFuture
+        controllerFuture.addListener({ runCatching { controllerFuture.get() } }, MoreExecutors.directExecutor())
+
+        // prune unbounded per-track caches when the ui hides while leaving playback and dac intact
+        unregisterMemoryTrim = com.mochyy.mochymusic.utils.AppMemory.register { level ->
+            if (level >= android.content.ComponentCallbacks2.TRIM_MEMORY_UI_HIDDEN) {
+                scope.launch { trimServiceCaches() }
+            }
+        }
 
         connectivityManager = getSystemService()!!
         connectivityObserver = NetworkConnectivityObserver(this)
@@ -1384,19 +1438,11 @@ class MusicService :
             }
         }
 
-        // the timed saves only write what changed: a queue edit (they're the only thing that saves one), or the place in the song
+        // save playback position only while playing, so a paused service causes zero background wakeups
         scope.launch {
             while (isActive) {
+                isPlayingFlow.first { it }
                 delay(30.seconds)
-                if (dataStore.get(PersistentQueueKey, true)) {
-                    saveQueueToDisk(onlyChanges = true)
-                }
-            }
-        }
-
-        scope.launch {
-            while (isActive) {
-                delay(10.seconds)
                 if (dataStore.get(PersistentQueueKey, true) && player.isPlaying) {
                     saveQueueToDisk(onlyChanges = true)
                 }
@@ -1480,11 +1526,23 @@ class MusicService :
             silenceProcessor.instantModeEnabled = skipSilence && instantSkip
         }
 
+        // 50-90 s of runway and time wins over the byte cap so a 24/192 dac stream keeps its full
+        // buffer instead of stopping short; playback starts on a second of audio, and what played
+        // stays for 30 s so a quick scrub back is instant
+        val loadControl = androidx.media3.exoplayer.DefaultLoadControl.Builder()
+            .setBufferDurationsMs(50_000, 90_000, 1_000, 2_000)
+            .setTargetBufferBytes(64 * 1024 * 1024)
+            .setPrioritizeTimeOverSizeThresholds(true)
+            .setBackBuffer(30_000, false)
+            .build()
+
         val player = ExoPlayer.Builder(this)
+            .setLoadControl(loadControl)
             .setMediaSourceFactory(createMediaSourceFactory())
             .setRenderersFactory(createRenderersFactory(eqProcessor, fxProcessors, silenceProcessor, hapticAudioProcessor, crossmixProcessor, replayGain, spectrum, inspector))
             .setHandleAudioBecomingNoisy(true)
-            .setWakeMode(C.WAKE_MODE_NETWORK)
+            // local wake lock keeps background audio smooth without locking the wifi radio out of power-save mode
+            .setWakeMode(C.WAKE_MODE_LOCAL)
             .setAudioAttributes(
                 AudioAttributes.Builder()
                     .setUsage(C.USAGE_MEDIA)
@@ -2276,7 +2334,7 @@ class MusicService :
      */
     private fun scheduleRunwayRetry(generation: Int) {
         if (runwayRetries >= MAX_RUNWAY_RETRIES || com.mochyy.mochymusic.utils.OfflineMode.isOn) return
-        val canGrow = (dataStore.get(AutoLoadMoreKey, true) && currentQueue.hasNextPage()) ||
+        val canGrow = currentQueue.hasOwnNextPage() ||
             (isInfiniteQueueEnabled() && player.repeatMode == REPEAT_MODE_OFF)
         if (!canGrow) return
         val delayMs = RUNWAY_RETRY_BASE_MS shl runwayRetries
@@ -2354,9 +2412,13 @@ class MusicService :
     private fun wantsAutoplayPreview(): Boolean {
         if (!isInfiniteQueueEnabled() || player.repeatMode != REPEAT_MODE_OFF) return false
         if (android.os.SystemClock.elapsedRealtime() < autoplayPreviewRetryAt) return false
-        if (dataStore.get(AutoLoadMoreKey, true) && currentQueue.hasNextPage()) return false
+        if (currentQueue.hasOwnNextPage()) return false
         return upcomingAutoplayStart() == player.mediaItemCount
     }
+
+    // more of what you picked, not an album's radio, which is autoplay and waits for its switch
+    private fun Queue.hasOwnNextPage(): Boolean =
+        !continuesAsRadio && hasNextPage() && dataStore.get(AutoLoadMoreKey, true)
 
     /** Drops the Autoplay songs still to come, e.g. when infinite queue is switched off. */
     private fun removeUpcomingAutoplay() {
@@ -2499,7 +2561,7 @@ class MusicService :
         val hideVideos = dataStore.get(HideVideoSongsKey, false)
 
         val queue = currentQueue
-        if (dataStore.get(AutoLoadMoreKey, true) && queue.hasNextPage()) {
+        if (queue.hasOwnNextPage()) {
             val rawPage = runCatching { withContext(Dispatchers.IO) { queue.nextPage() } }
                 .onFailure { Timber.tag(TAG).w(it, "Failed to load next queue page") }
                 .getOrDefault(emptyList())
@@ -2525,7 +2587,8 @@ class MusicService :
         val hidden = NotRecommended.songs
         fun List<MediaItem>.fresh() = filter { it.mediaId !in queued && it.mediaId !in hidden }
 
-        infiniteSource?.takeIf { it.hasNextPage() }?.let { source ->
+        // an album's own radio goes first, it follows the whole album better than a radio of its last song
+        (infiniteSource ?: currentQueue.takeIf { it.continuesAsRadio })?.takeIf { it.hasNextPage() }?.let { source ->
             runCatching { withContext(Dispatchers.IO) { source.nextPage() } }
                 .onFailure { Timber.tag(TAG).w(it, "Failed to load next infinite queue page") }
                 .getOrNull()
@@ -2544,6 +2607,12 @@ class MusicService :
         val seed = seedItem.mediaId
         usedInfiniteSeeds += seed
 
+        val muzo = muzoRadio(seed)
+        val muzoItems = muzo?.let { q -> runCatching { withContext(Dispatchers.IO) { q.getInitialStatus().items } }.getOrNull()?.fresh() }
+        if (muzo != null && !muzoItems.isNullOrEmpty()) {
+            infiniteSource = muzo
+            return muzoItems
+        }
         val radio = YouTubeQueue(WatchEndpoint(videoId = seed, playlistId = "RDAMVM$seed"))
         val radioItems = runCatching { withContext(Dispatchers.IO) { radio.getInitialStatus().items } }
             .onFailure { Timber.tag(TAG).w(it, "Failed to start infinite queue radio for $seed") }
@@ -2631,13 +2700,18 @@ class MusicService :
         generation: Int,
     ) {
         // the song's own station, the same one youtube music's "start radio" plays, not whatever "up next" happened to be
-        val radioQueue = YouTubeQueue(WatchEndpoint(videoId = currentMediaId, playlistId = "RDAMVM$currentMediaId"))
+        val youTubeRadio = YouTubeQueue(WatchEndpoint(videoId = currentMediaId, playlistId = "RDAMVM$currentMediaId"))
         val hideExplicit = dataStore.get(HideExplicitKey, false)
         val hideVideoSongs = dataStore.get(HideVideoSongsKey, false)
-        var moreFrom: Queue = radioQueue
+        var moreFrom: Queue = youTubeRadio
         val loaded = try {
-            withContext(Dispatchers.IO) {
-                radioQueue.getInitialStatus()
+            // Muzo Data's radio when its queue is switched on, YouTube's station whenever that fails
+            val muzoItems = muzoRadio(currentMediaId)?.let { q ->
+                runCatching { withContext(Dispatchers.IO) { q.getInitialStatus().filterExplicit(hideExplicit).filterVideoSongs(hideVideoSongs).items } }
+                    .getOrNull()?.takeIf { it.isNotEmpty() }?.also { moreFrom = q }
+            }
+            muzoItems ?: withContext(Dispatchers.IO) {
+                youTubeRadio.getInitialStatus()
                     .filterExplicit(hideExplicit)
                     .filterVideoSongs(hideVideoSongs)
                     .items
@@ -3120,6 +3194,7 @@ class MusicService :
         reason: Int,
     ) {
         clearStreamFailure()
+        mediaItem?.mediaId?.let(::queueForMuzoCatalog)
         // the queue moving on by itself is still this device deciding what the
         // ported room plays next, and no other path reports it — as in Neiro's
         // service. A skip is reported by the connection's own press
@@ -3296,6 +3371,7 @@ class MusicService :
         }
 
         if (events.containsAny(Player.EVENT_IS_PLAYING_CHANGED)) {
+            isPlayingFlow.value = player.isPlaying
             updateWidgetUI(player.isPlaying)
             if (player.isPlaying) {
                 startWidgetUpdates()
@@ -3657,6 +3733,8 @@ class MusicService :
 
         try {
             playerCache.removeResource(mediaId)
+            // custom module streams live under module|<id>|<mediaId>, so a bad cached stream stayed corrupt without this
+            dropModuleCache(mediaId)
             Timber.tag(TAG).d("Cleared player cache for $mediaId")
         } catch (e: Exception) {
             Timber.tag(TAG).e(e, "Failed to clear player cache for $mediaId")
@@ -3735,6 +3813,8 @@ class MusicService :
             try {
 
                 player.pause()
+                // a stuck usb dac mixer setting would make the retry fail with the same audiotrack error
+                audioOutputs.releaseMixer()
                 Timber.tag(TAG).d("Paused playback due to AudioTrack error")
 
                 delay(RETRY_DELAY_MS * 3)
@@ -3902,6 +3982,25 @@ class MusicService :
         }
     }
 
+    // one shared okhttp client for every track, prefetch and analyzer instead of spawning a new pool per song
+    private val streamHttpClient: OkHttpClient by lazy {
+        com.mochyy.mochymusic.utils.AppProxy.sharedClient.newBuilder()
+            // soundcloud streams need their playback headers on every request
+            .addInterceptor(SoundCloudPlaybackHeaders.interceptor)
+            .readTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
+            .dns(object : Dns {
+                override fun lookup(hostname: String): List<InetAddress> {
+                    val addresses = Dns.SYSTEM.lookup(hostname)
+                    return when (this@MusicService.ipVersion) {
+                        IpVersion.IPV4 -> addresses.filter { it is Inet4Address }.ifEmpty { addresses }
+                        IpVersion.IPV6 -> addresses.filter { it is Inet6Address }.ifEmpty { addresses }
+                        IpVersion.AUTO -> addresses
+                    }
+                }
+            })
+            .build()
+    }
+
     private fun createCacheDataSource(): CacheDataSource.Factory =
         CacheDataSource
             .Factory()
@@ -3915,23 +4014,7 @@ class MusicService :
                         // through the ported decrypting reader; everything else as before
                         DeezerSchemeRouting(DefaultDataSource.Factory(
                             this,
-                            OkHttpDataSource.Factory(
-                                OkHttpClient
-                                    .Builder()
-                                    .addInterceptor(SoundCloudPlaybackHeaders.interceptor)
-                                    .dns(object : Dns {
-                                        override fun lookup(hostname: String): List<InetAddress> {
-                                            val addresses = Dns.SYSTEM.lookup(hostname)
-                                            return when (this@MusicService.ipVersion) {
-                                                IpVersion.IPV4 -> addresses.filter { it is Inet4Address }.ifEmpty { addresses }
-                                                IpVersion.IPV6 -> addresses.filter { it is Inet6Address }.ifEmpty { addresses }
-                                                IpVersion.AUTO -> addresses
-                                            }
-                                        }
-                                    })
-                                    .followAppProxy()
-                                    .build(),
-                            ),
+                            OkHttpDataSource.Factory(streamHttpClient),
                         )),
                     ),
             ).setCacheWriteDataSinkFactory(null)
@@ -4369,6 +4452,7 @@ class MusicService :
         android.util.Log.i("SourceModules", "Force playback: ${sourceModules.nameOf(failed)} failed on $mediaId, trying ${sourceModules.nameOf(next)}")
         resolvedStreamSources.remove(mediaId)
         songUrlCache.remove(mediaId)
+        dropModuleCache(mediaId)
         val index = player.currentMediaItemIndex
         val position = player.currentPosition
         val wasPlaying = player.playWhenReady
@@ -4650,9 +4734,14 @@ class MusicService :
     }
 
     override fun onDestroy() {
+        muzoAddJob?.cancel()
         runCatching { playbackWakeLock?.let { if (it.isHeld) it.release() } }
         playbackWakeLock = null
         isRunning = false
+        unregisterMemoryTrim?.invoke()
+        unregisterMemoryTrim = null
+        selfControllerFuture?.let { MediaController.releaseFuture(it) }
+        selfControllerFuture = null
 
         audioManager.unregisterAudioDeviceCallback(audioDeviceCallback)
         audioOutputs.release()
@@ -4683,10 +4772,30 @@ class MusicService :
         floatingLyrics?.stop()
         floatingLyrics = null
         mediaSession.release()
+        mediaLibrarySessionCallback.release()
+        secondaryPlayer?.let { sec ->
+            sec.removeListener(secondaryPlayerListener)
+            unregisterEqualizer(sec)
+            runCatching { sec.release() }
+        }
+        secondaryPlayer = null
+        fadingPlayer?.let { fading ->
+            unregisterEqualizer(fading)
+            runCatching { fading.release() }
+        }
+        fadingPlayer = null
         player.removeListener(this)
         player.removeListener(sleepTimer)
-        playerSilenceProcessors.remove(player)
-        playerReplayGain.remove(player)
+        unregisterEqualizer(player)
+        playerSilenceProcessors.clear()
+        playerReplayGain.clear()
+        playerCrossmixProcessors.clear()
+        playerEqProcessors.clear()
+        playerSpectra.clear()
+        if (crossmixAnalysisInit) crossmixAnalysisRepository.release()
+        if (videoAudioSyncInit) videoAudioSync.release()
+        if (lyricsAutoSyncInit) lyricsAutoSync.release()
+        scope.cancel()
 
         player.release()
         super.onDestroy()
@@ -4778,6 +4887,7 @@ class MusicService :
                 )
                 // a lyric widget was just placed, so draw once more now that its lines get looked up
                 if (!lyricsShown && widgetManager.hasLyricWidgets) updateWidgetUI(isPlaying)
+                if (isPlaying && widgetManager.hasTickingWidgets && widgetUpdateJob == null) startWidgetUpdates()
             } catch (e: Exception) {
 
             }
@@ -4788,8 +4898,14 @@ class MusicService :
 
     private fun startWidgetUpdates() {
         widgetUpdateJob?.cancel()
+        // skip the once-a-second tick completely when no ticking widget is placed on the home screen
+        if (!widgetManager.hasTickingWidgets) {
+            widgetUpdateJob = null
+            return
+        }
         widgetUpdateJob = scope.launch {
             while (isActive) {
+                if (!widgetManager.hasTickingWidgets) break
                 // nobody sees a widget with the screen off, and redrawing it every second there was all cost
                 var wait = WidgetProgressIntervalMs
                 if (player.isPlaying && powerManager?.isInteractive != false) {
@@ -4799,6 +4915,7 @@ class MusicService :
                 }
                 delay(wait)
             }
+            widgetUpdateJob = null
         }
     }
 
@@ -4837,18 +4954,31 @@ class MusicService :
         }
     }
 
-    /** a song's stream for a cast receiver: the link it fetches itself, and the kind of file behind it */
-    data class CastStream(val url: String, val mimeType: String)
+    /** a song's stream for a cast receiver: the link it fetches (or the proxy relays), its mime type, and any upstream headers it needs */
+    data class CastStream(
+        val url: String,
+        val mimeType: String,
+        val headers: Map<String, String> = emptyMap(),
+        val contentLength: Long = -1L,
+        val client: String = "",
+    )
 
-    // the receiver fetches the song itself, so it needs to be told what it is: an opus stream sent as mp4 won't play on most tvs
-    suspend fun getCastStream(mediaId: String): CastStream? = withContext(Dispatchers.IO) {
+    // receivers (especially samsung and other dlna tvs) reject opus/webm, so cast asks for stereo aac in mp4 first
+    suspend fun getCastStream(mediaId: String, preferMp4: Boolean = true): CastStream? = withContext(Dispatchers.IO) {
         try {
             YTPlayerUtils.playerResponseForPlayback(
                 videoId = mediaId,
                 audioQuality = audioQuality,
                 connectivityManager = connectivityManager,
+                preferMp4 = preferMp4,
             ).getOrNull()?.let { data ->
-                CastStream(data.streamUrl, data.format.mimeType.substringBefore(';').trim().ifBlank { "audio/mp4" })
+                CastStream(
+                    url = data.streamUrl,
+                    mimeType = data.format.mimeType.substringBefore(';').trim().ifBlank { "audio/mp4" },
+                    headers = data.streamHeaders,
+                    contentLength = data.format.contentLength ?: -1L,
+                    client = data.streamClient,
+                )
             }
         } catch (e: Exception) {
             timber.log.Timber.e(e, "Failed to get a stream for casting")
@@ -5270,6 +5400,7 @@ class MusicService :
         fadingPlayer?.release()
         fadingPlayer?.let(playerCrossmixProcessors::remove)
         fadingPlayer?.let(playerSilenceProcessors::remove)
+        fadingPlayer?.let(playerReplayGain::remove)
         fadingPlayer?.let(::unregisterEqualizer)
         fadingPlayer = null
         fadingLoudnessEnhancer?.runCatching { release() }
@@ -5477,6 +5608,28 @@ class MusicService :
     }
 
 
+    // Muzo Data's radio for this seed, only with its queue switched on and a key set
+    private suspend fun muzoRadio(seedId: String): MuzoRadioQueue? {
+        if (!com.mochyy.mochymusic.muzo.MuzoPrefs.autoqueue) return null
+        val key = com.mochyy.mochymusic.muzo.MuzoService.apiKey(this) ?: return null
+        return MuzoRadioQueue(key, seedId)
+    }
+
+    // the ids that played, handed to Muzo's open ingest queue in batches; it takes no key
+    private val muzoAddBuffer = java.util.Collections.synchronizedSet(LinkedHashSet<String>())
+    private var muzoAddJob: Job? = null
+
+    private fun queueForMuzoCatalog(mediaId: String) {
+        if (!com.mochyy.mochymusic.muzo.MuzoPrefs.catalogAdd || mediaId.length != 11) return
+        muzoAddBuffer.add(mediaId)
+        muzoAddJob?.cancel()
+        muzoAddJob = scope.launch(Dispatchers.IO) {
+            if (muzoAddBuffer.size < 20) delay(30_000)
+            val batch = synchronized(muzoAddBuffer) { muzoAddBuffer.toList().also { muzoAddBuffer.clear() } }
+            runCatching { com.mochyy.mochymusic.muzo.MuzoEndpoints.addToCatalog(batch) }
+        }
+    }
+
     private fun notePlayingFrom(mediaId: String, from: PlayingFrom) {
         _playingFrom.update { if (it[mediaId] == from) it else it + (mediaId to from) }
     }
@@ -5503,11 +5656,11 @@ class MusicService :
         )
     }
 
-    /** one ask of [module] for the song, passing over a stream this phone has no decoder for */
     private suspend fun resolveWith(module: com.mochyy.mochymusic.module.SourceModule, mediaId: String): com.mochyy.mochymusic.module.SourceStream? {
         val track = trackQueryOf(mediaId) ?: return null
         val result = module.resolve(track, sourceModules.picks(module.info.id))
         return (result as? com.mochyy.mochymusic.module.ResolveResult.Found)?.stream
+            ?.let(com.mochyy.mochymusic.modules.security.ModuleUrlGuard::sanitizeStream)
             ?.takeIf { com.mochyy.mochymusic.modules.DeviceDecoders.canPlay(it) }
     }
 

@@ -77,6 +77,8 @@ import com.mochyy.mochymusic.ui.screens.search.rememberScrollCollapseProgress
 import com.mochyy.mochymusic.ui.screens.search.searchTopBarHeight
 import com.mochyy.mochymusic.ui.theme.InterFontFamily
 import com.mochyy.mochymusic.utils.rememberPreference
+import com.mochyy.mochymusic.ui.motion.morphClip
+import com.mochyy.mochymusic.ui.motion.onHeld
 
 private data class SettingsEntry(
     val title: String,
@@ -107,7 +109,6 @@ private val LocalizedSettingsTitles = mapOf(
     "Keep playing even when closed" to R.string.playback_keep_playing,
     "Play alongside other apps" to R.string.playback_mix_other_apps,
     "Save Player's last state" to R.string.playback_save_state,
-    "Local song auto metadata" to R.string.settings_local_auto_metadata,
     "Keep shuffle on" to R.string.settings_persistent_shuffle,
     "Disable auto-playing YouTube video" to R.string.settings_disable_video_autoplay,
     "Translations from YouTube" to R.string.settings_youtube_translations,
@@ -202,9 +203,9 @@ private val SettingsIndex = listOf(
     SettingsEntry("Audio quality on Wi-Fi", "App behaviour", com.mochyy.mochymusic.ui.screens.settings.InternetSettingsRoute, "quality wifi ceiling stream mobile data cellular"),
     SettingsEntry("Proxy", "App behaviour", ProxySettingsRoute, "proxy socks http server vpn network region country blocked bot sign in"),
     SettingsEntry("Albums from liked songs", "App behaviour", "general_settings", "albums library liked songs old way apple music"),
-    SettingsEntry("Local song auto metadata", "App behaviour", "general_settings", "match tags id3 covers lyrics"),
     SettingsEntry("Pause search history", "App behaviour", "general_settings", "search history pause private incognito privacy", R.string.pause_search_history),
     SettingsEntry("Count plays on YouTube views", "App behaviour", "general_settings", "youtube history plays views report count privacy", R.string.settings_youtube_plays),
+    SettingsEntry("Override lyrics sorting", "App behaviour", "general_settings", "lyrics provider order sort priority duet word sync apple music source", R.string.settings_lyrics_order_override),
 
     // Playback
     SettingsEntry("Playback", "Playback", PlaybackSettingsRoute, "background bluetooth shuffle skip silence mute queue failure"),
@@ -273,7 +274,6 @@ private val SettingsIndex = listOf(
     SettingsEntry("Apple Music", "Modules", "module/applemusic", "apple music itunes subscription stream aac"),
     SettingsEntry("Monochrome", "Modules", "module/monochrome", "monochrome lossless flac hi-res tidal"),
     SettingsEntry("Qobuz", "Modules", "module/qobuz", "qobuz lossless hi-res flac 192 account instance"),
-    SettingsEntry("Qobuz backup", "Modules", "module/qobuzbackup", "qobuz backup community mirror lossless kouzu endpoint"),
     SettingsEntry("Deezer", "Modules", "module/deezer", "deezer flac cd 16 bit arl account"),
     SettingsEntry("SoundCloud", "Modules", "module/soundcloud", "soundcloud aac 160 uploads remixes sets client id"),
     SettingsEntry("Spotify", "Modules", "module/spotify", "spotify web player cdn widevine aac free account sp_dc"),
@@ -654,10 +654,15 @@ internal fun CategoryBubble(
     // lit while its page is open beside the list on a wide screen
     selected: Boolean = false,
 ) {
+    // the badge turns from a circle into a cookie while the row is held
+    var held by remember { mutableStateOf(false) }
+    val badge = com.mochyy.mochymusic.ui.motion.rememberMorph(com.mochyy.mochymusic.ui.motion.MotionPolygons.Circle, com.mochyy.mochymusic.ui.motion.MotionPolygons.Cookie)
+    val badgeShape = com.mochyy.mochymusic.ui.motion.morphProgress(held)
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .height(64.dp)
+            .onHeld { held = it }
             .clip(RoundedCornerShape(22.dp))
             .background(if (selected) SelectedBubbleColor else BubbleColor)
             .clickable(onClick = onClick)
@@ -671,7 +676,7 @@ internal fun CategoryBubble(
             Box(
                 modifier = Modifier
                     .size(40.dp)
-                    .clip(CircleShape)
+                    .morphClip(badge) { badgeShape.value }
                     .background(IconBgColor),
                 contentAlignment = Alignment.Center
             ) {

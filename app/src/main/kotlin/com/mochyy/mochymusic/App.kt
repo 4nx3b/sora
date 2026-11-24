@@ -69,6 +69,8 @@ class App : Application(), SingletonImageLoader.Factory {
     lateinit var phoneLink: dagger.Lazy<com.mochyy.mochymusic.link.phone.PhoneLinkHost>
 
     override fun onCreate() {
+        // init random-key vault first so transfer restore and settings can use it right away
+        com.mochyy.mochymusic.utils.SecretVault.init(this)
         CrashReporter.install(this)
         // before super, because that's where hilt builds the database and the player caches
         com.mochyy.mochymusic.importer.transfer.TransferRestore.applyPending(this)
@@ -78,6 +80,8 @@ class App : Application(), SingletonImageLoader.Factory {
 
         AppLanguage.initialize(this)
 
+        // share one okhttp connection pool and dispatcher between innertube, coil, and the rest of the app
+        YouTube.configureSharedPool(AppProxy.connectionPool, AppProxy.dispatcher)
         CipherDeobfuscator.initialize(this)
 
         if (BuildConfig.DEBUG || BuildConfig.BUILD_TYPE == "fast") {
@@ -236,6 +240,12 @@ class App : Application(), SingletonImageLoader.Factory {
         YouTube.ipVersion = settings[IpVersionKey]?.toEnum(defaultValue = IpVersion.AUTO) ?: IpVersion.AUTO
         com.mochyy.mochymusic.utils.YTPlayerUtils.backend =
             settings[StreamBackendKey]?.toEnum(defaultValue = StreamBackend.INNERTUBEX) ?: StreamBackend.INNERTUBEX
+        com.mochyy.mochymusic.utils.YTPlayerUtils.accountIsPremium = settings[YtAccountIsPremiumKey]
+        com.mochyy.mochymusic.utils.YTPlayerUtils.onPremiumDetected = { isPremium ->
+            applicationScope.launch(Dispatchers.IO) {
+                runCatching { dataStore.edit { it[YtAccountIsPremiumKey] = isPremium } }
+            }
+        }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
@@ -291,7 +301,7 @@ class App : Application(), SingletonImageLoader.Factory {
                 .distinctUntilChanged()
                 .collect { cookie ->
                     try {
-                        YouTube.cookie = cookie
+                        YouTube.cookie = cookie?.takeIf { it.isNotBlank() }
                     } catch (e: Exception) {
                         Timber.e(e, "Could not parse cookie. Clearing existing cookie.")
                         forgetAccount(this@App)
@@ -305,6 +315,15 @@ class App : Application(), SingletonImageLoader.Factory {
                 .distinctUntilChanged()
                 .collect { (enabled, provider, customUrl) ->
                     com.mochyy.mochymusic.utils.AppDns.update(enabled, provider, customUrl)
+                }
+        }
+
+        applicationScope.launch(Dispatchers.IO) {
+            dataStore.data
+                .map { it[YtAccountIsPremiumKey] }
+                .distinctUntilChanged()
+                .collect { isPremium ->
+                    com.mochyy.mochymusic.utils.YTPlayerUtils.accountIsPremium = isPremium
                 }
         }
 
@@ -350,42 +369,37 @@ class App : Application(), SingletonImageLoader.Factory {
             dataStore.data
                 .map { it[StreamBackendKey]?.toEnum(defaultValue = StreamBackend.INNERTUBEX) ?: StreamBackend.INNERTUBEX }
                 .distinctUntilChanged()
-                .collectIndexed { index, backend ->
+                .collectIndexed { _, backend ->
                     com.mochyy.mochymusic.utils.YTPlayerUtils.backend = backend
-                    // a switch mid-session warms it straight away; at launch that waits for the intro, further up
-                    if (index > 0) com.mochyy.mochymusic.utils.YTPlayerUtils.preWarmInnerTubeX()
                 }
         }
     }
 
-    // covers are the most the app holds: half go when the phone runs short, most when the screen goes to the background, all once the system starts reclaiming background apps
+    // frees ui-only caches, webviews, kuromoji and sqlite pages when hidden or short on ram while leaving playback and dac untouched
     @Suppress("DEPRECATION")
     override fun onTrimMemory(level: Int) {
         super.onTrimMemory(level)
-        val cache = SingletonImageLoader.get(this).memoryCache ?: return
-        when {
-            level >= android.content.ComponentCallbacks2.TRIM_MEMORY_BACKGROUND -> cache.clear()
-            level >= android.content.ComponentCallbacks2.TRIM_MEMORY_UI_HIDDEN -> cache.trimToSize(cache.size / 4)
-            level >= android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW -> cache.trimToSize(cache.size / 2)
-        }
+        com.mochyy.mochymusic.utils.AppMemory.onTrimMemory(this, level, applicationScope)
     }
 
     override fun newImageLoader(context: PlatformContext): ImageLoader {
-        val cacheSize = runBlocking {
-            dataStore.data.map { it[MaxImageCacheSizeKey] ?: 512 }.first()
-        }
+        // read from the already-warmed preferences cache so the first image never blocks the main thread
+        val cacheSize = com.mochyy.mochymusic.utils.PreferencesCache.current(dataStore)[MaxImageCacheSizeKey] ?: 512
         return ImageLoader.Builder(this).apply {
             components {
+                add(coil3.network.okhttp.OkHttpNetworkFetcherFactory(callFactory = { AppProxy.sharedClient }))
                 add(SvgDecoder.Factory())
                 add(com.mochyy.mochymusic.utils.ImageRetry)
             }
             // covers ease in as they arrive; coil skips the fade for ones already in memory, so scrolling back never flickers
-            crossfade(300)
+            crossfade(150)
             allowHardware(Build.VERSION.SDK_INT >= Build.VERSION_CODES.P)
 
             memoryCache {
                 MemoryCache.Builder()
-                    .maxSizePercent(context, 0.30)
+                    // a quarter of the app's memory: covers of everything on screen and more stay
+                    // decoded, so scrolling back through a list shows them the same frame
+                    .maxSizePercent(context, 0.25)
                     .build()
             }
             if (cacheSize == 0) {
@@ -413,15 +427,22 @@ class App : Application(), SingletonImageLoader.Factory {
                 settings.remove(AccountNameKey)
                 settings.remove(AccountEmailKey)
                 settings.remove(AccountChannelHandleKey)
+                settings.remove(YtAccountIsPremiumKey)
+                settings.remove(LastFullSyncKey)
+                settings.remove(YtSyncHoldKey)
+                settings.remove(SelectedYtmPlaylistsKey)
+                settings.remove(YtSyncSourcesTaggedKey)
             }
             Timber.d("forgetAccount: DataStore preferences cleared")
 
             Timber.d("forgetAccount: Clearing YouTube object auth state")
-            Timber.d("forgetAccount: Before - cookie=${YouTube.cookie?.take(50)}, visitorData=${YouTube.visitorData?.take(20)}, dataSyncId=${YouTube.dataSyncId?.take(20)}")
             YouTube.cookie = null
             YouTube.visitorData = null
             YouTube.dataSyncId = null
-            Timber.d("forgetAccount: After - cookie=${YouTube.cookie}, visitorData=${YouTube.visitorData}, dataSyncId=${YouTube.dataSyncId}")
+            com.mochyy.mochymusic.utils.YTPlayerUtils.accountIsPremium = null
+            com.mochyy.mochymusic.importer.YouTubeLikesMemory.clear(context)
+            com.mochyy.mochymusic.importer.PendingYouTubeLikes.clear(context)
+            com.mochyy.mochymusic.importer.PlaylistAddedHere.clearAll(context)
 
             Timber.d("forgetAccount: Clearing WebView CookieManager")
             withContext(Dispatchers.Main) {

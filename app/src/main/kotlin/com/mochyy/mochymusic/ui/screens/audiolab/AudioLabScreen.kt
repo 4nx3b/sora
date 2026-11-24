@@ -69,6 +69,7 @@ import com.mochyy.mochymusic.eq.EqSettings
 import com.mochyy.mochymusic.playback.audio.AudioOutputs
 import com.mochyy.mochymusic.ui.component.damageBoundary
 import com.mochyy.mochymusic.ui.component.pressBounce
+import com.mochyy.mochymusic.ui.motion.dragTilt
 import com.mochyy.mochymusic.ui.theme.InterFontFamily
 import com.mochyy.mochymusic.utils.rememberEnumPreference
 import com.mochyy.mochymusic.utils.rememberPreference
@@ -245,6 +246,7 @@ private fun BigHubCard(
     Box(
         modifier = modifier
             .fillMaxWidth()
+            .dragTilt(6f)
             // at least the mock's height; a big system font makes it taller instead of cutting it
             .heightIn(min = 128.dp)
             .pressBounce(interaction, pressedScale = 0.97f)

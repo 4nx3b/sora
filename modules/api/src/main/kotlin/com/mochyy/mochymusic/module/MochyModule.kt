@@ -221,6 +221,34 @@ interface SourceModule : MochyModule {
     suspend fun diagnose(track: TrackQuery, picks: Map<String, String>, report: (DiagnosticStep) -> Unit): ResolveResult
 }
 
+/** one match a source's catalogue has for a song, with what is known about its stream */
+data class CatalogHit(
+    val id: String,
+    val title: String,
+    val artist: String,
+    val album: String? = null,
+    val durationMs: Long? = null,
+    val artworkUrl: String? = null,
+    val codec: String? = null,
+    val sampleRateHz: Int = 0,
+    val bitDepth: Int = 0,
+    val bitrateKbps: Int = 0,
+    val lossless: Boolean = false,
+    val sizeBytes: Long? = null,
+    val qualityLabel: String? = null,
+)
+
+/**
+ * A source that can list several matches for a song, for Force change's search. Optional: a source
+ * without it shows the one match [SourceModule.resolve] gives.
+ */
+interface CatalogSearch : SourceModule {
+    suspend fun searchCatalog(track: TrackQuery, limit: Int = 10): List<CatalogHit>
+
+    /** the stream for one listed match */
+    suspend fun resolveHit(hit: CatalogHit, picks: Map<String, String>): ResolveResult
+}
+
 /** a server a module plays from, as its page lists it; the built-in ones can't be removed */
 data class ModuleServer(val url: String, val name: String, val builtIn: Boolean)
 
@@ -313,6 +341,29 @@ interface LookModule : MochyModule {
 
     /** a [LookSetting] name to its value, anything else is ignored */
     val look: Map<String, String>
+}
+
+/** a module that renders live 32-bit argb frames into a player block (games, emulators, visualizers) */
+interface SurfaceModule : MochyModule {
+    /** starts the engine for [assetPath] with saves in [dataDir] and optional [extraPaths]; 0 ready, 1 another asset loaded, -1 error */
+    fun surfaceStart(assetPath: String, dataDir: String, extraPaths: List<String> = emptyList()): Int
+
+    /** framebuffer width and height in pixels as a two-element array */
+    fun surfaceSize(): IntArray
+
+    /** advances one engine tick; false once the engine hits a fatal error */
+    fun surfaceTick(): Boolean
+
+    /** fills [pixels] with the latest 0xAARRGGBB frame when newer than [lastSeq], returning the new sequence number */
+    fun surfaceCopyFrame(pixels: IntArray, lastSeq: Long): Long
+
+    fun surfaceSetPaused(paused: Boolean)
+
+    fun surfaceKey(keyCode: Int, pressed: Boolean)
+
+    fun surfaceTurn(delta: Int)
+
+    fun surfaceLastError(): String
 }
 
 /** the only settings a look may change, so a module can restyle mochy but never touch accounts, network or playback */
