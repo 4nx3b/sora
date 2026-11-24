@@ -48,6 +48,9 @@ import timber.log.Timber
 import javax.inject.Inject
 import com.mochyy.mochymusic.link.isTelevision
 
+// how long after the launch intro the PoToken WebView may boot (Home's reveal runs ~1s)
+private const val PoTokenAfterIntroMillis = 2_500L
+
 // one character from each system fallback font titles commonly reach for: japanese, chinese, korean, emoji
 private const val FallbackFontWarmup = "あ漢한😀"
 
@@ -153,7 +156,26 @@ class App : Application(), SingletonImageLoader.Factory {
             observeSettingsChanges()
         }
 
-        // potoken webview and innertubex both boot on demand when a song actually needs them, keeping ~80 mb of chromium and quackjs out of startup and background ram
+        applicationScope.launch(Dispatchers.IO) {
+            // Boot BotGuard once a session id exists. Without a PoToken YouTube serves only a
+            // ~32 second preview window, and paying the engine's cold start inside the playback
+            // resolver stalls the first track instead.
+            val ready = kotlinx.coroutines.withTimeoutOrNull(60_000) {
+                while (YouTube.visitorData == null && YouTube.dataSyncId == null) {
+                    kotlinx.coroutines.delay(500)
+                }
+                true
+            }
+            if (ready == true) {
+                // its WebView boots on the main thread; let the launch intro and Home's reveal
+                // play out first. VISIONOS streams need no token, so nothing waits on this
+                com.mochyy.mochymusic.ui.launch.LaunchGate.awaitIntro()
+                kotlinx.coroutines.delay(PoTokenAfterIntroMillis)
+                com.mochyy.mochymusic.utils.YTPlayerUtils.preWarmPoToken()
+                // the player script compiles now, so the first song doesn't wait for it
+                com.mochyy.mochymusic.utils.YTPlayerUtils.preWarmInnerTubeX()
+            }
+        }
 
         applicationScope.launch(Dispatchers.IO) {
             // a paired device can reach this phone again as soon as mochy is up, after the intro has had the main thread

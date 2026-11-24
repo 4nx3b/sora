@@ -4015,7 +4015,7 @@ class MusicService :
                         DeezerSchemeRouting(DefaultDataSource.Factory(
                             this,
                             OkHttpDataSource.Factory(streamHttpClient),
-                        ),
+                        )),
                     ),
             ).setCacheWriteDataSinkFactory(null)
             .setFlags(FLAG_IGNORE_CACHE_ON_ERROR)

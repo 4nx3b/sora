@@ -353,18 +353,53 @@ private fun PlayerSection() {
     val playerSheetState = LocalPlayerBottomSheetState.current
     val playerStyle by rememberEnumPreference(PlayerStyleKey, defaultValue = PlayerStyle.FLAGSHIP)
     val playFirst = stringResource(R.string.customise_play_first)
-    PlayerStyleCard(
-        selected = playerStyle,
-        onOpenEditor = {
-            val hasMedia = playerConnection?.player?.currentMediaItem != null
-            if (hasMedia) {
-                playerSheetState?.expandSoft()
-                playerConnection?.requestPlayerStudio()
-            } else {
-                Toast.makeText(context, playFirst, Toast.LENGTH_SHORT).show()
-            }
-        },
-    )
+    Column {
+        PlayerStyleCard(
+            selected = playerStyle,
+            onOpenEditor = {
+                val hasMedia = playerConnection?.player?.currentMediaItem != null
+                if (hasMedia) {
+                    playerSheetState?.expandSoft()
+                    playerConnection?.requestPlayerStudio()
+                } else {
+                    Toast.makeText(context, playFirst, Toast.LENGTH_SHORT).show()
+                }
+            },
+        )
+        Spacer(Modifier.height(16.dp))
+        LandscapePlayerCard()
+    }
+}
+
+// the flagship turned sideways: a rounded square beside the controls, or the whole cover melting into them
+@Composable
+private fun LandscapePlayerCard() {
+    val (fullCover, setFullCover) = rememberPreference(com.mochyy.mochymusic.constants.LandscapeFullCoverKey, defaultValue = false)
+    LabCard(padding = CardPadding) {
+        Text(
+            stringResource(R.string.customise_landscape_player),
+            fontFamily = InterFontFamily,
+            fontWeight = FontWeight.Bold,
+            fontSize = 20.sp,
+            letterSpacing = (-0.02).em,
+            color = LabColors.Primary,
+        )
+        Text(
+            stringResource(R.string.customise_landscape_player_desc),
+            fontFamily = InterFontFamily,
+            fontWeight = FontWeight.Medium,
+            fontSize = 13.sp,
+            color = LabColors.Secondary,
+            modifier = Modifier.padding(top = 2.dp),
+        )
+        Spacer(Modifier.height(14.dp))
+        LabToggleRow(
+            title = stringResource(R.string.customise_landscape_full_cover),
+            subtitle = stringResource(R.string.customise_landscape_full_cover_desc),
+            checked = fullCover,
+            onCheckedChange = setFullCover,
+        )
+    }
 }
 
 @Composable

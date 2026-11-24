@@ -36,7 +36,6 @@ import com.mochyy.mochymusic.constants.HideSettingsDescriptionsKey
 import com.mochyy.mochymusic.constants.HideUpdateNoticeKey
 import com.mochyy.mochymusic.constants.LarpLevelKey
 import com.mochyy.mochymusic.constants.LarpModeKey
-import com.mochyy.mochymusic.constants.LocalSongAutoMetadataKey
 import com.mochyy.mochymusic.constants.LyricsOrderOverrideKey
 import com.mochyy.mochymusic.constants.LyricsProviderOrderKey
 import com.mochyy.mochymusic.constants.PreferredLyricsProvider

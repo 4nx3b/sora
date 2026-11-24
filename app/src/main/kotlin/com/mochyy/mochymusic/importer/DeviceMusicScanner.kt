@@ -135,6 +135,7 @@ object DeviceMusicScanner {
                             artworkUri = ContentUris.withAppendedId(AlbumArtUri, cursor.getLong(albumColumn)).toString(),
                             onSdCard = isCardVolume,
                         )
+                    }
                 }
             } catch (e: Exception) {
                 // a storage provider or unmounted card that refuses the query shouldn't take the library down with it
